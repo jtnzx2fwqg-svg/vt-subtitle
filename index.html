@@ -124,10 +124,10 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
     const time = document.createElement("time");
     if (videoId) {
       const link = document.createElement("a");
-      link.href = "https://www.youtube.com/watch?v=" +
-        encodeURIComponent(videoId) + "&t=" + Math.floor(c.start) + "s";
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
+link.href = "https://www.youtube.com/embed/" +
+  encodeURIComponent(videoId) + "?start=" + Math.floor(c.start);
+link.target = "_blank";
+link.rel = "noopener noreferrer";
       link.textContent = fmt(c.start) + " → " + fmt(c.end);
       time.append(link);
     } else {
