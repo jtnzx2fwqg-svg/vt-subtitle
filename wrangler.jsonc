@@ -1,4 +1,4 @@
-
+// Cloudflare GitHub deployment trigger
 {
   "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
   "name": "vt-subtitle-api",
