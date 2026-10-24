@@ -30,6 +30,21 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .cue time{display:block;color:var(--muted);font-size:.85rem}
 .cue-text{white-space:pre-wrap}
+  #youtube-player-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  padding: 8px 0;
+}
+#youtube-player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+#youtube-player iframe {
+  width: 100%;
+  height: 100%;
+}
 @media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -46,10 +61,11 @@ a{color:var(--accent);overflow-wrap:anywhere}
       value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
     <button id="check">取得日文字幕</button>
     <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
-    <div id="autopreview"></div>
-    <div id="youtube-player-container" hidden>
+        <div id="youtube-player-container" hidden>
   <div id="youtube-player"></div>
 </div>
+    <div id="autopreview"></div>
+
     <p class="muted"><small>本功能透過 Cloudflare Worker 取得字幕。能否取得字幕，取決於影片是否有可用的日文字幕，以及字幕服務的處理結果。</small></p>
   </section>
 
