@@ -127,4 +127,12 @@ try {
   );
 }
 
-return jsonResponse(data, upstream.status, origin);
+return jsonResponse(data, upstream.status, origin);    } catch {
+      return jsonResponse(
+        { error: "Unable to contact the transcript service" },
+        502,
+        origin
+      );
+    }
+  },
+};
