@@ -115,27 +115,31 @@ function fmt(t) {
     String(m).padStart(2,"0")+":"+s;
 }
 
-function renderCues(container, cues, limit = Infinity) {
+function renderCues(container, cues, limit = Infinity, videoId = "") {
   container.replaceChildren();
   const fragment = document.createDocumentFragment();
-
-  cues.slice(0,limit).forEach(c => {
+  cues.slice(0, limit).forEach(c => {
     const d = document.createElement("div");
     d.className = "cue";
-
     const time = document.createElement("time");
-    time.textContent = fmt(c.start) + " → " + fmt(c.end);
-
+    if (videoId) {
+      const link = document.createElement("a");
+      link.href = "https://www.youtube.com/watch?v=" +
+        encodeURIComponent(videoId) + "&t=" + Math.floor(c.start) + "s";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = fmt(c.start) + " → " + fmt(c.end);
+      time.append(link);
+    } else {
+      time.textContent = fmt(c.start) + " → " + fmt(c.end);
+    }
     const txt = document.createElement("div");
     txt.className = "cue-text";
     txt.textContent = c.text;
-
-    d.append(time,txt);
+    d.append(time, txt);
     fragment.append(d);
   });
-
   container.append(fragment);
-
   if (cues.length > limit) {
     const note = document.createElement("p");
     note.className = "muted";
@@ -211,8 +215,8 @@ $("check").addEventListener("click", async () => {
       `影片 ID：${parsed.id}\n` +
       `字幕語言：${data.lang || "未知"}\n` +
       `取得字幕：${cues.length} 句`;
-
-    renderCues(preview,cues);
+    
+    renderCues(preview,cues,Infinity,parsed.id);
 
   } catch (error) {
     status.textContent =
