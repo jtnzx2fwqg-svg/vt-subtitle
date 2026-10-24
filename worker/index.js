@@ -114,29 +114,17 @@ export default {
         });
       }
 
-      const body = await upstream.text();
 
-      return new Response(body, {
-        status: upstream.status,
-        headers: {
-          "Content-Type":
-            upstream.headers.get("Content-Type") ||
-            "application/json; charset=utf-8",
-          "Cache-Control": "no-store",
-          ...(origin === ALLOWED_ORIGIN
-            ? {
-                "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-                "Vary": "Origin",
-              }
-            : {}),
-        },
-      });
-    } catch {
-      return jsonResponse(
-        { error: "Unable to contact the transcript service" },
-        502,
-        origin
-      );
-    }
-  },
-};
+let data;
+
+try {
+  data = await upstream.json();
+} catch {
+  return jsonResponse(
+    { error: "Transcript service returned invalid JSON" },
+    502,
+    origin
+  );
+}
+
+return jsonResponse(data, upstream.status, origin);
