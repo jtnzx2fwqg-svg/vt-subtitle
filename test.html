@@ -483,6 +483,34 @@ $("subtitlefile").addEventListener("change",async e => {
       lines.push("讀取播放器狀態失敗：" + e.message);
     }
 
+    lines.push("");
+    lines.push("---- 右緣超出可視寬度的元素（依右緣由大到小，最多 12 個）----");
+    var limit = de.clientWidth + 0.5;
+    var hits = [];
+    var all = document.body.querySelectorAll("*");
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      if (el.id === "measure-wrap" || (el.closest && el.closest("#measure-wrap"))) continue;
+      var rr = el.getBoundingClientRect();
+      if (rr.width === 0 && rr.height === 0) continue;
+      if (rr.right > limit) hits.push({ el: el, r: rr });
+    }
+    hits.sort(function (a, b) { return b.r.right - a.r.right; });
+    lines.push("共 " + hits.length + " 個，可視寬度 " + de.clientWidth);
+    function label(e) {
+      var t = e.tagName.toLowerCase();
+      if (e.id) t += "#" + e.id;
+      if (e.className && typeof e.className === "string") t += "." + e.className.trim().split(/\s+/).join(".");
+      return t;
+    }
+    for (var k = 0; k < Math.min(12, hits.length); k++) {
+      var h = hits[k], p = h.el.parentElement, path = label(h.el);
+      if (p) path += "  <  " + label(p);
+      if (p && p.parentElement) path += "  <  " + label(p.parentElement);
+      var txt = (h.el.children.length === 0 ? (h.el.textContent || "") : "").trim().slice(0, 24);
+      lines.push((k + 1) + ". " + path + "\n   左 " + h.r.left.toFixed(1) + "　右 " + h.r.right.toFixed(1) + "　寬 " + h.r.width.toFixed(1) + (txt ? "\n   文字：" + txt : ""));
+    }
+
     out.textContent = lines.join("\n");
   }
   document.getElementById("measure-btn").addEventListener("click", measure);
