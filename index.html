@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -7,36 +8,51 @@
 <title>VT 字幕取得測試器</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--panel:#151d30;--line:#2b3852;--text:#edf2ff;--muted:#a9b6cf;--accent:#8ab4ff;--ok:#8ce0b0;--warn:#ffd28a}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:760px;margin:auto;padding:22px 16px 40px}h1{font-size:1.55rem;margin:0 0 6px}h2{font-size:1.08rem;margin:0 0 10px}.intro{color:var(--muted);margin:0 0 20px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:auto;padding:22px 16px 40px}
+h1{font-size:1.55rem;margin:0 0 6px}
+h2{font-size:1.08rem;margin:0 0 10px}
+.intro{color:var(--muted);margin:0 0 20px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
-label{display:block;font-weight:650;margin:12px 0 6px}input,textarea,button{font:inherit}input[type=url],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1426;color:var(--text)}
-button,.filebtn{display:inline-block;border:0;border-radius:10px;background:var(--accent);color:#10182a;font-weight:750;padding:11px 14px;cursor:pointer;margin-top:10px}
-button.secondary{background:#2a3852;color:var(--text)}button:disabled{opacity:.5}
-small,.muted{color:var(--muted)}.status{padding:12px;border-radius:10px;background:#0c1426;border:1px solid var(--line);margin-top:12px;white-space:pre-wrap}
+label{display:block;font-weight:650;margin:12px 0 6px}
+input,textarea,button{font:inherit}
+input[type=url],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1426;color:var(--text)}
+button{display:inline-block;border:0;border-radius:10px;background:var(--accent);color:#10182a;font-weight:750;padding:11px 14px;cursor:pointer;margin-top:10px}
+button.secondary{background:#2a3852;color:var(--text)}
+button:disabled{opacity:.5;cursor:wait}
+small,.muted{color:var(--muted)}
+.status{padding:12px;border-radius:10px;background:#0c1426;border:1px solid var(--line);margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 .pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#26334b;color:#dce7ff;font-size:.82rem;margin-right:5px}
-.grid{display:grid;grid-template-columns:1fr;gap:10px}.result{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
-a{color:var(--accent);overflow-wrap:anywhere}.cue{padding:10px;border-bottom:1px solid var(--line)}.cue time{display:block;color:var(--muted);font-size:.85rem}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+.result{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
+a{color:var(--accent);overflow-wrap:anywhere}
+.cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.cue time{display:block;color:var(--muted);font-size:.85rem}
+.cue-text{white-space:pre-wrap}
 @media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <main>
   <h1>VT 字幕取得測試器</h1>
-  <p class="intro">第一版原型：檢查 YouTube 網址、匯入字幕檔並解析時間軸。此頁不會假裝已成功抓取 YouTube 自動字幕。</p>
+  <p class="intro">取得 YouTube 日文字幕，並依時間順序顯示。也支援匯入 SRT／VTT 字幕檔。</p>
 
   <section class="panel">
-    <h2>1. 輸入 YouTube 存檔網址</h2>
+    <h2>1. 取得 YouTube 日文字幕</h2>
     <label for="yturl">影片網址</label>
-    <input id="yturl" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=..." value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
-    <button id="check">檢查網址</button>
-    <div id="urlstatus" class="status" aria-live="polite">尚未檢查。</div>
-    <p class="muted"><small>注意：一般 iPhone 網頁不能只靠影片網址直接讀取 YouTube 自動字幕。真正的自動字幕取得需要後端服務；下一步會依測試結果接上可行的字幕來源。</small></p>
+    <input id="yturl" type="url" inputmode="url"
+      placeholder="https://www.youtube.com/watch?v=..."
+      value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
+    <button id="check">取得日文字幕</button>
+    <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
+    <div id="autopreview"></div>
+    <p class="muted"><small>本功能透過 Cloudflare Worker 取得字幕。能否取得字幕，取決於影片是否有可用的日文字幕，以及字幕服務的處理結果。</small></p>
   </section>
 
   <section class="panel">
-    <h2>2. 匯入字幕檔（備援測試）</h2>
-    <p class="muted">如果你能取得 .srt 或 .vtt 字幕檔，可以在這裡確認字幕解析與時間戳記是否正常。</p>
+    <h2>2. 匯入字幕檔（備援功能）</h2>
+    <p class="muted">可匯入 SRT／VTT 字幕檔，或直接貼上字幕內容。</p>
     <label for="subtitlefile">選擇字幕檔</label>
     <input id="subtitlefile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
     <label for="subtitletext">或貼上字幕內容</label>
@@ -48,77 +64,236 @@ a{color:var(--accent);overflow-wrap:anywhere}.cue{padding:10px;border-bottom:1px
   </section>
 
   <section class="panel">
-    <h2>3. 下一步會驗證的項目</h2>
+    <h2>3. 後續功能</h2>
     <div class="grid">
-      <div class="result"><span class="pill">待接後端</span><b>自動取得日文字幕</b><br><small>確認能否讀取日文自動產生字幕及時間戳記。</small></div>
-      <div class="result"><span class="pill">可先測試</span><b>字幕解析</b><br><small>支援 SRT／VTT，顯示每句文字及起始時間。</small></div>
-      <div class="result"><span class="pill">下一階段</span><b>繁體中文翻譯</b><br><small>接上免費額度可用的翻譯服務，或先人工測試翻譯流程。</small></div>
-      <div class="result"><span class="pill">下一階段</span><b>iPhone 子母畫面搭配</b><br><small>字幕網頁獨立顯示；影片與字幕的精準同步需要可用的播放時間來源或手動校準。</small></div>
+      <div class="result"><span class="pill">本階段</span><b>取得日文字幕</b><br><small>呼叫後端服務並顯示字幕與時間。</small></div>
+      <div class="result"><span class="pill">保留</span><b>字幕檔解析</b><br><small>支援 SRT／VTT 格式及時間戳記。</small></div>
+      <div class="result"><span class="pill">下一階段</span><b>繁體中文翻譯</b><br><small>待日文字幕取得穩定後再加入。</small></div>
+      <div class="result"><span class="pill">下一階段</span><b>iPhone 子母畫面搭配</b><br><small>之後再研究影片播放與字幕同步。</small></div>
     </div>
   </section>
 </main>
+
 <script>
 const $ = id => document.getElementById(id);
-function parseYouTubeUrl(raw){
+const API = "https://vt-subtitle-api.weide1217.workers.dev/";
+
+function parseYouTubeUrl(raw) {
   let u;
-  try { u = new URL(raw.trim()); } catch { return {ok:false,error:"網址格式不正確。"}; }
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return {ok:false,error:"網址格式不正確，請重新確認。"};
+  }
+
   const host = u.hostname.toLowerCase().replace(/^www\./,"").replace(/^m\./,"");
   let id = "";
-  if(host === "youtu.be") id = u.pathname.split("/").filter(Boolean)[0] || "";
-  else if(["youtube.com","music.youtube.com"].includes(host)){
-    if(u.pathname === "/watch") id = u.searchParams.get("v") || "";
-    else {
+
+  if (host === "youtu.be") {
+    id = u.pathname.split("/").filter(Boolean)[0] || "";
+  } else if (["youtube.com","music.youtube.com"].includes(host)) {
+    if (u.pathname === "/watch") {
+      id = u.searchParams.get("v") || "";
+    } else {
       const m = u.pathname.match(/^\/(?:live|shorts|embed|v)\/([^/?]+)/);
-      if(m) id = m[1];
+      if (m) id = m[1];
     }
   }
-  if(!id || !/^[\w-]{11}$/.test(id)) return {ok:false,error:"無法從網址辨識標準 YouTube 影片 ID，請確認貼上的是影片或存檔網址。"};
-  return {ok:true,id,canonical:"https://www.youtube.com/watch?v="+id,embed:"https://www.youtube.com/embed/"+id};
+
+  if (!id || !/^[\w-]{11}$/.test(id)) {
+    return {ok:false,error:"無法辨識影片 ID，請貼上有效的 YouTube 影片或直播存檔網址。"};
+  }
+
+  return {ok:true,id};
 }
-$("check").addEventListener("click",()=>{
- const r=parseYouTubeUrl($("yturl").value);
- if(!r.ok){$("urlstatus").textContent="檢查結果：失敗\n"+r.error;return;}
- $("urlstatus").textContent="網址格式：通過\n影片 ID："+r.id+"\n標準網址："+r.canonical+"\n\n字幕狀態：尚未檢查\n原因：瀏覽器端無法可靠地直接讀取 YouTube 自動字幕；需要接上後端字幕取得服務後才能確認。";
+
+function fmt(t) {
+  const h = Math.floor(t / 3600);
+  const m = Math.floor(t % 3600 / 60);
+  const s = (t % 60).toFixed(1).padStart(4,"0");
+  return (h ? String(h).padStart(2,"0")+":" : "") +
+    String(m).padStart(2,"0")+":"+s;
+}
+
+function renderCues(container, cues, limit = Infinity) {
+  container.replaceChildren();
+  const fragment = document.createDocumentFragment();
+
+  cues.slice(0,limit).forEach(c => {
+    const d = document.createElement("div");
+    d.className = "cue";
+
+    const time = document.createElement("time");
+    time.textContent = fmt(c.start) + " → " + fmt(c.end);
+
+    const txt = document.createElement("div");
+    txt.className = "cue-text";
+    txt.textContent = c.text;
+
+    d.append(time,txt);
+    fragment.append(d);
+  });
+
+  container.append(fragment);
+
+  if (cues.length > limit) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = `目前顯示前 ${limit} 句，共 ${cues.length} 句字幕。`;
+    container.append(note);
+  }
+}
+
+$("check").addEventListener("click", async () => {
+  const button = $("check");
+  const status = $("urlstatus");
+  const preview = $("autopreview");
+  const raw = $("yturl").value.trim();
+  const parsed = parseYouTubeUrl(raw);
+
+  if (!parsed.ok) {
+    status.textContent = "網址檢查失敗\n" + parsed.error;
+    preview.replaceChildren();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "正在取得字幕…";
+  status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
+  preview.replaceChildren();
+
+  try {
+    const endpoint = new URL(API);
+    endpoint.searchParams.set("url", raw);
+
+    const response = await fetch(endpoint.toString(), {
+      method: "GET"
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("字幕服務回傳的資料無法解析。");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || `字幕服務回應錯誤（HTTP ${response.status}）。`);
+    }
+
+    if (data.jobId) {
+      status.textContent =
+        "字幕服務已接受請求，但仍在處理中。\n" +
+        "目前收到處理編號，尚未取得字幕內容。\n" +
+        "請將此畫面結果回報，以便確認後續查詢方式。";
+      return;
+    }
+
+    if (!Array.isArray(data.content)) {
+      throw new Error("回應中沒有字幕內容。請確認這部影片有可用的字幕。");
+    }
+
+    const cues = data.content
+      .filter(item => item && typeof item.text === "string")
+      .map(item => ({
+        start: Number(item.offset || 0) / 1000,
+        end: (Number(item.offset || 0) + Number(item.duration || 0)) / 1000,
+        text: item.text
+      }))
+      .sort((a,b) => a.start - b.start);
+
+    if (!cues.length) {
+      throw new Error("服務有回應，但沒有可顯示的字幕句子。");
+    }
+
+    status.textContent =
+      `取得成功！\n` +
+      `影片 ID：${parsed.id}\n` +
+      `字幕語言：${data.lang || "未知"}\n` +
+      `取得字幕：${cues.length} 句`;
+
+    renderCues(preview,cues);
+
+  } catch (error) {
+    status.textContent =
+      "取得字幕失敗。\n" +
+      (error && error.message ? error.message : "發生未知錯誤。") +
+      "\n\n請確認網路連線、影片字幕是否可用，以及後端服務是否正常。";
+  } finally {
+    button.disabled = false;
+    button.textContent = "取得日文字幕";
+  }
 });
-function parseTimestamp(s){
- const m=s.trim().replace(",",".").match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
- if(!m)return null;
- const h=Number(m[1]||0), min=Number(m[2]), sec=Number(m[3]), ms=Number((m[4]||"").padEnd(3,"0")||0);
- return h*3600+min*60+sec+ms/1000;
+
+function parseTimestamp(s) {
+  const m = s.trim().replace(",",".").match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!m) return null;
+
+  const h = Number(m[1] || 0);
+  const min = Number(m[2]);
+  const sec = Number(m[3]);
+  const ms = Number((m[4] || "").padEnd(3,"0") || 0);
+
+  return h * 3600 + min * 60 + sec + ms / 1000;
 }
-function parseSubs(text){
- text=text.replace(/^\uFEFF/,"").replace(/\r/g,"").trim();
- const blocks=text.replace(/^WEBVTT[^\n]*\n/,"").split(/\n{2,}/);
- const cues=[];
- for(const b of blocks){
-   const lines=b.split("\n").map(x=>x.trim()).filter(Boolean);
-   const ti=lines.findIndex(x=>x.includes("-->"));
-   if(ti<0)continue;
-   const parts=lines[ti].split("-->");
-   const start=parseTimestamp(parts[0].trim()), end=parseTimestamp(parts[1].trim().split(/\s+/)[0]);
-   const body=lines.slice(ti+1).join("\n").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#39;/g,"'").replace(/&quot;/g,'"');
-   if(start!==null && end!==null && body)cues.push({start,end,text:body});
- }
- return cues;
+
+function parseSubs(text) {
+  text = text.replace(/^\uFEFF/,"").replace(/\r/g,"").trim();
+  const blocks = text.replace(/^WEBVTT[^\n]*\n/,"").split(/\n{2,}/);
+  const cues = [];
+
+  for (const b of blocks) {
+    const lines = b.split("\n").map(x => x.trim()).filter(Boolean);
+    const ti = lines.findIndex(x => x.includes("-->"));
+    if (ti < 0) continue;
+
+    const parts = lines[ti].split("-->");
+    const start = parseTimestamp(parts[0].trim());
+    const end = parseTimestamp(parts[1].trim().split(/\s+/)[0]);
+    const body = lines.slice(ti+1).join("\n")
+      .replace(/<[^>]*>/g,"")
+      .replace(/&amp;/g,"&")
+      .replace(/&lt;/g,"<")
+      .replace(/&gt;/g,">")
+      .replace(/&#39;/g,"'")
+      .replace(/&quot;/g,'"');
+
+    if (start !== null && end !== null && body) {
+      cues.push({start,end,text:body});
+    }
+  }
+
+  return cues;
 }
-function fmt(t){const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=(t%60).toFixed(1).padStart(4,"0");return (h?String(h).padStart(2,"0")+":":"")+String(m).padStart(2,"0")+":"+s;}
-function render(){
- const cues=parseSubs($("subtitletext").value);
- $("substatus").textContent=cues.length ? `解析成功：${cues.length} 句字幕。\n第一句開始：${fmt(cues[0].start)}\n最後一句結束：${fmt(cues[cues.length-1].end)}` : "沒有解析到字幕。請確認內容是有效的 SRT 或 WebVTT 格式，且每句都有時間戳記。";
- const p=$("preview");p.replaceChildren();
- cues.slice(0,80).forEach(c=>{
-   const d=document.createElement("div");d.className="cue";
-   const time=document.createElement("time");time.textContent=fmt(c.start)+" → "+fmt(c.end);
-   const txt=document.createElement("div");txt.textContent=c.text;
-   d.append(time,txt);p.append(d);
- });
- if(cues.length>80){const n=document.createElement("p");n.className="muted";n.textContent=`預覽前 80 句；共 ${cues.length} 句。`;p.append(n);}
+
+function renderImportedSubs() {
+  const cues = parseSubs($("subtitletext").value);
+  $("substatus").textContent = cues.length
+    ? `解析成功：${cues.length} 句字幕。\n第一句開始：${fmt(cues[0].start)}\n最後一句結束：${fmt(cues[cues.length-1].end)}`
+    : "沒有解析到字幕。請確認內容是有效的 SRT 或 WebVTT 格式，且每句都有時間戳記。";
+
+  renderCues($("preview"),cues,80);
 }
-$("parse").addEventListener("click",render);
-$("clear").addEventListener("click",()=>{$("subtitletext").value="";$("subtitlefile").value="";$("substatus").textContent="已清除。";$("preview").replaceChildren();});
-$("subtitlefile").addEventListener("change",async e=>{
- const f=e.target.files&&e.target.files[0];if(!f)return;
- $("subtitletext").value=await f.text();render();
+
+$("parse").addEventListener("click",renderImportedSubs);
+
+$("clear").addEventListener("click",() => {
+  $("subtitletext").value = "";
+  $("subtitlefile").value = "";
+  $("substatus").textContent = "已清除。";
+  $("preview").replaceChildren();
+});
+
+$("subtitlefile").addEventListener("change",async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+
+  try {
+    $("subtitletext").value = await f.text();
+    renderImportedSubs();
+  } catch {
+    $("substatus").textContent = "讀取字幕檔失敗，請重新選擇檔案。";
+  }
 });
 </script>
 </body>
