@@ -3,5 +3,5 @@
   "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
   "name": "vt-subtitle-api",
   "main": "worker/index.js",
-  "compatibility_date": "2026-10-25"
+  "compatibility_date": "2026-10-23"
 }
