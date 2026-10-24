@@ -1,0 +1,492 @@
+
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>VT 版面測量頁</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d30;--line:#2b3852;--text:#edf2ff;--muted:#a9b6cf;--accent:#8ab4ff;--ok:#8ce0b0;--warn:#ffd28a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:auto;padding:22px 0 40px}
+h1{font-size:1.55rem;margin:0 0 6px}
+h2{font-size:1.08rem;margin:0 0 10px}
+.intro{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
+label{display:block;font-weight:650;margin:12px 0 6px}
+input,textarea,button{font:inherit}
+input[type=url],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1426;color:var(--text)}
+button{display:inline-block;border:0;border-radius:10px;background:var(--accent);color:#10182a;font-weight:750;padding:11px 14px;cursor:pointer;margin-top:10px}
+button.secondary{background:#2a3852;color:var(--text)}
+button:disabled{opacity:.5;cursor:wait}
+small,.muted{color:var(--muted)}
+.status{padding:12px;border-radius:10px;background:#0c1426;border:1px solid var(--line);margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#26334b;color:#dce7ff;font-size:.82rem;margin-right:5px}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+.result{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
+a{color:var(--accent);overflow-wrap:anywhere}
+.cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.cue time{display:block;color:var(--muted);font-size:.85rem}
+.cue-text{white-space:pre-wrap}
+#youtube-player-container {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  padding: 8px 0;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+#youtube-player {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+#youtube-player iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+}
+@media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>VT 字幕取得測試器</h1>
+  <p class="intro">取得 YouTube 日文字幕，並依時間順序顯示。也支援匯入 SRT／VTT 字幕檔。</p>
+
+  <section class="panel">
+    <h2>1. 取得 YouTube 日文字幕</h2>
+    <label for="yturl">影片網址</label>
+    <input id="yturl" type="url" inputmode="url"
+      placeholder="https://www.youtube.com/watch?v=..."
+      value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
+    <button id="check">取得日文字幕</button>
+    <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
+        <div id="youtube-player-container" hidden>
+  <div id="youtube-player"></div>
+</div>
+    <div id="autopreview"></div>
+
+    <p class="muted"><small>本功能透過 Cloudflare Worker 取得字幕。能否取得字幕，取決於影片是否有可用的日文字幕，以及字幕服務的處理結果。</small></p>
+  </section>
+
+  <section class="panel">
+    <h2>2. 匯入字幕檔（備援功能）</h2>
+    <p class="muted">可匯入 SRT／VTT 字幕檔，或直接貼上字幕內容。</p>
+    <label for="subtitlefile">選擇字幕檔</label>
+    <input id="subtitlefile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
+    <label for="subtitletext">或貼上字幕內容</label>
+    <textarea id="subtitletext" rows="7" placeholder="可貼上 SRT 或 WebVTT 內容"></textarea>
+    <button id="parse">解析字幕</button>
+    <button id="clear" class="secondary">清除</button>
+    <div id="substatus" class="status" aria-live="polite">尚未載入字幕。</div>
+    <div id="preview"></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. 後續功能</h2>
+    <div class="grid">
+      <div class="result"><span class="pill">本階段</span><b>取得日文字幕</b><br><small>呼叫後端服務並顯示字幕與時間。</small></div>
+      <div class="result"><span class="pill">保留</span><b>字幕檔解析</b><br><small>支援 SRT／VTT 格式及時間戳記。</small></div>
+      <div class="result"><span class="pill">下一階段</span><b>繁體中文翻譯</b><br><small>待日文字幕取得穩定後再加入。</small></div>
+      <div class="result"><span class="pill">下一階段</span><b>iPhone 子母畫面搭配</b><br><small>之後再研究影片播放與字幕同步。</small></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const API = "https://vt-subtitle-api.weide1217.workers.dev/";
+
+let youtubePlayer = null;
+let youtubeApiReady = false;
+let pendingVideoId = null;
+let pendingSeekTime = null;
+
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) {
+    youtubeApiReady = true;
+    return;
+  }
+
+  if (document.getElementById("youtube-iframe-api")) return;
+
+  const script = document.createElement("script");
+  script.id = "youtube-iframe-api";
+  script.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(script);
+}
+
+window.onYouTubeIframeAPIReady = function () {
+  youtubeApiReady = true;
+
+  if (pendingVideoId) {
+    createYouTubePlayer(pendingVideoId);
+  }
+};
+
+function createYouTubePlayer(videoId) {
+  if (!youtubeApiReady) {
+    pendingVideoId = videoId;
+    loadYouTubeAPI();
+    return;
+  }
+
+  pendingVideoId = videoId;
+
+  $("youtube-player-container").hidden = false;
+
+  if (youtubePlayer) {
+    youtubePlayer.loadVideoById(videoId, pendingSeekTime || 0);
+    return;
+  }
+
+  youtubePlayer = new YT.Player("youtube-player", {
+    width: "100%",
+    height: "220",
+    videoId: videoId,
+    playerVars: {
+      playsinline: 1
+    },
+    events: {
+      onReady: function () {
+        if (pendingSeekTime !== null) {
+          youtubePlayer.seekTo(pendingSeekTime, true);
+          pendingSeekTime = null;
+        }
+      }
+    }
+  });
+}
+
+function seekToTimestamp(videoId, seconds) {
+  pendingVideoId = videoId;
+  pendingSeekTime = seconds;
+
+  if (!youtubeApiReady) {
+    loadYouTubeAPI();
+    return;
+  }
+
+  if (!youtubePlayer) {
+    createYouTubePlayer(videoId);
+    return;
+  }
+
+  $("youtube-player-container").hidden = false;
+  youtubePlayer.loadVideoById(videoId, seconds);
+}
+
+function parseYouTubeUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return {ok:false,error:"網址格式不正確，請重新確認。"};
+  }
+
+  const host = u.hostname.toLowerCase().replace(/^www\./,"").replace(/^m\./,"");
+  let id = "";
+
+  if (host === "youtu.be") {
+    id = u.pathname.split("/").filter(Boolean)[0] || "";
+  } else if (["youtube.com","music.youtube.com"].includes(host)) {
+    if (u.pathname === "/watch") {
+      id = u.searchParams.get("v") || "";
+    } else {
+      const m = u.pathname.match(/^\/(?:live|shorts|embed|v)\/([^/?]+)/);
+      if (m) id = m[1];
+    }
+  }
+
+  if (!id || !/^[\w-]{11}$/.test(id)) {
+    return {ok:false,error:"無法辨識影片 ID，請貼上有效的 YouTube 影片或直播存檔網址。"};
+  }
+
+  return {ok:true,id};
+}
+
+function fmt(t) {
+  const h = Math.floor(t / 3600);
+  const m = Math.floor(t % 3600 / 60);
+  const s = (t % 60).toFixed(1).padStart(4,"0");
+  return (h ? String(h).padStart(2,"0")+":" : "") +
+    String(m).padStart(2,"0")+":"+s;
+}
+
+function renderCues(container, cues, limit = Infinity, videoId = "") {
+  container.replaceChildren();
+  const fragment = document.createDocumentFragment();
+
+  cues.slice(0, limit).forEach(c => {
+    const d = document.createElement("div");
+    d.className = "cue";
+
+    const time = document.createElement("time");
+
+    if (videoId) {
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = fmt(c.start) + " → " + fmt(c.end);
+
+      link.addEventListener("click", event => {
+        event.preventDefault();
+        seekToTimestamp(videoId, c.start);
+      });
+
+      time.append(link);
+    } else {
+      time.textContent = fmt(c.start) + " → " + fmt(c.end);
+    }
+
+    const txt = document.createElement("div");
+    txt.className = "cue-text";
+    txt.textContent = c.text;
+
+    d.append(time, txt);
+    fragment.append(d);
+  });
+
+  container.append(fragment);
+
+  if (cues.length > limit) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent =
+      `目前顯示前 ${limit} 句，共 ${cues.length} 句字幕。`;
+    container.append(note);
+  }
+}
+
+$("check").addEventListener("click", async () => {
+  const button = $("check");
+  const status = $("urlstatus");
+  const preview = $("autopreview");
+  const raw = $("yturl").value.trim();
+  const parsed = parseYouTubeUrl(raw);
+
+  if (!parsed.ok) {
+    status.textContent = "網址檢查失敗\n" + parsed.error;
+    preview.replaceChildren();
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "正在取得字幕…";
+  status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
+  preview.replaceChildren();
+
+  try {
+    const endpoint = new URL(API);
+    endpoint.searchParams.set("url", raw);
+
+    const response = await fetch(endpoint.toString(), {
+      method: "GET"
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("字幕服務回傳的資料無法解析。");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || `字幕服務回應錯誤（HTTP ${response.status}）。`);
+    }
+
+    if (data.jobId) {
+      status.textContent =
+        "字幕服務已接受請求，但仍在處理中。\n" +
+        "目前收到處理編號，尚未取得字幕內容。\n" +
+        "請將此畫面結果回報，以便確認後續查詢方式。";
+      return;
+    }
+
+    if (!Array.isArray(data.content)) {
+      throw new Error("回應中沒有字幕內容。請確認這部影片有可用的字幕。");
+    }
+
+    const cues = data.content
+      .filter(item => item && typeof item.text === "string")
+      .map(item => ({
+        start: Number(item.offset || 0) / 1000,
+        end: (Number(item.offset || 0) + Number(item.duration || 0)) / 1000,
+        text: item.text
+      }))
+      .sort((a,b) => a.start - b.start);
+
+    if (!cues.length) {
+      throw new Error("服務有回應，但沒有可顯示的字幕句子。");
+    }
+
+    status.textContent =
+      `取得成功！\n` +
+      `影片 ID：${parsed.id}\n` +
+      `字幕語言：${data.lang || "未知"}\n` +
+      `取得字幕：${cues.length} 句`;
+    
+    createYouTubePlayer(parsed.id);
+renderCues(preview, cues, Infinity, parsed.id);
+
+  } catch (error) {
+    status.textContent =
+      "取得字幕失敗。\n" +
+      (error && error.message ? error.message : "發生未知錯誤。") +
+      "\n\n請確認網路連線、影片字幕是否可用，以及後端服務是否正常。";
+  } finally {
+    button.disabled = false;
+    button.textContent = "取得日文字幕";
+  }
+});
+
+function parseTimestamp(s) {
+  const m = s.trim().replace(",",".").match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!m) return null;
+
+  const h = Number(m[1] || 0);
+  const min = Number(m[2]);
+  const sec = Number(m[3]);
+  const ms = Number((m[4] || "").padEnd(3,"0") || 0);
+
+  return h * 3600 + min * 60 + sec + ms / 1000;
+}
+
+function parseSubs(text) {
+  text = text.replace(/^\uFEFF/,"").replace(/\r/g,"").trim();
+  const blocks = text.replace(/^WEBVTT[^\n]*\n/,"").split(/\n{2,}/);
+  const cues = [];
+
+  for (const b of blocks) {
+    const lines = b.split("\n").map(x => x.trim()).filter(Boolean);
+    const ti = lines.findIndex(x => x.includes("-->"));
+    if (ti < 0) continue;
+
+    const parts = lines[ti].split("-->");
+    const start = parseTimestamp(parts[0].trim());
+    const end = parseTimestamp(parts[1].trim().split(/\s+/)[0]);
+    const body = lines.slice(ti+1).join("\n")
+      .replace(/<[^>]*>/g,"")
+      .replace(/&amp;/g,"&")
+      .replace(/&lt;/g,"<")
+      .replace(/&gt;/g,">")
+      .replace(/&#39;/g,"'")
+      .replace(/&quot;/g,'"');
+
+    if (start !== null && end !== null && body) {
+      cues.push({start,end,text:body});
+    }
+  }
+
+  return cues;
+}
+
+function renderImportedSubs() {
+  const cues = parseSubs($("subtitletext").value);
+  $("substatus").textContent = cues.length
+    ? `解析成功：${cues.length} 句字幕。\n第一句開始：${fmt(cues[0].start)}\n最後一句結束：${fmt(cues[cues.length-1].end)}`
+    : "沒有解析到字幕。請確認內容是有效的 SRT 或 WebVTT 格式，且每句都有時間戳記。";
+
+  renderCues($("preview"),cues,80);
+}
+
+$("parse").addEventListener("click",renderImportedSubs);
+
+$("clear").addEventListener("click",() => {
+  $("subtitletext").value = "";
+  $("subtitlefile").value = "";
+  $("substatus").textContent = "已清除。";
+  $("preview").replaceChildren();
+});
+
+$("subtitlefile").addEventListener("change",async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+
+  try {
+    $("subtitletext").value = await f.text();
+    renderImportedSubs();
+  } catch {
+    $("substatus").textContent = "讀取字幕檔失敗，請重新選擇檔案。";
+  }
+});
+</script>
+
+<div id="measure-wrap" style="margin:12px;padding:12px;background:#fff;color:#111;border-radius:8px">
+  <button id="measure-btn" type="button" style="margin:0 0 10px 0">測量版面（按一次測一次）</button>
+  <pre id="measure-out" style="margin:0;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere">尚未測量。請先取得字幕並等播放器出現，再按上方按鈕。</pre>
+</div>
+<script>
+(function () {
+  function row(name, el) {
+    if (!el) return name + "：不存在";
+    var r = el.getBoundingClientRect();
+    return name + "\n  左 " + r.left.toFixed(1) + "　右 " + r.right.toFixed(1) + "　寬 " + r.width.toFixed(1) + "　高 " + r.height.toFixed(1);
+  }
+  function measure() {
+    var out = document.getElementById("measure-out");
+    var de = document.documentElement;
+    var vv = window.visualViewport;
+    var lines = [];
+    lines.push("時間：" + new Date().toLocaleTimeString());
+    lines.push("方向：" + (innerWidth > innerHeight ? "橫向" : "直向"));
+    lines.push("innerWidth x innerHeight：" + innerWidth + " x " + innerHeight);
+    lines.push("documentElement.clientWidth：" + de.clientWidth);
+    lines.push("documentElement.scrollWidth：" + de.scrollWidth);
+    lines.push("body.scrollWidth：" + document.body.scrollWidth);
+    lines.push("pageXOffset：" + window.pageXOffset);
+    if (vv) lines.push("visualViewport 寬 " + vv.width.toFixed(1) + "　縮放 " + vv.scale.toFixed(2) + "　offsetLeft " + vv.offsetLeft.toFixed(1));
+    lines.push("");
+
+    var main = document.querySelector("main");
+    if (main) {
+      var cs = getComputedStyle(main);
+      lines.push("main 的 margin 左/右：" + cs.marginLeft + " / " + cs.marginRight);
+      lines.push("main 的 padding 左/右：" + cs.paddingLeft + " / " + cs.paddingRight);
+    }
+    lines.push("");
+
+    var panels = document.querySelectorAll(".panel");
+    lines.push(row("main", main));
+    lines.push(row("區塊1", panels[0]));
+    lines.push(row("區塊2", panels[1]));
+    lines.push(row("區塊3", panels[2]));
+    lines.push(row("播放器容器 #youtube-player-container", document.getElementById("youtube-player-container")));
+
+    var pl = document.getElementById("youtube-player");
+    lines.push(row("id=youtube-player 的元素", pl));
+    lines.push("  該元素的標籤：" + (pl ? pl.tagName : "無"));
+    lines.push(row("頁面中的第一個 iframe", document.querySelector("iframe")));
+
+    var ifr = document.querySelector("iframe");
+    if (ifr) {
+      lines.push("  iframe 的 width/height 屬性：" + ifr.getAttribute("width") + " / " + ifr.getAttribute("height"));
+    }
+    lines.push("");
+
+    try {
+      lines.push("YouTube API 已載入（window.YT）：" + (typeof window.YT !== "undefined" && !!window.YT.Player));
+      lines.push("youtubeApiReady：" + youtubeApiReady);
+      lines.push("youtubePlayer 已建立：" + (youtubePlayer !== null));
+      lines.push("pendingSeekTime：" + pendingSeekTime);
+    } catch (e) {
+      lines.push("讀取播放器狀態失敗：" + e.message);
+    }
+
+    out.textContent = lines.join("\n");
+  }
+  document.getElementById("measure-btn").addEventListener("click", measure);
+})();
+</script>
+</body>
+</html>
