@@ -113,8 +113,8 @@ button.btn-danger{background:var(--bad);color:#fff}
           <input type="text" id="cfg-limit-count" value="" placeholder="留空代表全部">
         </div>
         <div>
-          <label>每批上限 (1~80)</label>
-          <input type="text" id="cfg-batch-size" value="80" placeholder="1~80">
+          <label>每批上限 (1~300，建議 100~300)</label>
+          <input type="text" id="cfg-batch-size" value="200" placeholder="1~300，預設 200">
         </div>
       </div>
 
@@ -144,6 +144,7 @@ button.btn-danger{background:var(--bad);color:#fff}
         <button id="btn-save-current-batch" class="btn-save" style="display:none;">暫存當前批次結果</button>
         <button id="btn-revert-current-batch" class="btn-secondary" style="display:none;">還原至已儲存暫存</button>
         <button id="btn-clear-current-batch" class="btn-danger" style="display:none;">作廢此批暫存</button>
+        <button id="btn-split-current-batch" class="btn-secondary" style="display:none;">將此批拆成兩批</button>
         <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
         <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
       </div>
@@ -309,6 +310,9 @@ let parsedRawCues = [];
 let rawParsePassed = false;
 let batchList = [];
 let currentBatchIdx = 0;
+const MAX_BATCH_SIZE = 300;   // 每批上限（使用者可設 1~300，建議 100~300）
+const MAX_SPLIT_DEPTH = 2;    // 失敗拆批最大深度：200 → 100 → 50，不再往下拆
+const MIN_SPLIT_CUES = 2;     // 少於此段數不可再拆
 
 let fullyVerifiedCues = [];
 // 原始字幕解析警告，保留結構化物件 { index: number, type: string, message: string }
@@ -649,6 +653,7 @@ function resetBatchState() {
   document.getElementById('btn-save-current-batch').style.display = 'none';
   document.getElementById('btn-revert-current-batch').style.display = 'none';
   document.getElementById('btn-clear-current-batch').style.display = 'none';
+  document.getElementById('btn-split-current-batch').style.display = 'none';
   document.getElementById('field-trans-prompt').value = '';
   document.getElementById('btn-copy-trans-prompt').disabled = true;
   document.getElementById('status-prompt-info').style.display = 'none';
@@ -701,17 +706,17 @@ document.getElementById('btn-apply-batch-config').addEventListener('click', () =
     }
   }
 
-  // 3. 驗證每批上限（1 到 80，不可默默改成其他數值）
+  // 3. 驗證每批上限（1 到 MAX_BATCH_SIZE，不可默默改成其他數值）
   const rawBatchSizeStr = document.getElementById('cfg-batch-size').value.trim();
   if (!/^[1-9]\d*$/.test(rawBatchSizeStr)) {
     statusPrompt.className = 'status-msg err';
-    statusPrompt.textContent = `【設定錯誤】：每批上限必須是 1 到 80 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`;
+    statusPrompt.textContent = `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`;
     return;
   }
   const cfgBatchSize = parseInt(rawBatchSizeStr, 10);
-  if (cfgBatchSize > 80 || cfgBatchSize < 1) {
+  if (cfgBatchSize > MAX_BATCH_SIZE || cfgBatchSize < 1) {
     statusPrompt.className = 'status-msg err';
-    statusPrompt.textContent = `【設定錯誤】：每批上限必須在 1 到 80 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`;
+    statusPrompt.textContent = `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`;
     return;
   }
 
@@ -749,7 +754,10 @@ document.getElementById('btn-apply-batch-config').addEventListener('click', () =
       status: 'PENDING',
       savedSrt: '',
       savedCues: [],
-      draftSrt: ''
+      draftSrt: '',
+      splitDepth: 0,
+      failCount: 0,
+      lastFailure: ''
     });
   }
 
@@ -758,6 +766,7 @@ document.getElementById('btn-apply-batch-config').addEventListener('click', () =
   document.getElementById('btn-save-current-batch').style.display = 'inline-block';
   document.getElementById('btn-revert-current-batch').style.display = 'none';
   document.getElementById('btn-clear-current-batch').style.display = 'inline-block';
+  document.getElementById('btn-split-current-batch').style.display = 'inline-block';
   updateBatchUI();
 
   // 詞庫未驗證硬阻擋
@@ -779,7 +788,11 @@ function updateBatchUI() {
   if (batchList.length === 0) return;
   const cur = batchList[currentBatchIdx];
   document.getElementById('batch-info-label').textContent = 
-    `目前批次：第 ${cur.batchNum} / ${cur.totalBatches} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)`;
+    `目前批次：第 ${cur.batchNum} / ${cur.totalBatches} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)` +
+    (cur.splitDepth > 0 ? `｜已拆分 ${cur.splitDepth} 層` : '');
+
+  const splitBtn = document.getElementById('btn-split-current-batch');
+  splitBtn.disabled = !(cur.status !== 'SAVED' && cur.splitDepth < MAX_SPLIT_DEPTH && cur.cues.length >= MIN_SPLIT_CUES);
   
   const tag = document.getElementById('batch-status-tag');
   const currentInput = document.getElementById('field-trans-result').value;
@@ -801,7 +814,7 @@ function updateBatchUI() {
     }
   } else {
     tag.className = 'batch-tag pending';
-    tag.textContent = '待翻譯';
+    tag.textContent = cur.failCount > 0 ? `待翻譯（已失敗 ${cur.failCount} 次：${cur.lastFailure}）` : '待翻譯';
     document.getElementById('btn-save-current-batch').disabled = false;
     document.getElementById('btn-clear-current-batch').disabled = true;
     document.getElementById('btn-revert-current-batch').style.display = 'none';
@@ -890,6 +903,7 @@ ${loadedGlossaryRawContent}
 3. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」，並保留日文行。
 4. 不確定的內容請標註「（待確認）」，絕對不可自行猜測補寫。
 5. 只輸出純雙語 SRT 內容，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何前後解說文字。
+6. 不得重新編號、不得合併或拆分字幕、不得改寫日文原文；輸入幾條就輸出幾條，序號沿用原始序號（即使本批不是從 1 開始）。
 
 【待翻譯字幕清單（第 ${batchObj.batchNum} 批，#${batchObj.startSeq} ~ #${batchObj.endSeq}）】：
 ${srtChunk}`;
@@ -1005,6 +1019,97 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
   return { cues, errors, warnings };
 }
 
+// ==================== 失敗分類與拆批（本頁不呼叫 API，僅依貼入內容判斷；只拆失敗的待翻譯批次） ====================
+// 回傳 { type, label, advice(batch) }；type: QUOTA | TRUNCATED | VALIDATION
+function classifyBatchFailure(text, expectedCues, errors) {
+  const t = String(text || '');
+  // 1. 配額/限流：貼入的是錯誤訊息而非字幕。拆批無法解決，必須等待或改用其他模型，不可持續重試。
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|too many requests|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)|try again later|稍後再試/i.test(t)
+      && !/-->/.test(t)) {
+    return { type: 'QUOTA', label: '疑似限流／配額',
+      advice: () => '貼入內容像是限流或配額訊息，不是字幕。請勿拆批，也不要連續重試；稍候再試，或改用備援模型／隔日再繼續。已暫存的批次不受影響。' };
+  }
+  // 1b. 網路錯誤：貼入的是連線失敗訊息。拆批無法解決，直接重試同一批。
+  if (/failed to fetch|network ?error|ERR_[A-Z_]+|timed? ?out|連線(失敗|中斷|逾時)|網路(錯誤|中斷)|503|500 internal/i.test(t) && !/-->/.test(t)) {
+    return { type: 'NETWORK', label: '疑似網路錯誤',
+      advice: () => '貼入內容像是連線或伺服器錯誤，不是字幕。請勿拆批；確認網路後重新送出同一批。' };
+  }
+  // 2. 輸出截斷：區塊數不足，且已輸出的前段與原始序號、時間戳完全一致（只是缺尾）。
+  const blocks = t.replace(/\r\n/g, '\n').split(/\n\s*\n+/).filter(b => b.length > 0);
+  if (blocks.length > 0 && blocks.length < expectedCues.length) {
+    let prefixOk = true;
+    for (let i = 0; i < blocks.length; i++) {
+      const ln = blocks[i].split('\n');
+      const isLast = (i === blocks.length - 1);
+      if (ln[0] !== expectedCues[i].rawSeqLine) { prefixOk = false; break; }           // 最後一塊至少要有正確序號
+      if (!isLast && ln[1] !== expectedCues[i].rawTimeLine) { prefixOk = false; break; }
+      if (isLast && ln.length >= 2 && !expectedCues[i].rawTimeLine.startsWith(ln[1])) { prefixOk = false; break; }
+    }
+    if (prefixOk) {
+      return { type: 'TRUNCATED', label: '疑似輸出截斷',
+        advice: (b) => canSplit(b)
+          ? '回覆在中途結束，前段內容與原始一致。建議按「將此批拆成兩批」改以較小批次重新翻譯；已暫存的其他批次不會重跑。'
+          : '回覆在中途結束，但此批已達最大拆分深度或段數過少，無法再拆。請人工重試此批，或縮小「每批上限」後重新建立批次。' };
+    }
+  }
+  // 3. 其他驗證失敗：序號／時間戳／日文原文不一致、行數不符等。拆批不能修正，應重試同一批。
+  return { type: 'VALIDATION', label: '驗證失敗',
+    advice: (b) => b.failCount >= 3
+      ? '同一批已連續驗證失敗 3 次以上。請人工檢查 Gemini 回覆是否改動了序號、時間戳或日文原文；若回覆很長，可手動按「將此批拆成兩批」。'
+      : '回覆內容與原始字幕不一致（非單純截斷）。拆批通常無法修正，請要求 Gemini 重新輸出此批，並提醒逐字保留序號、時間戳與日文。' };
+}
+
+function canSplit(b) {
+  return !!b && b.status !== 'SAVED' && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
+}
+
+function renumberBatches() {
+  batchList.forEach((b, i) => { b.batchNum = i + 1; b.totalBatches = batchList.length; });
+}
+
+// 將指定「未成功」批次拆成兩個連續子批次；原始 cues 物件原樣保留，已暫存批次完全不動。
+function splitBatchAt(idx) {
+  const cur = batchList[idx];
+  if (!canSplit(cur)) return false;
+  const mid = Math.ceil(cur.cues.length / 2);
+  const mk = (cues) => ({
+    batchNum: 0, totalBatches: 0,
+    startSeq: cues[0].index, endSeq: cues[cues.length - 1].index,
+    cues: cues, status: 'PENDING', savedSrt: '', savedCues: [], draftSrt: '',
+    splitDepth: cur.splitDepth + 1, failCount: 0, lastFailure: ''
+  });
+  batchList.splice(idx, 1, mk(cur.cues.slice(0, mid)), mk(cur.cues.slice(mid)));
+  renumberBatches();
+  currentBatchIdx = idx;
+  return true;
+}
+
+document.getElementById('btn-split-current-batch').addEventListener('click', () => {
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (!canSplit(cur)) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = cur.status === 'SAVED'
+      ? '【拆批拒絕】：此批已驗證並暫存，不可拆分或重跑。若確需重做，請先「作廢此批暫存」。'
+      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`;
+    return;
+  }
+  const hasInput = document.getElementById('field-trans-result').value.trim().length > 0;
+  const ok = confirm(`將第 ${cur.batchNum} 批（#${cur.startSeq} ~ #${cur.endSeq}，${cur.cues.length} 條）拆成兩批重新翻譯？` +
+    (hasInput ? '\n目前輸入框中的未暫存內容將被清空。' : '') + '\n其他已暫存批次不受影響。');
+  if (!ok) return;
+  const from = `#${cur.startSeq} ~ #${cur.endSeq}`;
+  splitBatchAt(currentBatchIdx);
+  setTransInputValue('');
+  lockAndClearVerificationState('批次已拆分，請完成所有批次並重新執行全量校驗。');
+  updateBatchUI();
+  if (isGlossaryVerified) generatePromptForBatch(batchList[currentBatchIdx]);
+  statusEl.className = 'status-msg warn';
+  statusEl.textContent = `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`;
+});
+
 // 暫存當前批次
 document.getElementById('btn-save-current-batch').addEventListener('click', () => {
   const statusEl = document.getElementById('status-verify');
@@ -1024,11 +1129,18 @@ document.getElementById('btn-save-current-batch').addEventListener('click', () =
 
   if (errors.length > 0) {
     statusEl.className = 'status-msg err';
-    statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join('\n');
+    const failure = classifyBatchFailure(inputSrt, curBatch.cues, errors);
+    curBatch.failCount += 1;
+    curBatch.lastFailure = failure.label;
+    updateBatchUI();
+    statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join('\n') +
+      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`;
     return;
   }
 
   curBatch.status = 'SAVED';
+  curBatch.failCount = 0;
+  curBatch.lastFailure = '';
   curBatch.savedSrt = inputSrt;
   curBatch.savedCues = cues;
   curBatch.draftSrt = inputSrt;
