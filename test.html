@@ -48,7 +48,43 @@ a{color:var(--accent);overflow-wrap:anywhere}
 #autopreview .cue time{transform-origin:left bottom}
 #autopreview .cue .cue-text{transform-origin:left top}
 #autopreview .cue.active time,#autopreview .cue.active .cue-text{transform:scale(1.1)}
-#autopreview .cue-text{font-weight:600}
+/* 中文翻譯：主要歌詞，字體較大 */
+#autopreview .cue-translation {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  font-weight: 650;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 日文原文：次要歌詞，字體較小、顏色較淡 */
+#autopreview .cue-original {
+  margin-top: 2px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 保留原本的動畫，讓中文與日文一起放大 */
+#autopreview .cue-translation,
+#autopreview .cue-original {
+  transition: transform .3s ease, color .3s ease;
+  transform-origin: left top;
+}
+
+#autopreview .cue.active .cue-translation {
+  transform: scale(1.05);
+  color: #ffffff;
+}
+
+#autopreview .cue.active .cue-original {
+  transform: scale(1.02);
+  color: #c7c7cc;
+}
 #youtube-player-container {
   position: sticky;
   top: 0;
@@ -59,7 +95,6 @@ a{color:var(--accent);overflow-wrap:anywhere}
   margin-left: 0;
   margin-right: 0;
 }
-
 #youtube-player {
   position: relative;
   width: 100%;
@@ -200,7 +235,6 @@ function createYouTubePlayer(videoId) {
     }
   });
 }
-
 function seekToTimestamp(videoId, seconds) {
   pendingVideoId = videoId;
   pendingSeekTime = seconds;
@@ -343,14 +377,19 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
     } else {
       time.textContent = fmt(c.start) + " → " + fmt(c.end);
     }
+// 中文翻譯：目前先使用測試文字，之後接入真正的翻譯資料
+const translation = document.createElement("div");
+translation.className = "cue-translation";
+translation.textContent = c.zhText || "（中文翻譯待加入）";
 
-    const txt = document.createElement("div");
-    txt.className = "cue-text";
-    txt.textContent = c.text;
+// 日文原文：保留 API 回傳的原始字幕
+const original = document.createElement("div");
+original.className = "cue-original";
+original.textContent = c.text;
 
-    d.append(time, txt);
-    fragment.append(d);
-  });
+d.append(time, translation, original);
+fragment.append(d);
+});
 
   container.append(fragment);
 
@@ -362,7 +401,6 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
     container.append(note);
   }
 }
-
 $("check").addEventListener("click", async () => {
   const button = $("check");
   const status = $("urlstatus");
