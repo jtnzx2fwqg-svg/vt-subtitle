@@ -39,7 +39,12 @@ a{color:var(--accent);overflow-wrap:anywhere}
 #autopreview .cue:has(+ .cue + .cue + .cue.active){opacity:.38;transform:scale(.95)}
 #autopreview .cue:has(+ .cue + .cue.active){opacity:.5;transform:scale(.96)}
 #autopreview .cue:has(+ .cue.active){opacity:.7;transform:scale(.98)}
-#autopreview .cue.active{z-index:1;opacity:1;transform:scale(1.1);background:rgba(138,180,255,.12)}
+#autopreview .cue.active{z-index:1;opacity:1;transform:none;background:rgba(138,180,255,.12)}
+/* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
+#autopreview .cue time,#autopreview .cue .cue-text{transition:transform .3s ease}
+#autopreview .cue time{transform-origin:left bottom}
+#autopreview .cue .cue-text{transform-origin:left top}
+#autopreview .cue.active time,#autopreview .cue.active .cue-text{transform:scale(1.1)}
 #autopreview .cue-text{font-weight:600}
 #youtube-player-container {
   position: sticky;
