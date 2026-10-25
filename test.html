@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
-<title>VT 版面測量頁</title>
+<title>VT 字幕取得測試器</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--panel:#151d30;--line:#2b3852;--text:#edf2ff;--muted:#a9b6cf;--accent:#8ab4ff;--ok:#8ce0b0;--warn:#ffd28a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:760px;margin:auto;padding:22px 0 40px}
+main{max-width:760px;margin:auto;padding:22px 8px 40px}
 h1{font-size:1.55rem;margin:0 0 6px}
 h2{font-size:1.08rem;margin:0 0 10px}
 .intro{color:var(--muted);margin:0 0 20px}
@@ -31,6 +31,8 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .cue time{display:block;color:var(--muted);font-size:.85rem}
 .cue-text{white-space:pre-wrap}
+#autopreview .cue{opacity:.45;border-radius:10px;transition:opacity .25s,background-color .25s}
+#autopreview .cue.active{opacity:1;background:rgba(138,180,255,.14);box-shadow:inset 3px 0 0 var(--accent)}
 #youtube-player-container {
   position: sticky;
   top: 0;
@@ -188,6 +190,58 @@ function seekToTimestamp(videoId, seconds) {
   youtubePlayer.loadVideoById(videoId, seconds);
 }
 
+
+// ===== 字幕跟隨播放進度 =====
+const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
+const FOLLOW_PAUSE_MS = 4000;  // 使用者手動捲動後，暫停自動跟隨的毫秒數
+const SYNC_INTERVAL_MS = 250;  // 每隔多久檢查一次播放進度
+
+let syncTrack = null;
+let lastActiveIndex = -1;
+let followPausedUntil = 0;
+
+function findActiveIndex(cues, t) {
+  let lo = 0, hi = cues.length - 1, idx = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[mid].start <= t) { idx = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  if (idx >= 0 && t > cues[idx].end + ACTIVE_GRACE) return -1;
+  return idx;
+}
+
+function scrollCueIntoPlace(el) {
+  const player = $("youtube-player-container");
+  const offset = (player && !player.hidden ? player.offsetHeight : 0) + 16;
+  const top = window.scrollY + el.getBoundingClientRect().top - offset;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
+function setActiveCue(index) {
+  if (!syncTrack || index === lastActiveIndex) return;
+  const prev = syncTrack.els[lastActiveIndex];
+  if (prev) prev.classList.remove("active");
+  lastActiveIndex = index;
+  const el = syncTrack.els[index];
+  if (!el) return;
+  el.classList.add("active");
+  if (Date.now() < followPausedUntil) return;
+  scrollCueIntoPlace(el);
+}
+
+["touchstart", "touchmove", "wheel"].forEach(name => {
+  window.addEventListener(name, () => {
+    followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+  }, { passive: true });
+});
+
+setInterval(() => {
+  if (!syncTrack || !youtubePlayer || typeof youtubePlayer.getCurrentTime !== "function") return;
+  const t = youtubePlayer.getCurrentTime();
+  if (typeof t !== "number" || Number.isNaN(t)) return;
+  setActiveCue(findActiveIndex(syncTrack.cues, t));
+}, SYNC_INTERVAL_MS);
+
 function parseYouTubeUrl(raw) {
   let u;
   try {
@@ -228,10 +282,13 @@ function fmt(t) {
 function renderCues(container, cues, limit = Infinity, videoId = "") {
   container.replaceChildren();
   const fragment = document.createDocumentFragment();
+  const track = videoId ? { cues: cues.slice(0, limit), els: [] } : null;
+  if (track) { syncTrack = track; lastActiveIndex = -1; }
 
   cues.slice(0, limit).forEach(c => {
     const d = document.createElement("div");
     d.className = "cue";
+    if (track) track.els.push(d);
 
     const time = document.createElement("time");
 
@@ -242,6 +299,7 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
 
       link.addEventListener("click", event => {
         event.preventDefault();
+        followPausedUntil = 0;
         seekToTimestamp(videoId, c.start);
       });
 
@@ -421,101 +479,6 @@ $("subtitlefile").addEventListener("change",async e => {
     $("substatus").textContent = "讀取字幕檔失敗，請重新選擇檔案。";
   }
 });
-</script>
-
-<div id="measure-wrap" style="margin:12px;padding:12px;background:#fff;color:#111;border-radius:8px">
-  <button id="measure-btn" type="button" style="margin:0 0 10px 0">測量版面（按一次測一次）</button>
-  <pre id="measure-out" style="margin:0;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere">尚未測量。請先取得字幕並等播放器出現，再按上方按鈕。</pre>
-</div>
-<script>
-(function () {
-  function row(name, el) {
-    if (!el) return name + "：不存在";
-    var r = el.getBoundingClientRect();
-    return name + "\n  左 " + r.left.toFixed(1) + "　右 " + r.right.toFixed(1) + "　寬 " + r.width.toFixed(1) + "　高 " + r.height.toFixed(1);
-  }
-  function measure() {
-    var out = document.getElementById("measure-out");
-    var de = document.documentElement;
-    var vv = window.visualViewport;
-    var lines = [];
-    lines.push("時間：" + new Date().toLocaleTimeString());
-    lines.push("方向：" + (innerWidth > innerHeight ? "橫向" : "直向"));
-    lines.push("innerWidth x innerHeight：" + innerWidth + " x " + innerHeight);
-    lines.push("documentElement.clientWidth：" + de.clientWidth);
-    lines.push("documentElement.scrollWidth：" + de.scrollWidth);
-    lines.push("body.scrollWidth：" + document.body.scrollWidth);
-    lines.push("pageXOffset：" + window.pageXOffset);
-    if (vv) lines.push("visualViewport 寬 " + vv.width.toFixed(1) + "　縮放 " + vv.scale.toFixed(2) + "　offsetLeft " + vv.offsetLeft.toFixed(1));
-    lines.push("");
-
-    var main = document.querySelector("main");
-    if (main) {
-      var cs = getComputedStyle(main);
-      lines.push("main 的 margin 左/右：" + cs.marginLeft + " / " + cs.marginRight);
-      lines.push("main 的 padding 左/右：" + cs.paddingLeft + " / " + cs.paddingRight);
-    }
-    lines.push("");
-
-    var panels = document.querySelectorAll(".panel");
-    lines.push(row("main", main));
-    lines.push(row("區塊1", panels[0]));
-    lines.push(row("區塊2", panels[1]));
-    lines.push(row("區塊3", panels[2]));
-    lines.push(row("播放器容器 #youtube-player-container", document.getElementById("youtube-player-container")));
-
-    var pl = document.getElementById("youtube-player");
-    lines.push(row("id=youtube-player 的元素", pl));
-    lines.push("  該元素的標籤：" + (pl ? pl.tagName : "無"));
-    lines.push(row("頁面中的第一個 iframe", document.querySelector("iframe")));
-
-    var ifr = document.querySelector("iframe");
-    if (ifr) {
-      lines.push("  iframe 的 width/height 屬性：" + ifr.getAttribute("width") + " / " + ifr.getAttribute("height"));
-    }
-    lines.push("");
-
-    try {
-      lines.push("YouTube API 已載入（window.YT）：" + (typeof window.YT !== "undefined" && !!window.YT.Player));
-      lines.push("youtubeApiReady：" + youtubeApiReady);
-      lines.push("youtubePlayer 已建立：" + (youtubePlayer !== null));
-      lines.push("pendingSeekTime：" + pendingSeekTime);
-    } catch (e) {
-      lines.push("讀取播放器狀態失敗：" + e.message);
-    }
-
-    lines.push("");
-    lines.push("---- 右緣超出可視寬度的元素（依右緣由大到小，最多 12 個）----");
-    var limit = de.clientWidth + 0.5;
-    var hits = [];
-    var all = document.body.querySelectorAll("*");
-    for (var i = 0; i < all.length; i++) {
-      var el = all[i];
-      if (el.id === "measure-wrap" || (el.closest && el.closest("#measure-wrap"))) continue;
-      var rr = el.getBoundingClientRect();
-      if (rr.width === 0 && rr.height === 0) continue;
-      if (rr.right > limit) hits.push({ el: el, r: rr });
-    }
-    hits.sort(function (a, b) { return b.r.right - a.r.right; });
-    lines.push("共 " + hits.length + " 個，可視寬度 " + de.clientWidth);
-    function label(e) {
-      var t = e.tagName.toLowerCase();
-      if (e.id) t += "#" + e.id;
-      if (e.className && typeof e.className === "string") t += "." + e.className.trim().split(/\s+/).join(".");
-      return t;
-    }
-    for (var k = 0; k < Math.min(12, hits.length); k++) {
-      var h = hits[k], p = h.el.parentElement, path = label(h.el);
-      if (p) path += "  <  " + label(p);
-      if (p && p.parentElement) path += "  <  " + label(p.parentElement);
-      var txt = (h.el.children.length === 0 ? (h.el.textContent || "") : "").trim().slice(0, 24);
-      lines.push((k + 1) + ". " + path + "\n   左 " + h.r.left.toFixed(1) + "　右 " + h.r.right.toFixed(1) + "　寬 " + h.r.width.toFixed(1) + (txt ? "\n   文字：" + txt : ""));
-    }
-
-    out.textContent = lines.join("\n");
-  }
-  document.getElementById("measure-btn").addEventListener("click", measure);
-})();
 </script>
 </body>
 </html>
