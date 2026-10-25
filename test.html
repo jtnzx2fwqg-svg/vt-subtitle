@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#000000">
 <title>VT 字幕取得測試器</title>
 <style>
-:root{color-scheme:dark;--bg:#000000;--panel:#1c1c1e;--field:#2c2c2e;--fill:#3a3a3c;--line:#38383a;--text:#f5f5f7;--muted:#98989f;--accent:#0a84ff;--ok:#30d158;--warn:#ffd60a}
+:root{color-scheme:dark;--bg:#000000;--panel:#1c1c1e;--field:#2c2c2e;--fill:#3a3a3c;--line:#38383a;--text:#f5f5f7;--muted:#98989f;--accent:#0a84ff;--ok:#30d158;--bad:#ff453a;--warn:#ffd60a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:760px;margin:auto;padding:22px 8px 40px}
@@ -22,6 +22,13 @@ input[type=url]:focus,textarea:focus,input[type=number]:focus{outline:none;borde
 input[type=number]{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
 .tr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tr-row>div{min-width:0}
+.tr-total{margin-top:12px;font-weight:600}
+#tr-range{font-size:.85rem;min-height:1.2em}
+.gl-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.gl-row .gl-status{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.gl-row button{margin-top:0}
+.gl-ok{color:var(--ok);font-weight:700}
+.gl-bad{color:var(--bad)}
 input[type=file]{width:100%;max-width:100%}
 button{display:inline-block;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;padding:11px 14px;cursor:pointer;margin-top:10px}
 button:active{opacity:.7}
@@ -126,12 +133,20 @@ a{color:var(--accent);overflow-wrap:anywhere}
         <input id="tr-from" type="number" inputmode="numeric" min="1" value="1">
       </div>
       <div>
-        <label for="tr-count">段數（最多 100）</label>
-        <input id="tr-count" type="number" inputmode="numeric" min="1" max="100" value="20">
+        <label for="tr-count">段數（最多 1,000）</label>
+        <input id="tr-count" type="number" inputmode="numeric" min="1" max="1000" value="20">
       </div>
     </div>
-    <label for="tr-glossary">詞庫（選填，貼上你自己的詞庫）</label>
-    <textarea id="tr-glossary" rows="3" placeholder="沒有詞庫可留空；內容不會被修改或補充"></textarea>
+    <div id="tr-total" class="tr-total">尚未取得字幕</div>
+    <div id="tr-range" class="muted"></div>
+    <div class="gl-row">
+      <div id="gl-status" class="gl-status">詞庫讀取中…</div>
+      <button id="gl-reload" type="button" class="secondary">重新載入詞庫</button>
+    </div>
+    <label for="gl-file">從裝置選擇詞庫檔案（選填）</label>
+    <input id="gl-file" type="file" accept=".md,.txt,text/plain,text/markdown">
+    <label for="tr-glossary">手動貼上詞庫（選填；有內容時會取代上方載入的詞庫）</label>
+    <textarea id="tr-glossary" rows="3" placeholder="一般不需要貼；已載入詞庫時請保持空白"></textarea>
     <button id="tr-make">1. 產生要貼給 Gemini 的內容</button>
     <label for="tr-export">要貼給 Gemini 的內容</label>
     <textarea id="tr-export" rows="6" readonly></textarea>
@@ -406,6 +421,7 @@ $("check").addEventListener("click", async () => {
   if (!parsed.ok) {
     status.textContent = "網址檢查失敗\n" + parsed.error;
     preview.replaceChildren();
+    clearTranslationSource();
     return;
   }
 
@@ -413,6 +429,7 @@ $("check").addEventListener("click", async () => {
   button.textContent = "正在取得字幕…";
   status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
   preview.replaceChildren();
+  clearTranslationSource();
 
   try {
     const endpoint = new URL(API);
@@ -480,9 +497,12 @@ renderCues(preview, cues, Infinity, parsed.id);
 });
 
 // ===== 翻譯：透過 Gemini 網頁手動完成（不使用 API）=====
-const MAX_BATCH = 100;
+const MAX_BATCH = 1000;
+const LARGE_BATCH_NOTE = 200;
+const fmtN = n => Number(n).toLocaleString("en-US");
 let loadedCues = [];
 let pendingBatch = null;
+let exportGlossarySig = null;
 let translationWarnings = [];
 
 function toSrtTime(sec) {
@@ -494,36 +514,88 @@ function toSrtTime(sec) {
     p(total % 1000, 3);
 }
 
+function updateTotalDisplay() {
+  $("tr-total").textContent = loadedCues.length
+    ? `已取得字幕：${fmtN(loadedCues.length)} 句`
+    : "尚未取得字幕";
+}
+
+function readIntField(raw, label) {
+  const str = String(raw === undefined || raw === null ? "" : raw).replace(/[,\s]/g, "");
+  if (str === "") return { error: `請輸入${label}。` };
+  if (!/^-?\d+(\.\d+)?$/.test(str)) return { error: `${label}必須是數字。` };
+  const n = Number(str);
+  if (!Number.isInteger(n)) return { error: `${label}必須是整數。` };
+  if (n < 1) return { error: `${label}必須是 1 以上的整數。` };
+  return { value: n };
+}
+
+function computeRange() {
+  const total = loadedCues.length;
+  if (!total) return { error: "尚未取得 YouTube 字幕，請先在上方取得日文字幕。" };
+
+  const f = readIntField($("tr-from").value, "起始編號");
+  if (f.error) return { error: f.error };
+  const c = readIntField($("tr-count").value, "段數");
+  if (c.error) return { error: c.error };
+
+  if (c.value > MAX_BATCH) return { error: `段數最多 ${fmtN(MAX_BATCH)} 句，請調整。` };
+  if (f.value > total) {
+    return { error: `起始編號 ${fmtN(f.value)} 超出範圍，目前字幕共 ${fmtN(total)} 句。` };
+  }
+
+  const count = Math.min(c.value, total - f.value + 1);
+  return { from: f.value, count, last: f.value + count - 1, total, clamped: count < c.value };
+}
+
+function updateBatchHint() {
+  const el = $("tr-range");
+  if (!loadedCues.length) { el.textContent = ""; return; }
+  const r = computeRange();
+  el.textContent = r.error
+    ? r.error
+    : `本批：第 ${fmtN(r.from)}–${fmtN(r.last)} 句（${fmtN(r.count)} 句）` +
+      (r.last < r.total ? `；下一批起始編號 ${fmtN(r.last + 1)}` : "；已是最後一批");
+}
+
+function clearTranslationSource() {
+  loadedCues = [];
+  pendingBatch = null;
+  exportGlossarySig = null;
+  translationWarnings = [];
+  $("tr-export").value = "";
+  $("tr-input").value = "";
+  $("tr-saved").value = "";
+  $("tr-saved-wrap").hidden = true;
+  $("tr-status").textContent = "尚未取得字幕。";
+  updateTotalDisplay();
+  updateBatchHint();
+}
+
 function setTranslationSource(cues) {
   loadedCues = cues;
   pendingBatch = null;
+  exportGlossarySig = null;
   translationWarnings = [];
   $("tr-export").value = "";
   $("tr-input").value = "";
   $("tr-saved").value = "";
   $("tr-saved-wrap").hidden = true;
   $("tr-status").textContent =
-    `已載入 ${cues.length} 段日文原文。\n請選擇範圍，再按「產生要貼給 Gemini 的內容」。`;
+    `已載入 ${fmtN(cues.length)} 句日文原文。\n請選擇範圍，再按「產生要貼給 Gemini 的內容」。`;
+  updateTotalDisplay();
+  updateBatchHint();
 }
 
 function getBatch() {
-  const total = loadedCues.length;
-  if (!total) return { error: "尚未取得 YouTube 字幕，請先在上方取得日文字幕。" };
-
-  const from = Number($("tr-from").value);
-  const countRaw = Number($("tr-count").value);
-  if (!Number.isInteger(from) || from < 1 || !Number.isInteger(countRaw) || countRaw < 1) {
-    return { error: "起始編號與段數都必須是 1 以上的整數。" };
-  }
-  if (from > total) return { error: `起始編號超出範圍，原始字幕共 ${total} 段。` };
-
-  const count = Math.min(countRaw, MAX_BATCH, total - from + 1);
+  const r = computeRange();
+  if (r.error) return r;
   const items = [];
-  for (let i = from - 1; i < from - 1 + count; i++) {
+  for (let i = r.from - 1; i < r.last; i++) {
     const c = loadedCues[i];
     items.push({ index: i + 1, start: toSrtTime(c.start), end: toSrtTime(c.end), ja: c.text });
   }
-  return { items, from, count, total, clamped: count < countRaw };
+  return { ...r, items };
 }
 
 function findTimestampAnomalies(items) {
@@ -592,9 +664,12 @@ function validateTranslation(raw, items) {
   try {
     data = JSON.parse(text);
   } catch (e) {
-    const hint = /[“”‘’]/.test(text)
+    let hint = /[“”‘’]/.test(text)
       ? "（偵測到全形引號，JSON 必須使用半形雙引號）"
       : "";
+    if (!/[}\]]\s*$/.test(text)) {
+      hint += "（內容結尾不完整，Gemini 的回覆可能被截斷。請減少段數後重試；未套用任何譯文）";
+    }
     add(null, "JSON 格式", "無法解析：" + e.message + hint);
     return { ok: false, errors, notes };
   }
@@ -613,7 +688,8 @@ function validateTranslation(raw, items) {
 
   const subs = data.subtitles;
   if (subs.length !== items.length) {
-    add(null, "段數", `原始 ${items.length} 段，收到 ${subs.length} 段。`);
+    add(null, "段數", `原始 ${items.length} 段，收到 ${subs.length} 段。` +
+      (subs.length < items.length ? "回覆可能被截斷或漏譯，請減少段數後重試；未套用任何譯文。" : ""));
   }
 
   const expected = items.map(it => String(it.index));
@@ -728,22 +804,165 @@ async function copyText(text, ta) {
   }
 }
 
+// ===== 詞庫載入與狀態 =====
+const GLOSSARY_URL = "hololive_glossary.md";
+const GLOSSARY_MIN_CHARS = 200;
+const GLOSSARY_MIN_ENTRIES = 5;
+const GLOSSARY_MIN_BULLETS = 5;
+let fileGlossary = { state: "loading" };
+let glossarySeq = 0;
+
+function parseGlossary(raw) {
+  const t = String(raw || "").replace(/^\uFEFF/, "").trim();
+  if (!t) return { ok: false, reason: "內容是空的" };
+  if (/<\s*(!doctype|html|body)\b/i.test(t.slice(0, 500))) {
+    return { ok: false, reason: "拿到的是網頁，不是詞庫文字檔" };
+  }
+  if (t.length < GLOSSARY_MIN_CHARS) return { ok: false, reason: "內容太短，不像完整詞庫" };
+
+  const lines = t.split(/\r?\n/).map(l => l.trim());
+  const entries = lines.filter(l =>
+    /^[^•\-*#>\s].{0,60}[（(][^）)]{1,60}[）)]\s*(【[^】]*】)?$/.test(l)).length;
+  const bullets = lines.filter(l => /^[•\-*]\s/.test(l)).length;
+  if (entries < GLOSSARY_MIN_ENTRIES || bullets < GLOSSARY_MIN_BULLETS) {
+    return { ok: false, reason: "找不到詞條格式（需要「名稱（English）」詞條行與「•」說明行）" };
+  }
+  return { ok: true, entries, bullets, chars: t.length };
+}
+
+function getEffectiveGlossary() {
+  const manual = $("tr-glossary").value.trim();
+  if (manual) {
+    const p = parseGlossary(manual);
+    return p.ok
+      ? { ok: true, text: manual, label: "手動貼上", entries: p.entries }
+      : { ok: false, reason: `手動貼上的內容無法辨識為詞庫（${p.reason}），未使用；清空該欄位可改用檔案詞庫` };
+  }
+  if (fileGlossary.state === "ok") {
+    return { ok: true, text: fileGlossary.text, label: fileGlossary.source, entries: fileGlossary.entries };
+  }
+  if (fileGlossary.state === "loading") return { ok: false, loading: true, reason: "詞庫讀取中" };
+  return { ok: false, reason: fileGlossary.message };
+}
+
+function glossarySig(g) {
+  return g.ok ? `ok:${g.label}:${g.text.length}` : "none";
+}
+
+function renderGlossaryStatus() {
+  const el = $("gl-status");
+  const g = getEffectiveGlossary();
+  el.replaceChildren();
+  const mark = document.createElement("span");
+  const txt = document.createElement("span");
+  if (g.ok) {
+    mark.className = "gl-ok";
+    mark.textContent = "✓ ";
+    txt.textContent = `詞庫已載入（${g.label}，${fmtN(g.entries)} 個詞條）`;
+  } else if (g.loading) {
+    txt.textContent = "詞庫讀取中…";
+  } else {
+    mark.className = "gl-bad";
+    mark.textContent = "✕ ";
+    txt.className = "gl-bad";
+    const reason = String(g.reason || "原因不明");
+    txt.textContent = "詞庫未載入：" + (reason.length > 90 ? reason.slice(0, 87) + "…" : reason);
+  }
+  el.append(mark, txt);
+}
+
+function afterGlossaryChange() {
+  renderGlossaryStatus();
+  if (pendingBatch && exportGlossarySig !== null && glossarySig(getEffectiveGlossary()) !== exportGlossarySig) {
+    $("tr-status").textContent =
+      "詞庫狀態已變更，目前文字框裡的提示詞是用舊的詞庫產生的。\n請重新按「產生要貼給 Gemini 的內容」。";
+  }
+}
+
+async function loadGlossaryFromRepo() {
+  const seq = ++glossarySeq;
+  fileGlossary = { state: "loading" };
+  renderGlossaryStatus();
+  let result;
+  try {
+    const res = await fetch(GLOSSARY_URL, { cache: "no-store" });
+    if (!res.ok) {
+      result = { state: "fail", message: res.status === 404
+        ? `找不到 ${GLOSSARY_URL}（請放在與本頁相同的資料夾，或改用下方選擇檔案）`
+        : `讀取 ${GLOSSARY_URL} 失敗（HTTP ${res.status}）` };
+    } else {
+      const text = await res.text();
+      const p = parseGlossary(text);
+      result = p.ok
+        ? { state: "ok", text, source: GLOSSARY_URL, entries: p.entries }
+        : { state: "fail", message: `${GLOSSARY_URL} 解析失敗：${p.reason}` };
+    }
+  } catch {
+    result = { state: "fail", message: `無法讀取 ${GLOSSARY_URL}（網路或載入錯誤）` };
+  }
+  if (seq !== glossarySeq) return;
+  fileGlossary = result;
+  afterGlossaryChange();
+}
+
+$("gl-reload").addEventListener("click", () => { loadGlossaryFromRepo(); });
+
+$("gl-file").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const seq = ++glossarySeq;
+  let result;
+  try {
+    const text = await f.text();
+    const p = parseGlossary(text);
+    result = p.ok
+      ? { state: "ok", text, source: f.name, entries: p.entries }
+      : { state: "fail", message: `「${f.name}」解析失敗：${p.reason}` };
+  } catch {
+    result = { state: "fail", message: "讀取所選檔案失敗" };
+  }
+  if (seq !== glossarySeq) return;
+  fileGlossary = result;
+  afterGlossaryChange();
+});
+
+$("tr-glossary").addEventListener("input", afterGlossaryChange);
+$("tr-from").addEventListener("input", updateBatchHint);
+$("tr-count").addEventListener("input", updateBatchHint);
+
 $("tr-make").addEventListener("click", async () => {
   const status = $("tr-status");
   const batch = getBatch();
   if (batch.error) { status.textContent = batch.error; return; }
 
+  const g = getEffectiveGlossary();
   pendingBatch = batch.items;
-  const prompt = buildGeminiPrompt(batch.items, $("tr-glossary").value);
+  exportGlossarySig = glossarySig(g);
+  const prompt = buildGeminiPrompt(batch.items, g.ok ? g.text : "");
   $("tr-export").value = prompt;
 
-  const last = batch.from + batch.count - 1;
-  let msg = `已產生第 ${batch.from}–${last} 段（${batch.count} 段，全部共 ${batch.total} 段）。`;
-  if (batch.clamped) msg += `\n段數已自動調整為 ${batch.count}（上限 ${MAX_BATCH} 段，或已到最後一段）。`;
+  let msg = `已產生第 ${fmtN(batch.from)}–${fmtN(batch.last)} 句（${fmtN(batch.count)} 句；全部共 ${fmtN(batch.total)} 句）。`;
+  msg += batch.last < batch.total
+    ? `\n下一批請從起始編號 ${fmtN(batch.last + 1)} 開始。`
+    : "\n這是最後一批。";
+  if (batch.clamped) msg += `\n段數已自動調整為 ${fmtN(batch.count)}（已到最後一句，不會超出字幕總數）。`;
+
+  if (g.ok) {
+    msg += `\n詞庫：已包含（${g.label}，${fmtN(g.entries)} 個詞條）。`;
+  } else if (g.loading) {
+    msg += "\n注意：詞庫仍在讀取中，這次的提示詞沒有詞庫。請等狀態顯示「詞庫已載入」後再重新產生。";
+  } else {
+    msg += `\n注意：詞庫未載入（${g.reason}），這次的提示詞沒有詞庫，專有名詞可能翻譯失準。請確認詞庫後再重新產生。`;
+  }
+
+  if (batch.count > LARGE_BATCH_NOTE) {
+    msg += `\n提醒：單批超過 ${LARGE_BATCH_NOTE} 句時，Gemini 網頁的回覆可能被截斷。若驗證失敗，請縮小段數再試；不完整的回覆不會被套用。`;
+  }
 
   const anomalies = findTimestampAnomalies(batch.items);
   if (anomalies.length) {
-    msg += `\n提醒：第 ${anomalies.join("、")} 段的結束時間不晚於開始時間。這只是提醒，時間戳不會被修改。`;
+    const shown = anomalies.slice(0, 20).join("、") + (anomalies.length > 20 ? `…等 ${anomalies.length} 段` : "");
+    msg += `\n提醒：第 ${shown} 段的結束時間不晚於開始時間。這只是提醒，時間戳不會被修改。`;
   }
 
   const copied = await copyText(prompt, $("tr-export"));
@@ -789,7 +1008,7 @@ $("tr-apply").addEventListener("click", () => {
 $("tr-save").addEventListener("click", async () => {
   const subtitles = [];
   loadedCues.forEach((c, i) => {
-    if (c.zh) {
+    if (typeof c.zh === "string") {
       subtitles.push({ index: i + 1, start: toSrtTime(c.start), end: toSrtTime(c.end), ja: c.text, zh_tw: c.zh });
     }
   });
@@ -802,6 +1021,9 @@ $("tr-save").addEventListener("click", async () => {
     ? `已複製目前已匯入的 ${subtitles.length} 段譯文 JSON（也顯示在下方文字框）。`
     : `已顯示目前已匯入的 ${subtitles.length} 段譯文 JSON，自動複製失敗，請長按下方文字框全選後手動複製。`;
 });
+
+loadGlossaryFromRepo();
+updateTotalDisplay();
 
 function parseTimestamp(s) {
   const m = s.trim().replace(",",".").match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
