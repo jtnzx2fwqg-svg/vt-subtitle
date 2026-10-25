@@ -3,46 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<title>VT 字幕取得測試器</title>
+<meta name="theme-color" content="#000000">
+<title>【TEST】VT 字幕整合測試頁</title>
 <style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:#151d30;--line:#2b3852;--text:#edf2ff;--muted:#a9b6cf;--accent:#8ab4ff;--ok:#8ce0b0;--warn:#ffd28a}
+:root{color-scheme:dark;--bg:#000000;--panel:#1c1c1e;--field:#2c2c2e;--fill:#3a3a3c;--line:#38383a;--text:#f5f5f7;--muted:#98989f;--accent:#0a84ff;--ok:#30d158;--bad:#ff453a;--warn:#ffd60a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:760px;margin:auto;padding:22px 8px 40px}
-h1{font-size:1.55rem;margin:0 0 6px}
-h2{font-size:1.08rem;margin:0 0 10px}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
 .intro{color:var(--muted);margin:0 0 20px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin:14px 0}
+.panel{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px;margin:14px 0}
 label{display:block;font-weight:650;margin:12px 0 6px}
 input,textarea,button{font:inherit}
-input[type=url],textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0c1426;color:var(--text)}
-input[type=file]{
-  width:100%;
-  max-width:100%;
-}
-button{display:inline-block;border:0;border-radius:10px;background:var(--accent);color:#10182a;font-weight:750;padding:11px 14px;cursor:pointer;margin-top:10px}
-button.secondary{background:#2a3852;color:var(--text)}
+input[type=url],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
+input[type=url]:focus,textarea:focus,input[type=number]:focus{outline:none;border-color:var(--accent)}
+input[type=number]{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
+.tr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tr-row>div{min-width:0}
+.tr-total{margin-top:12px;font-weight:600}
+#tr-range{font-size:.85rem;min-height:1.2em}
+.gl-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.gl-row .gl-status{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.gl-row button{margin-top:0}
+.gl-ok{color:var(--ok);font-weight:700}
+.gl-bad{color:var(--bad)}
+input[type=file]{width:100%;max-width:100%}
+button{display:inline-block;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;padding:11px 14px;cursor:pointer;margin-top:10px}
+button:active{opacity:.7}
+button.secondary{background:var(--fill);color:var(--text)}
 button:disabled{opacity:.5;cursor:wait}
 small,.muted{color:var(--muted)}
-.status{padding:12px;border-radius:10px;background:#0c1426;border:1px solid var(--line);margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#26334b;color:#dce7ff;font-size:.82rem;margin-right:5px}
+.status{padding:12px;border-radius:12px;background:var(--field);border:1px solid transparent;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--fill);color:var(--text);font-size:.82rem;margin-right:5px}
 .grid{display:grid;grid-template-columns:1fr;gap:10px}
 .result{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
 a{color:var(--accent);overflow-wrap:anywhere}
 .cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
-.cue time{display:block;color:var(--muted);font-size:.85rem}
+.cue time{display:block;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.cue time a{text-decoration:none}
 .cue-text{white-space:pre-wrap}
+.cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
+.cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
 /* Apple Music 歌詞式字幕：離目前句越遠越暗、越小；右側留白是為了讓放大時不超出版面 */
-#autopreview .cue{position:relative;padding:14px 12% 14px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
+#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
 #autopreview .cue.active + .cue + .cue + .cue{opacity:.38;transform:scale(.95)}
 #autopreview .cue.active + .cue + .cue{opacity:.5;transform:scale(.96)}
 #autopreview .cue.active + .cue{opacity:.7;transform:scale(.98)}
 #autopreview .cue:has(+ .cue + .cue + .cue.active){opacity:.38;transform:scale(.95)}
 #autopreview .cue:has(+ .cue + .cue.active){opacity:.5;transform:scale(.96)}
 #autopreview .cue:has(+ .cue.active){opacity:.7;transform:scale(.98)}
-#autopreview .cue.active{z-index:1;opacity:1;transform:scale(1.1);background:rgba(138,180,255,.12)}
+#autopreview .cue.active{z-index:1;opacity:1;transform:none;background:rgba(255,255,255,.09)}
+/* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
+#autopreview .cue time,#autopreview .cue .cue-body{transition:transform .3s ease}
+#autopreview .cue time{transform-origin:left bottom}
+#autopreview .cue .cue-body{transform-origin:left top}
+#autopreview .cue.active time,#autopreview .cue.active .cue-body{transform:scale(1.1)}
 #autopreview .cue-text{font-weight:600}
+#autopreview .cue.has-zh .cue-text{font-weight:400}
 #youtube-player-container {
   position: sticky;
   top: 0;
@@ -70,12 +88,42 @@ a{color:var(--accent);overflow-wrap:anywhere}
   border: 0;
 }
 @media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
+
+:root{--err:var(--bad)}
+input[type=text]{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+.badge-test{background:var(--bad);color:#fff;padding:2px 8px;border-radius:99px;font-size:.78rem;vertical-align:middle;font-weight:700}
+.card{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px;margin:14px 0;min-width:0}
+.card textarea{display:block;min-height:140px;resize:vertical;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+.hint{color:var(--muted);font-size:.85rem;margin-top:6px;overflow-wrap:anywhere}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.btn-group button,.batch-bar button{margin-top:0;max-width:100%}
+button.btn-secondary{background:var(--fill);color:var(--text)}
+button.btn-accent{background:var(--accent);color:#fff}
+button.btn-save{background:var(--ok);color:#000}
+button.btn-danger{background:var(--bad);color:#fff}
+button:disabled{cursor:not-allowed}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.three-col>div{min-width:0}
+@media(max-width:520px){.three-col{grid-template-columns:1fr}}
+.status-msg{padding:12px;border-radius:12px;background:var(--field);border:1px solid transparent;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:260px;overflow-y:auto}
+.status-msg.err{color:var(--bad)}.status-msg.ok{color:var(--ok)}.status-msg.warn{color:var(--warn)}
+.batch-bar{display:flex;align-items:center;gap:10px;background:var(--field);padding:12px;border-radius:12px;margin:10px 0;flex-wrap:wrap}
+.batch-info{flex:1 1 100%;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
+.batch-tag{font-size:.8rem;padding:2px 8px;border-radius:99px;font-weight:700}
+.batch-tag.saved{background:var(--ok);color:#000}.batch-tag.pending{background:var(--warn);color:#000}
+.status-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:99px;font-size:.88rem;font-weight:700;overflow-wrap:anywhere}
+.status-badge.ok{background:rgba(48,209,88,.15);color:var(--ok)}
+.status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
+#pipeline{font-size:.92rem;margin-top:0}
 </style>
 </head>
 <body>
 <main>
-  <h1>VT 字幕取得測試器</h1>
-  <p class="intro">取得 YouTube 日文字幕，並依時間順序顯示。也支援匯入 SRT／VTT 字幕檔。</p>
+  <h1>VT 字幕整合測試頁 <span class="badge-test">TEST ONLY</span></h1>
+  <p class="intro">取得／匯入日文字幕 → 詞庫驗證 → 分批翻譯與暫存 → 全量校驗 → 雙語字幕載入播放器。僅供測試，未連動正式版。</p>
+
+  <section class="panel"><h2>整合流程狀態</h2><div id="pipeline" class="status">…</div></section>
 
   <section class="panel">
     <h2>1. 取得 YouTube 日文字幕</h2>
@@ -85,6 +133,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
       value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
     <button id="check">取得日文字幕</button>
     <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
+    <div id="player-state" class="status" aria-live="polite">播放器：尚未載入字幕。</div>
         <div id="youtube-player-container" hidden>
   <div id="youtube-player"></div>
 </div>
@@ -94,7 +143,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
   </section>
 
   <section class="panel">
-    <h2>2. 匯入字幕檔（備援功能）</h2>
+    <h2>2. 匯入字幕檔（備援功能；可送入翻譯流程）</h2>
     <p class="muted">可匯入 SRT／VTT 字幕檔，或直接貼上字幕內容。</p>
     <label for="subtitlefile">選擇字幕檔</label>
     <input id="subtitlefile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
@@ -102,19 +151,104 @@ a{color:var(--accent);overflow-wrap:anywhere}
     <textarea id="subtitletext" rows="7" placeholder="可貼上 SRT 或 WebVTT 內容"></textarea>
     <button id="parse">解析字幕</button>
     <button id="clear" class="secondary">清除</button>
+    <button id="btn-import-to-translation">送入翻譯流程（以解析結果重新編號 1..N）</button>
     <div id="substatus" class="status" aria-live="polite">尚未載入字幕。</div>
     <div id="preview"></div>
   </section>
 
-  <section class="panel">
-    <h2>3. 後續功能</h2>
-    <div class="grid">
-      <div class="result"><span class="pill">本階段</span><b>取得日文字幕</b><br><small>呼叫後端服務並顯示字幕與時間。</small></div>
-      <div class="result"><span class="pill">保留</span><b>字幕檔解析</b><br><small>支援 SRT／VTT 格式及時間戳記。</small></div>
-      <div class="result"><span class="pill">下一階段</span><b>繁體中文翻譯</b><br><small>待日文字幕取得穩定後再加入。</small></div>
-      <div class="result"><span class="pill">下一階段</span><b>iPhone 子母畫面搭配</b><br><small>之後再研究影片播放與字幕同步。</small></div>
+  <div class="trwrap">
+  <div class="card">
+    <h2>3. 詞庫（翻譯步驟 0）</h2>
+    <label>選取詞庫檔案 hololive_glossary.txt（專案實際檔名；本頁不自動讀取詞庫，必須手動選檔）：</label>
+    <input type="file" id="glossary-file-input" accept=".txt,text/plain">
+    <div><span id="glossary-status-badge" class="status-badge err">● 詞庫未載入：請選擇 hololive_glossary.txt</span></div>
+    <div id="glossary-status-desc" class="hint">未通過結構驗證（≥500 行、27 個必要章節）前，禁止產生翻譯 Prompt、QC Prompt，也禁止全量校驗解鎖。</div>
+  </div>
+    <div class="card">
+      <h2>4. 原始日文字幕 SRT（翻譯步驟 1）</h2>
+      <label>貼入原始字幕（解析前防誤觸保護；零長度/重疊時間戳記錄至 warnings 保留）：</label>
+      <div class="btn-group">
+        <button id="btn-parse-raw" class="btn-accent">解析原始字幕</button>
+        <button class="btn-secondary" id="btn-clear-raw">清空原始字幕</button>
+      </div>
+      <textarea id="field-raw-ja" placeholder="請貼入日文原始字幕..."></textarea>
+      <div class="hint">上方「取得日文字幕」或「送入翻譯流程」會自動把字幕序列化為 SRT 填入此處並解析；也可手動貼入標準 SRT。</div>
+      <div id="status-raw" class="status-msg" style="display:none;"></div>
     </div>
-  </section>
+
+    <div class="card">
+      <h2>5. 翻譯 Prompt 與批次（翻譯步驟 2）</h2>
+      
+      <!-- 起始序號、段數與每批上限設定 -->
+      <div class="three-col">
+        <div>
+          <label>起始序號 (需實際存在)</label>
+          <input type="text" id="cfg-start-seq" value="1" placeholder="例如 1 或 51">
+        </div>
+        <div>
+          <label>處理段數 (留空代表全部)</label>
+          <input type="text" id="cfg-limit-count" value="" placeholder="留空代表全部">
+        </div>
+        <div>
+          <label>每批上限 (1~300，建議 100~300)</label>
+          <input type="text" id="cfg-batch-size" value="200" placeholder="1~300，預設 200">
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-apply-batch-config" class="btn-accent">套用設定／建立批次</button>
+      </div>
+
+      <div id="batch-control-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="batch-info-label">批次 1 / 1</span>
+        <span id="batch-status-tag" class="batch-tag pending">待翻譯</span>
+        <button id="btn-prev-batch" class="btn-secondary" disabled>上一批</button>
+        <button id="btn-next-batch" class="btn-secondary" disabled>下一批</button>
+        <button id="btn-gen-batch-prompt" class="btn-accent">產生此批 Prompt</button>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-copy-trans-prompt" disabled>複製 Prompt</button>
+      </div>
+      <textarea id="field-trans-prompt" readonly placeholder="請先完成步驟 0 載入詞庫、步驟 1 解析原始字幕並套用批次設定..."></textarea>
+      <div id="status-prompt-info" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>6. 雙語結果暫存、全量校驗與匯出（翻譯步驟 3）</h2>
+      <label>貼入雙語 SRT（單批與多批均強制要求先暫存；修改將標記未存並鎖定全量校驗）：</label>
+      <div class="btn-group">
+        <button id="btn-save-current-batch" class="btn-save" style="display:none;">暫存當前批次結果</button>
+        <button id="btn-revert-current-batch" class="btn-secondary" style="display:none;">還原至已儲存暫存</button>
+        <button id="btn-clear-current-batch" class="btn-danger" style="display:none;">作廢此批暫存</button>
+        <button id="btn-split-current-batch" class="btn-secondary" style="display:none;">將此批拆成兩批</button>
+        <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
+        <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
+        <button class="btn-secondary" id="btn-clear-all-batches">清空所有批次暫存</button>
+      </div>
+      <textarea id="field-trans-result" placeholder="貼入 Gemini 產出之雙語 SRT..."></textarea>
+      <div id="status-verify" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>7. 品質檢查 Prompt（翻譯步驟 4）</h2>
+      <label>僅在通過步驟 3 全量校驗後解鎖（詞庫紅燈或輸入變更將立即重新鎖定）：</label>
+      <div id="qc-batch-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="qc-batch-label">QC 批次 1 / 1</span>
+        <button id="btn-prev-qc-batch" class="btn-secondary" disabled>QC 上一批</button>
+        <button id="btn-next-qc-batch" class="btn-secondary" disabled>QC 下一批</button>
+        <button id="btn-gen-current-qc" class="btn-accent">產生此批 QC Prompt</button>
+      </div>
+      <div class="btn-group">
+        <button id="btn-copy-qc-prompt" disabled>複製 QC Prompt</button>
+      </div>
+      <textarea id="field-qc-prompt" readonly placeholder="通過全量雙語校驗後，此處將解鎖產生 QC Prompt..."></textarea>
+      <div id="status-qc" class="status-msg" style="display:none;"></div>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -329,7 +463,20 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
     txt.className = "cue-text";
     txt.textContent = c.text;
 
-    d.append(time, txt);
+    const body = document.createElement("div");
+    body.className = "cue-body";
+
+    if (c.zh) {
+      const zh = document.createElement("div");
+      zh.className = "cue-zh";
+      zh.textContent = c.zh;
+      d.classList.add("has-zh");
+      body.append(zh, txt);   // 中文在上（主要字幕），日文在下（輔助）
+    } else {
+      body.append(txt);
+    }
+
+    d.append(time, body);
     fragment.append(d);
   });
 
@@ -353,14 +500,13 @@ $("check").addEventListener("click", async () => {
 
   if (!parsed.ok) {
     status.textContent = "網址檢查失敗\n" + parsed.error;
-    preview.replaceChildren();
     return;
   }
 
+  if (hasTranslationWork() && !confirm("取得新字幕將取代目前的翻譯來源，並清空所有批次暫存與翻譯輸入。\n確定要繼續嗎？")) return;
   button.disabled = true;
   button.textContent = "正在取得字幕…";
   status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
-  preview.replaceChildren();
 
   try {
     const endpoint = new URL(API);
@@ -414,6 +560,11 @@ $("check").addEventListener("click", async () => {
     
     createYouTubePlayer(parsed.id);
 renderCues(preview, cues, Infinity, parsed.id);
+    {
+      const ser = serializeCuesToSrt(cues);
+      sourceLabel = `YouTube Worker（${parsed.id}）`;
+      loadRawIntoTranslation(ser.srt, ser.items, ser.notes);
+    }
 
   } catch (error) {
     status.textContent =
@@ -425,6 +576,1454 @@ renderCues(preview, cues, Infinity, parsed.id);
     button.textContent = "取得日文字幕";
   }
 });
+
+
+let verifiedPlayerCues = null;      // Map<序號, 繁中>：僅在全量校驗＋播放器對照成功後才有值
+let playerShowsTranslation = false;
+let currentQcBatchIdx = 0;
+let sourceLabel = "";
+// ==================== 步驟 0：詞庫讀取、SHA-256 計算與結構驗證 ====================
+let loadedGlossaryRawContent = "";
+let isGlossaryVerified = false;
+let glossaryLoadToken = 0; // 讀取交易權杖，防止非同步競態
+
+// 立即撤銷詞庫狀態函式（嚴格比對 Token，防止舊請求干擾新狀態）
+function invalidateGlossaryState(reason, token) {
+  if (token !== undefined && token !== glossaryLoadToken) return;
+
+  isGlossaryVerified = false;
+  loadedGlossaryRawContent = "";
+  const badge = document.getElementById('glossary-status-badge');
+  badge.className = 'status-badge err';
+  badge.textContent = '● 詞庫未載入或驗證失敗';
+  document.getElementById('glossary-status-desc').textContent = reason || '選取檔案中，已撤銷舊詞庫與相關 Prompt。';
+  document.getElementById('field-trans-prompt').value = '';
+  document.getElementById('field-qc-prompt').value = '';
+  document.getElementById('btn-copy-trans-prompt').disabled = true;
+  document.getElementById('btn-copy-qc-prompt').disabled = true;
+  document.getElementById('status-prompt-info').style.display = 'none';
+  document.getElementById('status-qc').style.display = 'none';
+
+  // 全面鎖定校驗、預覽與 JSON 匯出
+  lockAndClearVerificationState('詞庫已失效，全量校驗、預覽與 JSON 匯出已全面鎖定。');
+}
+
+// 計算字串的 SHA-256 雜湊
+async function computeSHA256(text) {
+  const enc = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(text));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function validateGlossaryFileContent(content, token) {
+  if (token !== glossaryLoadToken) return false;
+
+  const badge = document.getElementById('glossary-status-badge');
+  const desc = document.getElementById('glossary-status-desc');
+
+  if (!content || content.trim().length === 0) {
+    invalidateGlossaryState('選取之檔案內容為空，請選取正確的詞庫檔案。', token);
+    return false;
+  }
+
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  if (lines.length < 500) {
+    invalidateGlossaryState(`檔案僅 ${lines.length} 行，原始詞庫應約 931 行。行數不足，判定結構不完整。`, token);
+    return false;
+  }
+
+  // 深度檢查原始詞庫必須存在的 27 個關鍵章節標記
+  const requiredSections = [
+    "1. hololive JP", "1.1 0期生", "1.2 1期生", "1.3 2期生",
+    "1.4 GAMERS", "1.5 3期生", "1.6 4期生", "1.7 5期生", "1.8 holoX",
+    "2. hololive Indonesia", "2.1 AREA 15", "2.2 holoro", "2.3 holoh3ro",
+    "3. hololive English", "3.1 Myth", "3.2 Project: HOPE", "3.3 Council", "3.4 Promise", "3.5 Advent", "3.6 Justice",
+    "4. hololive DEV_IS", "4.1 ReGLOSS", "4.2 FLOW GLOW", "4.3 アソビ★まわり隊！",
+    "5. 跨團體共通規則與字幕翻譯詞彙", "5.3 常見詞的上下文翻譯",
+    "6. 未確認／需人工複核清單"
+  ];
+
+  const missing = requiredSections.filter(sec => !content.includes(sec));
+  if (missing.length > 0) {
+    invalidateGlossaryState(`缺少關鍵章節標記：${missing.slice(0, 3).join(', ')}${missing.length > 3 ? ' 等' : ''}。`, token);
+    return false;
+  }
+
+  if (token !== glossaryLoadToken) return false;
+  const sha256 = await computeSHA256(content);
+  if (token !== glossaryLoadToken) return false;
+
+  loadedGlossaryRawContent = content;
+  isGlossaryVerified = true;
+  badge.className = 'status-badge ok';
+  badge.textContent = '● 詞庫基本結構檢查通過（27 個必要章節）';
+  desc.textContent = `行數：${lines.length} 行 | 檔案雜湊 (SHA-256)：${sha256} | 提示：雜湊值供使用者與已知版本手動核對，本系統僅驗證基本結構。`;
+  return true;
+}
+
+// 監聽選檔事件：僅在真正選取新檔案時才啟動驗證；取消選檔時保留原狀態
+const glossaryFileInput = document.getElementById('glossary-file-input');
+glossaryFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) {
+    // 使用者在系統選檔對話框按取消或未選取任何檔案：保留原已驗證詞庫，不撤銷狀態
+    return;
+  }
+
+  // 若已有暫存批次或已全量校驗，選新檔前提示確認
+  const hasSaved = batchList.some(b => b.status === 'SAVED');
+  if (hasSaved || fullyVerifiedCues.length > 0) {
+    const ok = confirm('選取新詞庫將使現有的全量校驗結果與 QC Prompt 失效。\n所有批次必須依新詞庫重新進行校驗與 QC。\n確定要更換詞庫嗎？');
+    if (!ok) {
+      glossaryFileInput.value = ''; // 使用者取消：清空選取器，保留原詞庫
+      return;
+    }
+  }
+
+  const currentToken = ++glossaryLoadToken;
+  invalidateGlossaryState('正在讀取新選取的詞庫檔案...', currentToken);
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    if (currentToken !== glossaryLoadToken) return;
+    invalidateGlossaryState('詞庫檔案讀取發生錯誤。', currentToken);
+  };
+  reader.onabort = () => {
+    if (currentToken !== glossaryLoadToken) return;
+    invalidateGlossaryState('詞庫檔案讀取已中止。', currentToken);
+  };
+  reader.onload = async (evt) => {
+    if (currentToken !== glossaryLoadToken) return;
+    const okv = await validateGlossaryFileContent(evt.target.result, currentToken);
+    if (okv && currentToken === glossaryLoadToken) {
+      const d = document.getElementById('glossary-status-desc');
+      d.textContent = `檔名：${file.name} | ` + d.textContent +
+        (/(^|[\\/])hololive_glossary\.txt$/i.test(file.name) ? '' : '\n注意：檔名不是 hololive_glossary.txt，請確認選到正確檔案。');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+
+// ==================== 狀態管理變數 ====================
+let parsedRawCues = [];
+let rawParsePassed = false;
+let batchList = [];
+let currentBatchIdx = 0;
+const MAX_BATCH_SIZE = 300;   // 每批上限（使用者可設 1~300，建議 100~300）
+const MAX_SPLIT_DEPTH = 2;    // 失敗拆批最大深度：200 → 100 → 50，不再往下拆
+const MIN_SPLIT_CUES = 2;     // 少於此段數不可再拆
+
+let fullyVerifiedCues = [];
+// 原始字幕解析警告，保留結構化物件 { index: number, type: string, message: string }
+let globalRawWarnings = [];
+let isProgrammaticInputUpdate = false; // 旗標：防止程式回填或切換時觸發輸入作廢
+let lastParsedRawJa = ""; // 僅在成功解析原始字幕時記錄已提交之字串
+
+function parseStrictTimestampValues(tsStr) {
+  const m = tsStr.match(/^(\d{2}):(\d{2}):(\d{2})([,\.])(\d{3})$/);
+  if (!m) return null;
+  const hh = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  const ss = parseInt(m[3], 10);
+  const sep = m[4];
+  const ms = parseInt(m[5], 10);
+  if (mm >= 60 || ss >= 60) return null;
+  const totalMs = hh * 3600000 + mm * 60000 + ss * 1000 + ms;
+  return { raw: tsStr, sep, totalMs };
+}
+
+
+function setTransInputValue(val) {
+  isProgrammaticInputUpdate = true;
+  document.getElementById('field-trans-result').value = val;
+  isProgrammaticInputUpdate = false;
+}
+
+function lockAndClearVerificationState(reasonMsg) {
+  fullyVerifiedCues = [];
+  verifiedPlayerCues = null;
+  document.getElementById('qc-batch-bar').style.display = 'none';
+  document.getElementById('btn-copy-qc-prompt').disabled = true;
+  document.getElementById('field-qc-prompt').value = '';
+  document.getElementById('status-qc').style.display = 'none';
+  document.getElementById('btn-export-json').disabled = true;
+  // 播放器若正顯示譯文，立即退回僅日文原文（未通過校驗的資料不得留在播放器）
+  if (playerShowsTranslation) {
+    playerShowsTranslation = false;
+    if (rawParsePassed && parsedRawCues.length) renderSourcePreview();
+    else document.getElementById('autopreview').replaceChildren();
+  }
+  setPlayerState('播放器：僅顯示日文原文。' + (reasonMsg ? '\n' + reasonMsg : ''));
+}
+
+// 監聽原始字幕變動：修改前防遺失確認
+const fieldRawJaEl = document.getElementById('field-raw-ja');
+fieldRawJaEl.addEventListener('input', () => {
+  const currentVal = fieldRawJaEl.value;
+  if (currentVal === lastParsedRawJa) return;
+
+  const hasSaved = batchList.some(b => b.status === 'SAVED');
+  const hasTransInput = document.getElementById('field-trans-result').value.trim().length > 0;
+
+  if (rawParsePassed && (hasSaved || hasTransInput)) {
+    const ok = confirm('目前已有批次暫存或翻譯輸入！修改原始字幕將會使現有暫存與校驗失效。\n確定要修改原始字幕並放棄現有資料嗎？\n點擊「取消」將還原原始字幕內容並保留所有批次與翻譯。');
+    if (!ok) {
+      fieldRawJaEl.value = lastParsedRawJa;
+      return;
+    }
+  }
+
+  // 使用者確認修改或尚無暫存：清空舊資料並重設
+  rawParsePassed = false;
+  parsedRawCues = [];
+  globalRawWarnings = [];
+  lastParsedRawJa = "";
+  setTransInputValue('');
+  lockAndClearVerificationState('原始字幕已修改，舊驗證與翻譯內容已清空。請重新解析原始字幕。');
+  document.getElementById('status-raw').style.display = 'none';
+  document.getElementById('status-verify').style.display = 'none';
+  resetBatchState();
+});
+
+// 監聽翻譯輸入變動：保留原 savedSrt，僅標記 draftSrt 並鎖定全量校驗
+document.getElementById('field-trans-result').addEventListener('input', () => {
+  if (isProgrammaticInputUpdate) return;
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    const cur = batchList[currentBatchIdx];
+    cur.draftSrt = document.getElementById('field-trans-result').value;
+    updateBatchUI();
+  }
+  lockAndClearVerificationState('翻譯輸入框有未儲存的修改，請點擊「暫存當前批次結果」更新暫存，或點擊「還原」撤銷修改。');
+  document.getElementById('status-verify').style.display = 'none';
+});
+
+// ==================== 步驟 1：原始字幕解析（無 trim 嚴格檢驗，警告序號完全一致） ====================
+function parseRawSubtitlesStrict(text) {
+  const errors = [];
+  const warnings = [];
+  const cues = [];
+
+  if (!text || text.length === 0) {
+    errors.push("輸入內容為空。");
+    return { cues: [], errors, warnings: [] };
+  }
+
+  const normalizedText = text.replace(/\r\n/g, '\n');
+
+  if (normalizedText.includes('-->')) {
+    const blocks = normalizedText.split(/\n\s*\n+/).filter(b => b.length > 0);
+    blocks.forEach((block, bIdx) => {
+      const rawLines = block.split('\n');
+      if (rawLines.length < 3) {
+        errors.push(`區塊 #${bIdx + 1} 行數不足（至少需有序號、時間戳與日文原文）。`);
+        return;
+      }
+
+      // 序號行直接檢查原始字串，不先 trim
+      const rawSeqLine = rawLines[0];
+      if (!/^[1-9]\d*$/.test(rawSeqLine)) {
+        errors.push(`區塊 #${bIdx + 1} 序號行格式不符規範（必須為無前後空白之純數字整數，實際為: "${rawSeqLine}"）`);
+        return;
+      }
+      const seq = parseInt(rawSeqLine, 10);
+
+      // 時間戳行直接檢查原始字串，箭頭前後單空格且無多餘空白
+      const rawTimeLine = rawLines[1];
+      const tm = rawTimeLine.match(/^(\d{2}:\d{2}:\d{2}[,\.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,\.]\d{3})$/);
+      if (!tm) {
+        errors.push(`區塊 #${bIdx + 1} 時間戳行格式不符規範（必須為標準 "HH:MM:SS,mmm --> HH:MM:SS,mmm"，且箭頭前後為單空格無多餘空白，實際為: "${rawTimeLine}"）`);
+        return;
+      }
+      const startObj = parseStrictTimestampValues(tm[1]);
+      const endObj = parseStrictTimestampValues(tm[2]);
+      if (!startObj || !endObj) {
+        errors.push(`區塊 #${bIdx + 1} 時間戳數值非合法格式: "${rawTimeLine}"`);
+        return;
+      }
+
+      if (startObj.totalMs === endObj.totalMs) {
+        warnings.push({ index: seq, type: "zero_duration", message: `字幕 #${seq} 時間戳為零長度 (${startObj.raw} --> ${endObj.raw})，保留原始值。` });
+      } else if (startObj.totalMs > endObj.totalMs) {
+        warnings.push({ index: seq, type: "reversed_time", message: `字幕 #${seq} 時間戳開始時間晚於結束時間 (${startObj.raw} --> ${endObj.raw})，依規格保留原始值並提出警告。` });
+      }
+
+      // 逐行保留日文原文，不進行 trim
+      const jaLines = rawLines.slice(2);
+      const jaText = jaLines.join('\n');
+
+      cues.push({
+        index: seq,
+        rawSeqLine: rawSeqLine,
+        rawTimeLine: rawTimeLine,
+        rawStart: startObj.raw,
+        rawEnd: endObj.raw,
+        startMs: startObj.totalMs,
+        endMs: endObj.totalMs,
+        jaLines: jaLines,
+        ja: jaText
+      });
+    });
+  } else {
+    // 時間戳行模式（支援顯式序號或無序號，但嚴禁混用）
+    const lines = normalizedText.split('\n');
+    const regexWithSeq = /^([1-9]\d*)\s+(\d{2}:\d{2}:\d{2}(?:[,\.]\d{3})?)\s+(.+)$/;
+    const regexNoSeq = /^(\d{2}:\d{2}:\d{2}(?:[,\.]\d{3})?)\s+(.+)$/;
+    const rawItems = [];
+    let hasExplicitCount = 0;
+    let hasNoSeqCount = 0;
+
+    lines.forEach((line, lIdx) => {
+      if (!line || line.trim().length === 0) return;
+      const mSeq = line.match(regexWithSeq);
+      if (mSeq) {
+        hasExplicitCount++;
+        const explicitSeq = parseInt(mSeq[1], 10);
+        const rawTs = mSeq[2];
+        const text = mSeq[3];
+        const paddedTs = rawTs.includes(',') || rawTs.includes('.') ? rawTs : `${rawTs},000`;
+        const tsObj = parseStrictTimestampValues(paddedTs);
+        if (!tsObj) {
+          errors.push(`第 ${lIdx + 1} 行時間戳數值不合法: "${rawTs}"`);
+          return;
+        }
+        rawItems.push({
+          lineNum: lIdx + 1,
+          explicitSeq: explicitSeq,
+          rawTs: rawTs,
+          totalMs: tsObj.totalMs,
+          text: text
+        });
+      } else {
+        const mNoSeq = line.match(regexNoSeq);
+        if (mNoSeq) {
+          hasNoSeqCount++;
+          const rawTs = mNoSeq[1];
+          const text = mNoSeq[2];
+          const paddedTs = rawTs.includes(',') || rawTs.includes('.') ? rawTs : `${rawTs},000`;
+          const tsObj = parseStrictTimestampValues(paddedTs);
+          if (!tsObj) {
+            errors.push(`第 ${lIdx + 1} 行時間戳數值不合法: "${rawTs}"`);
+            return;
+          }
+          rawItems.push({
+            lineNum: lIdx + 1,
+            explicitSeq: null,
+            rawTs: rawTs,
+            totalMs: tsObj.totalMs,
+            text: text
+          });
+        } else {
+          errors.push(`第 ${lIdx + 1} 行無法解析為合法「時間戳＋日文」: "${line}"`);
+          return;
+        }
+      }
+    });
+
+    // 混用序號模式直接報錯
+    if (hasExplicitCount > 0 && hasNoSeqCount > 0) {
+      errors.push(`原始字幕格式錯誤：整份字幕混用了「明確序號」(${hasExplicitCount} 行) 與「無序號」(${hasNoSeqCount} 行)，禁止混用！`);
+    }
+
+    if (errors.length === 0) {
+      if (rawItems.length === 0) {
+        errors.push("未找到任何有效之時間戳行！");
+      } else {
+        rawItems.forEach((item, i) => {
+          const seq = item.explicitSeq !== null ? item.explicitSeq : (i + 1);
+
+          if (i === rawItems.length - 1) {
+            // 最後一條無法推算結束時間，整份解析失敗
+            errors.push(`字幕 #${seq}（最後一條字幕「${item.text}」）無法確定結束時間！時間戳行模式無法自動推算最後一段結束時間，整份解析失敗。請改用標準 SRT。`);
+            return;
+          }
+          const nextItem = rawItems[i + 1];
+          if (item.totalMs === nextItem.totalMs) {
+            warnings.push({ index: seq, type: "zero_duration", message: `字幕 #${seq} 產生零長度時間戳 (${item.rawTs} --> ${nextItem.rawTs})，保留原始值。` });
+          } else if (item.totalMs > nextItem.totalMs) {
+            warnings.push({ index: seq, type: "reversed_time", message: `字幕 #${seq} 時間戳時序倒流：(${item.rawTs} 晚於下一條 ${nextItem.rawTs})，保留原始值並提出警告。` });
+          }
+          const rawTimeLine = `${item.rawTs} --> ${nextItem.rawTs}`;
+          cues.push({
+            index: seq,
+            rawSeqLine: String(seq),
+            rawTimeLine: rawTimeLine,
+            rawStart: item.rawTs,
+            rawEnd: nextItem.rawTs,
+            startMs: item.totalMs,
+            endMs: nextItem.totalMs,
+            jaLines: [item.text],
+            ja: item.text
+          });
+        });
+      }
+    }
+  }
+
+  // 檢查序號唯一性與全篇時間順序
+  if (errors.length === 0) {
+    const seqSet = new Set();
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i];
+      if (seqSet.has(c.index)) {
+        errors.push(`發現重複序號: #${c.index}`);
+      }
+      seqSet.add(c.index);
+
+      if (i > 0) {
+        const prev = cues[i - 1];
+        if (c.startMs < prev.startMs) {
+          warnings.push({ index: c.index, type: "backward_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 早於前一條開始時間 (${prev.rawStart})，保留原始值。` });
+        } else if (c.startMs < prev.endMs) {
+          warnings.push({ index: c.index, type: "overlap_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 與前一條結束時間重疊，保留原始值。` });
+        }
+      }
+    }
+  }
+
+  // 若存在任何錯誤，回傳之 cues 強制為空陣列，防止半成品被使用
+  if (errors.length > 0) {
+    return { cues: [], errors, warnings: [] };
+  }
+
+  return { cues, errors, warnings };
+}
+
+// 重新解析原始字幕按鈕（增加防遺失確認）
+document.getElementById('btn-parse-raw').addEventListener('click', () => {
+  const currentTransInput = document.getElementById('field-trans-result').value.trim();
+  const hasSavedBatches = batchList.some(b => b.status === 'SAVED');
+  const hasUnsavedTrans = currentTransInput.length > 0;
+
+  if (hasSavedBatches || hasUnsavedTrans) {
+    const ok = confirm('目前已有暫存之翻譯資料或輸入框中有翻譯內容！\n重新解析原始字幕將會清空現有的所有批次暫存與翻譯輸入。\n確定要重新解析原始字幕嗎？');
+    if (!ok) return; // 使用者取消：完整保留原輸入與批次暫存
+  }
+
+  const text = document.getElementById('field-raw-ja').value;
+  const statusEl = document.getElementById('status-raw');
+  statusEl.style.display = 'block';
+
+  const { cues, errors, warnings } = parseRawSubtitlesStrict(text);
+
+  if (errors.length > 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = `【原始字幕解析 FAIL】：發現 ${errors.length} 項嚴重錯誤，保留現有解析資料與批次：\n` + errors.slice(0, 10).join('\n');
+    return;
+  }
+
+  // 解析完全成功才提交
+  lastParsedRawJa = text;
+  rawParsePassed = true;
+  parsedRawCues = cues;
+  globalRawWarnings = warnings.slice();
+
+  setTransInputValue('');
+  lockAndClearVerificationState('原始字幕已重新解析，請重新完成翻譯與全量校驗。');
+  resetBatchState();
+
+  statusEl.className = 'status-msg ok';
+  statusEl.textContent = `【原始字幕解析 PASS】：共 ${cues.length} 條合法字幕。` +
+    (warnings.length > 0 ? `\n【時間戳警告（${warnings.length} 項，已保存）】：\n` + warnings.slice(0, 6).map(w => w.message).join('\n') + (warnings.length > 6 ? `\n...其餘 ${warnings.length - 6} 項警告已完整記錄` : '') : '') +
+    `\n\n提示：請在步驟 2 設定起始序號、處理段數後，點擊「套用設定／建立批次」開始分批作業。`;
+  renderSourcePreview();
+});
+
+// ==================== 步驟 2：先驗證後提交的批次管理 ====================
+function resetBatchState() {
+  batchList = [];
+  currentBatchIdx = 0;
+  document.getElementById('batch-control-bar').style.display = 'none';
+  document.getElementById('btn-save-current-batch').style.display = 'none';
+  document.getElementById('btn-revert-current-batch').style.display = 'none';
+  document.getElementById('btn-clear-current-batch').style.display = 'none';
+  document.getElementById('btn-split-current-batch').style.display = 'none';
+  document.getElementById('field-trans-prompt').value = '';
+  document.getElementById('btn-copy-trans-prompt').disabled = true;
+  document.getElementById('status-prompt-info').style.display = 'none';
+}
+
+document.getElementById('btn-apply-batch-config').addEventListener('click', () => {
+  const statusPrompt = document.getElementById('status-prompt-info');
+  statusPrompt.style.display = 'block';
+
+  if (!rawParsePassed || parsedRawCues.length === 0) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = '【操作順序錯誤】：請先完成步驟 1 原始字幕解析，方可套用批次設定！';
+    return;
+  }
+
+  // 1. 驗證起始序號（不可自動退回第一條，錯誤時列出可用序號範例）
+  const rawStartSeqStr = document.getElementById('cfg-start-seq').value.trim();
+  if (!/^[1-9]\d*$/.test(rawStartSeqStr)) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = `【設定錯誤】：起始序號必須是正整數（輸入為 "${rawStartSeqStr}"）。已停止，保留現有設定、批次與輸入。`;
+    return;
+  }
+  const cfgStartSeq = parseInt(rawStartSeqStr, 10);
+  const startIdx = parsedRawCues.findIndex(c => c.index === cfgStartSeq);
+  if (startIdx === -1) {
+    const availableSample = parsedRawCues.slice(0, 5).map(c => '#' + c.index).join(', ');
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = `【設定錯誤】：找不到指定的起始序號 #${cfgStartSeq}！請輸入實際存在的字幕序號（現有可用序號範例：${availableSample}${parsedRawCues.length > 5 ? ' ... 共 ' + parsedRawCues.length + ' 個序號' : ''}）。已停止，絕不自動退回第一條。`;
+    return;
+  }
+
+  // 2. 驗證處理段數（留空才代表全部；0、負數、小數均報錯拒絕）
+  const rawLimitStr = document.getElementById('cfg-limit-count').value.trim();
+  const availableRemaining = parsedRawCues.length - startIdx;
+  let cfgLimit = availableRemaining;
+  let isTruncatedNotice = "";
+
+  if (rawLimitStr !== '') {
+    if (!/^[1-9]\d*$/.test(rawLimitStr)) {
+      statusPrompt.className = 'status-msg err';
+      statusPrompt.textContent = `【設定錯誤】：處理段數必須是正整數（輸入為 "${rawLimitStr}"，只有留空才代表處理全部）。已停止，保留現有設定、批次與輸入。`;
+      return;
+    }
+    const parsedLimit = parseInt(rawLimitStr, 10);
+    if (parsedLimit > availableRemaining) {
+      cfgLimit = availableRemaining;
+      isTruncatedNotice = ` (注意：輸入的處理段數 ${parsedLimit} 大於剩餘字幕數 ${availableRemaining}，已自動調整為實際處理 ${availableRemaining} 段)`;
+    } else {
+      cfgLimit = parsedLimit;
+    }
+  }
+
+  // 3. 驗證每批上限（1 到 MAX_BATCH_SIZE，不可默默改成其他數值）
+  const rawBatchSizeStr = document.getElementById('cfg-batch-size').value.trim();
+  if (!/^[1-9]\d*$/.test(rawBatchSizeStr)) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`;
+    return;
+  }
+  const cfgBatchSize = parseInt(rawBatchSizeStr, 10);
+  if (cfgBatchSize > MAX_BATCH_SIZE || cfgBatchSize < 1) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`;
+    return;
+  }
+
+  // 4. 檢查是否有已暫存內容或未暫存輸入殘留
+  const currentInputText = document.getElementById('field-trans-result').value.trim();
+  const hasSaved = batchList.some(b => b.status === 'SAVED');
+  const hasUnsavedInput = currentInputText.length > 0 && (
+    batchList.length === 0 ||
+    (batchList[currentBatchIdx] && batchList[currentBatchIdx].status !== 'SAVED') ||
+    (batchList[currentBatchIdx] && currentInputText !== batchList[currentBatchIdx].savedSrt.trim())
+  );
+
+  if (hasSaved || hasUnsavedInput) {
+    const ok = confirm('目前已有暫存之翻譯或未暫存的輸入內容，重新建立批次將清空現有暫存與輸入！\n確定要放棄並套用新批次設定嗎？');
+    if (!ok) return; // 使用者取消：完整保留原批次與輸入
+  }
+
+  // 5. 使用者確認且所有設定合法後，清除舊輸入並提交建立新批次
+  setTransInputValue('');
+  resetBatchState();
+
+  const targetedCues = parsedRawCues.slice(startIdx, startIdx + cfgLimit);
+  const total = targetedCues.length;
+  const totalBatches = Math.ceil(total / cfgBatchSize);
+
+  for (let b = 0; b < totalBatches; b++) {
+    const bStart = b * cfgBatchSize;
+    const bEnd = Math.min(bStart + cfgBatchSize, total);
+    batchList.push({
+      batchNum: b + 1,
+      totalBatches: totalBatches,
+      startSeq: targetedCues[bStart].index,
+      endSeq: targetedCues[bEnd - 1].index,
+      cues: targetedCues.slice(bStart, bEnd),
+      status: 'PENDING',
+      savedSrt: '',
+      savedCues: [],
+      draftSrt: '',
+      splitDepth: 0,
+      failCount: 0,
+      lastFailure: ''
+    });
+  }
+
+  currentBatchIdx = 0;
+  document.getElementById('batch-control-bar').style.display = 'flex';
+  document.getElementById('btn-save-current-batch').style.display = 'inline-block';
+  document.getElementById('btn-revert-current-batch').style.display = 'none';
+  document.getElementById('btn-clear-current-batch').style.display = 'inline-block';
+  document.getElementById('btn-split-current-batch').style.display = 'inline-block';
+  updateBatchUI();
+
+  // 詞庫未驗證硬阻擋
+  if (!isGlossaryVerified) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = '【安全阻擋】：詞庫未載入或驗證失敗（紅燈），禁止產生翻譯與 QC Prompt！請先於步驟 0 載入正確詞庫檔案。';
+    document.getElementById('field-trans-prompt').value = '';
+    document.getElementById('btn-copy-trans-prompt').disabled = true;
+    return;
+  }
+
+  generatePromptForBatch(batchList[0]);
+  if (isTruncatedNotice) {
+    statusPrompt.textContent += isTruncatedNotice;
+  }
+});
+
+function updateBatchUI() {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  document.getElementById('batch-info-label').textContent = 
+    `目前批次：第 ${cur.batchNum} / ${cur.totalBatches} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)` +
+    (cur.splitDepth > 0 ? `｜已拆分 ${cur.splitDepth} 層` : '');
+
+  const splitBtn = document.getElementById('btn-split-current-batch');
+  splitBtn.disabled = !(cur.status !== 'SAVED' && cur.splitDepth < MAX_SPLIT_DEPTH && cur.cues.length >= MIN_SPLIT_CUES);
+  
+  const tag = document.getElementById('batch-status-tag');
+  const currentInput = document.getElementById('field-trans-result').value;
+  const hasDraftDiff = cur.status === 'SAVED' && cur.savedSrt !== currentInput;
+
+  if (cur.status === 'SAVED') {
+    if (hasDraftDiff) {
+      tag.className = 'batch-tag pending';
+      tag.textContent = '已暫存 (有未儲存修改)';
+      document.getElementById('btn-save-current-batch').disabled = false;
+      document.getElementById('btn-clear-current-batch').disabled = false;
+      document.getElementById('btn-revert-current-batch').style.display = 'inline-block';
+    } else {
+      tag.className = 'batch-tag saved';
+      tag.textContent = '已暫存 (鎖定)';
+      document.getElementById('btn-save-current-batch').disabled = true;
+      document.getElementById('btn-clear-current-batch').disabled = false;
+      document.getElementById('btn-revert-current-batch').style.display = 'none';
+    }
+  } else {
+    tag.className = 'batch-tag pending';
+    tag.textContent = cur.failCount > 0 ? `待翻譯（已失敗 ${cur.failCount} 次：${cur.lastFailure}）` : '待翻譯';
+    document.getElementById('btn-save-current-batch').disabled = false;
+    document.getElementById('btn-clear-current-batch').disabled = true;
+    document.getElementById('btn-revert-current-batch').style.display = 'none';
+  }
+
+  document.getElementById('btn-prev-batch').disabled = (currentBatchIdx === 0);
+  document.getElementById('btn-next-batch').disabled = (currentBatchIdx === batchList.length - 1);
+}
+
+// 切換批次：防止未暫存內容遺失
+function handleBatchSwitch(newIdx) {
+  if (currentBatchIdx === newIdx) return;
+  const cur = batchList[currentBatchIdx];
+  const inputVal = document.getElementById('field-trans-result').value;
+
+  // 檢查當前批次是否有未暫存的變更內容
+  const hasUnsavedDraft = (cur.status === 'PENDING' && inputVal.trim().length > 0) ||
+                          (cur.status === 'SAVED' && inputVal !== cur.savedSrt);
+
+  if (hasUnsavedDraft) {
+    const ok = confirm(`目前第 ${cur.batchNum} 批有尚未暫存的修改內容！\n點擊「確定」將放棄未儲存修改並切換批次。\n點擊「取消」將留在原批次並保留目前輸入與暫存。`);
+    if (!ok) {
+      return; // 使用者取消：停留在原批次，保留原輸入與暫存
+    }
+    // 使用者確認放棄未儲存修改：若已暫存則還原 draftSrt 為 savedSrt
+    if (cur.status === 'SAVED') {
+      cur.draftSrt = cur.savedSrt;
+    } else {
+      cur.draftSrt = '';
+    }
+  }
+
+  currentBatchIdx = newIdx;
+  const targetBatch = batchList[currentBatchIdx];
+  const textToLoad = targetBatch.status === 'SAVED' ? targetBatch.savedSrt : (targetBatch.draftSrt || '');
+  setTransInputValue(textToLoad);
+  updateBatchUI();
+  generatePromptForBatch(batchList[currentBatchIdx]);
+}
+
+document.getElementById('btn-prev-batch').addEventListener('click', () => {
+  if (currentBatchIdx > 0) handleBatchSwitch(currentBatchIdx - 1);
+});
+
+document.getElementById('btn-next-batch').addEventListener('click', () => {
+  if (currentBatchIdx < batchList.length - 1) handleBatchSwitch(currentBatchIdx + 1);
+});
+
+document.getElementById('btn-gen-batch-prompt').addEventListener('click', () => {
+  if (batchList.length > 0) {
+    generatePromptForBatch(batchList[currentBatchIdx]);
+  }
+});
+
+function generatePromptForBatch(batchObj) {
+  const statusPrompt = document.getElementById('status-prompt-info');
+  statusPrompt.style.display = 'block';
+
+  if (!isGlossaryVerified) {
+    statusPrompt.className = 'status-msg err';
+    statusPrompt.textContent = '【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生翻譯 Prompt！';
+    document.getElementById('field-trans-prompt').value = '';
+    document.getElementById('btn-copy-trans-prompt').disabled = true;
+    return;
+  }
+
+  // 使用原始字串組裝 SRT
+  const srtChunk = batchObj.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${c.ja}`).join('\n\n');
+
+  const prompt = `你現在是專業的 Hololive 日文轉台灣繁體中文雙語字幕翻譯專家。請將以下直播日文字幕翻譯成繁體中文（台灣用語）。
+
+【重要分批指示】
+本任務共 ${batchObj.totalBatches} 批，此為【第 ${batchObj.batchNum} 批】，字幕序號範圍為 #${batchObj.startSeq} 至 #${batchObj.endSeq}（共 ${batchObj.cues.length} 條）。
+請務必精確輸出此區間的所有字幕，不得跳號、漏段或輸出超出此範圍的字幕。
+
+【參考詞庫與規範（原始全文）】
+${loadedGlossaryRawContent}
+
+【嚴格輸出格式規則】
+1. 每一條字幕的編號行與時間戳行必須整行完全逐字保留（不得修改分隔符號、空格或任何數字），不得修改、合併、刪除或重新排序。
+2. 每條字幕區塊結構固定為：
+   - 第 1 行：字幕序號（與原始序號行完全逐字一致）
+   - 第 2 行：時間戳行（與原始時間戳行完全逐字一致）
+   - 第 3 行：台灣繁體中文翻譯（必須為單行）
+   - 第 4 行起：原始日語字幕（若原始日文為多行，必須逐行逐字完全保留原始日文，不可改動或刪減）
+3. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」，並保留日文行。
+4. 不確定的內容請標註「（待確認）」，絕對不可自行猜測補寫。
+5. 只輸出純雙語 SRT 內容，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何前後解說文字。
+6. 不得重新編號、不得合併或拆分字幕、不得改寫日文原文；輸入幾條就輸出幾條，序號沿用原始序號（即使本批不是從 1 開始）。
+
+【待翻譯字幕清單（第 ${batchObj.batchNum} 批，#${batchObj.startSeq} ~ #${batchObj.endSeq}）】：
+${srtChunk}`;
+
+  document.getElementById('field-trans-prompt').value = prompt;
+  document.getElementById('btn-copy-trans-prompt').disabled = false;
+  statusPrompt.className = 'status-msg ok';
+  statusPrompt.textContent = `已產生【第 ${batchObj.batchNum} / ${batchObj.totalBatches} 批】Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`;
+}
+
+document.getElementById('btn-copy-trans-prompt').addEventListener('click', () => {
+  const p = document.getElementById('field-trans-prompt').value;
+  if (!p) return alert('Prompt 內容為空！');
+  navigator.clipboard.writeText(p).then(() => alert('已複製翻譯 Prompt！'));
+});
+
+// ==================== 步驟 3：嚴格整行逐字比對與統一暫存 ====================
+// 依「序號行 + 緊接的時間戳行」辨識字幕區塊邊界，不再依賴空白行。
+// 邊界偵測刻意寬鬆（容許前後空白），目的只是切出區塊；嚴格逐字比對仍由 parseAndValidateBilingualSrt 負責。
+// 單獨的數字行（後面沒有緊接時間戳行）不會被視為序號。區塊尾端的空白行視為分隔符，區塊內部內容不做任何修改。
+function splitBilingualBlocks(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const seqRe = /^\s*\d+\s*$/;
+  const timeRe = /^\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*$/;
+  const starts = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (seqRe.test(lines[i]) && timeRe.test(lines[i + 1])) starts.push(i);
+  }
+  const leading = [];
+  const firstStart = starts.length ? starts[0] : lines.length;
+  for (let i = 0; i < firstStart; i++) {
+    if (lines[i].trim().length > 0) leading.push(i + 1);   // 記錄行號
+  }
+  const blocks = starts.map((st, k) => {
+    let end = (k + 1 < starts.length) ? starts[k + 1] : lines.length;
+    while (end > st + 1 && lines[end - 1].trim().length === 0) end--;   // 只剝除尾端分隔用空白行
+    return lines.slice(st, end).join('\n');
+  });
+  return { blocks, leadingLineNumbers: leading };
+}
+
+function parseAndValidateBilingualSrt(text, expectedRawCues) {
+  const errors = [];
+  const warnings = [];
+  const cues = [];
+
+  if (!text || text.trim().length === 0) {
+    errors.push("【輸入為空】雙語字幕輸入內容為空。");
+    return { cues, errors, warnings };
+  }
+
+  if (text.includes('```')) {
+    errors.push("偵測到 Markdown 程式碼框符號 (```)，請只貼入純 SRT 內容！");
+  }
+
+  const { blocks, leadingLineNumbers } = splitBilingualBlocks(text);
+
+  if (blocks.length === 0) {
+    errors.push('【區塊解析失敗】找不到任何有效字幕區塊（每條字幕需以「序號行」開頭，且下一行必須是時間戳行）。');
+    return { cues, errors, warnings };
+  }
+  if (leadingLineNumbers.length > 0) {
+    errors.push(`【區塊解析失敗】第一個有效字幕區塊之前有 ${leadingLineNumbers.length} 行無法歸屬的內容（第 ${leadingLineNumbers.slice(0, 5).join(', ')} 行起）。`);
+  }
+
+  if (blocks.length !== expectedRawCues.length) {
+    errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 條字幕，實際解析出 ${blocks.length} 個字幕區塊！`);
+  }
+
+  const seqSet = new Set();
+  const maxLen = Math.max(blocks.length, expectedRawCues.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const rawBlock = blocks[i];
+    const exp = expectedRawCues[i];
+    const labelNum = exp ? `#${exp.index}` : `區塊 #${i + 1}`;
+
+    if (rawBlock === undefined) {
+      errors.push(`遺漏字幕 ${labelNum}（原始字幕有此段，但翻譯結果缺失）。`);
+      continue;
+    }
+    if (!exp) {
+      errors.push(`多出額外字幕區塊 #${i + 1}（超出原始字幕數量）：\n"${rawBlock}"`);
+      continue;
+    }
+
+    const rawLines = rawBlock.split('\n');
+    const expectedJaLineCount = exp.jaLines.length;
+    const expectedTotalLines = 3 + expectedJaLineCount;
+
+    if (rawLines.length < expectedTotalLines) {
+      errors.push(`字幕 ${labelNum} 缺少內容：原始日文為 ${expectedJaLineCount} 行，區塊應為 ${expectedTotalLines} 行，實際僅 ${rawLines.length} 行（可能缺少繁中翻譯或原始日文）：\n"${rawBlock}"`);
+      continue;
+    }
+    if (rawLines.length !== expectedTotalLines) {
+      errors.push(`字幕 ${labelNum} 行數不符規格：原始日文為 ${expectedJaLineCount} 行，雙語區塊應剛好為 ${expectedTotalLines} 行（1行序號 + 1行時間戳 + 1行繁中 + ${expectedJaLineCount}行日文），實際為 ${rawLines.length} 行：\n"${rawBlock}"`);
+      continue;
+    }
+
+    // 1. 檢查序號行（完全逐字比對原始字串，不容許前後空格）
+    const actualSeqLine = rawLines[0];
+    if (actualSeqLine !== exp.rawSeqLine) {
+      if (/^\d+$/.test(actualSeqLine) && seqSet.has(parseInt(actualSeqLine, 10))) {
+        errors.push(`字幕 ${labelNum} 發現重複序號: #${parseInt(actualSeqLine, 10)}（此位置應為 "${exp.rawSeqLine}"）`);
+        continue;
+      }
+      errors.push(`字幕 ${labelNum} 序號行未整行逐字保留：原始為 "${exp.rawSeqLine}"，輸出為 "${actualSeqLine}"`);
+      continue;
+    }
+    const seq = parseInt(actualSeqLine.trim(), 10);
+    if (seqSet.has(seq)) {
+      errors.push(`字幕 ${labelNum} 發現重複序號: #${seq}`);
+    }
+    seqSet.add(seq);
+
+    // 2. 檢查時間戳行（完全整行逐字比對原始時間戳行）
+    const actualTimeLine = rawLines[1];
+    if (actualTimeLine !== exp.rawTimeLine) {
+      errors.push(`字幕 ${labelNum} 時間戳行未整行逐字保留：\n  原始: "${exp.rawTimeLine}"\n  輸出: "${actualTimeLine}"`);
+      continue;
+    }
+
+    // 3. 檢查繁中翻譯
+    const zh = rawLines[2];
+    if (!zh || zh.trim().length === 0) {
+      errors.push(`字幕 ${labelNum} 繁體中文翻譯為空！`);
+    }
+
+    // 4. 逐字逐行比對多行日文原文（不使用 trim 掩飾字元差異）
+    const outJaLines = rawLines.slice(3);
+    const outJaText = outJaLines.join('\n');
+    let jaMatch = true;
+    for (let k = 0; k < expectedJaLineCount; k++) {
+      if (outJaLines[k] !== exp.jaLines[k]) {
+        jaMatch = false;
+        break;
+      }
+    }
+    if (!jaMatch) {
+      errors.push(`字幕 ${labelNum} 日文原文未逐字保留！\n  原始: "${exp.ja}"\n  輸出: "${outJaText}"`);
+    }
+
+    cues.push({
+      index: seq,
+      start: exp.rawStart,
+      end: exp.rawEnd,
+      zh_tw: zh,
+      ja: outJaText
+    });
+  }
+
+  return { cues, errors, warnings };
+}
+
+// ==================== 失敗分類與拆批（本頁不呼叫 API，僅依貼入內容判斷；只拆失敗的待翻譯批次） ====================
+// 回傳 { type, label, advice(batch) }；type: QUOTA | TRUNCATED | VALIDATION
+function classifyBatchFailure(text, expectedCues, errors) {
+  const t = String(text || '');
+  // 0. 空輸入
+  if (t.trim().length === 0) {
+    return { type: 'EMPTY', label: '輸入為空',
+      advice: () => '輸入框是空的。請貼入 Gemini 回覆的雙語 SRT 後再暫存。' };
+  }
+  // 1. 配額/限流：貼入的是錯誤訊息而非字幕。拆批無法解決，必須等待或改用其他模型，不可持續重試。
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|too many requests|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)|try again later|稍後再試/i.test(t)
+      && !/-->/.test(t)) {
+    return { type: 'QUOTA', label: '疑似限流／配額',
+      advice: () => '貼入內容像是限流或配額訊息，不是字幕。請勿拆批，也不要連續重試；稍候再試，或改用備援模型／隔日再繼續。已暫存的批次不受影響。' };
+  }
+  // 1b. 網路錯誤：貼入的是連線失敗訊息。拆批無法解決，直接重試同一批。
+  if (/failed to fetch|network ?error|ERR_[A-Z_]+|timed? ?out|連線(失敗|中斷|逾時)|網路(錯誤|中斷)|503|500 internal/i.test(t) && !/-->/.test(t)) {
+    return { type: 'NETWORK', label: '疑似網路錯誤',
+      advice: () => '貼入內容像是連線或伺服器錯誤，不是字幕。請勿拆批；確認網路後重新送出同一批。' };
+  }
+  // 2. 輸出截斷：區塊數不足，且已輸出的前段與原始序號、時間戳完全一致（只是缺尾）。
+  const blocks = splitBilingualBlocks(t).blocks;
+  if (blocks.length > 0 && blocks.length < expectedCues.length) {
+    let prefixOk = true;
+    for (let i = 0; i < blocks.length; i++) {
+      const ln = blocks[i].split('\n');
+      const isLast = (i === blocks.length - 1);
+      if (ln[0] !== expectedCues[i].rawSeqLine) { prefixOk = false; break; }           // 最後一塊至少要有正確序號
+      if (!isLast && ln[1] !== expectedCues[i].rawTimeLine) { prefixOk = false; break; }
+      if (isLast && ln.length >= 2 && !expectedCues[i].rawTimeLine.startsWith(ln[1])) { prefixOk = false; break; }
+    }
+    if (prefixOk) {
+      return { type: 'TRUNCATED', label: '疑似輸出截斷',
+        advice: (b) => canSplit(b)
+          ? '回覆在中途結束，前段內容與原始一致。建議按「將此批拆成兩批」改以較小批次重新翻譯；已暫存的其他批次不會重跑。'
+          : '回覆在中途結束，但此批已達最大拆分深度或段數過少，無法再拆。請人工重試此批，或縮小「每批上限」後重新建立批次。' };
+    }
+  }
+  // 3. 其他失敗：依實際錯誤內容分項回報，只列出真正出現的問題類別
+  const errs = (errors || []).map(String);
+  const has = re => errs.some(e => re.test(e));
+  const hasOther = re => errs.some(e => !/區塊解析失敗/.test(e) && re.test(e));   // 解析失敗訊息本身的說明文字不計入其他類別
+  const cats = [];
+  if (has(/區塊解析失敗/)) cats.push(['解析失敗', '無法依「序號行＋時間戳行」切出字幕區塊，請確認貼入的是完整的雙語 SRT（不含說明文字）。']);
+  if (hasOther(/總段數不符|遺漏字幕|多出額外/)) cats.push(['段數不符', '回覆的字幕條數與本批預期不同，請看錯誤訊息中的實際與預期段數。']);
+  if (hasOther(/序號行|重複序號/)) cats.push(['序號', '有序號被改動、重複或缺漏，必須逐字沿用原始序號。']);
+  if (hasOther(/時間戳行/)) cats.push(['時間戳', '有時間戳被改動，必須逐字保留。']);
+  if (hasOther(/繁體中文翻譯為空|缺少內容/)) cats.push(['翻譯或內容缺漏', '有條目缺少繁中翻譯或原始日文。']);
+  if (hasOther(/日文原文未逐字|行數不符/)) cats.push(['日文原文／行數', '日文原文被改動，或區塊行數與規格不符。']);
+  const label = cats.length ? '驗證失敗：' + cats.map(c => c[0]).join('、') : '驗證失敗';
+  return { type: 'VALIDATION', label,
+    advice: (b) => (cats.length ? cats.map(c => '・' + c[1]).join('\n') : '請參考上方錯誤訊息。') +
+      (b.failCount >= 3 ? '\n同一批已連續失敗 3 次以上，請人工檢查回覆；若回覆很長，可手動按「將此批拆成兩批」。' : '') };
+}
+
+function canSplit(b) {
+  return !!b && b.status !== 'SAVED' && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
+}
+
+function renumberBatches() {
+  batchList.forEach((b, i) => { b.batchNum = i + 1; b.totalBatches = batchList.length; });
+}
+
+// 將指定「未成功」批次拆成兩個連續子批次；原始 cues 物件原樣保留，已暫存批次完全不動。
+function splitBatchAt(idx) {
+  const cur = batchList[idx];
+  if (!canSplit(cur)) return false;
+  const mid = Math.ceil(cur.cues.length / 2);
+  const mk = (cues) => ({
+    batchNum: 0, totalBatches: 0,
+    startSeq: cues[0].index, endSeq: cues[cues.length - 1].index,
+    cues: cues, status: 'PENDING', savedSrt: '', savedCues: [], draftSrt: '',
+    splitDepth: cur.splitDepth + 1, failCount: 0, lastFailure: ''
+  });
+  batchList.splice(idx, 1, mk(cur.cues.slice(0, mid)), mk(cur.cues.slice(mid)));
+  renumberBatches();
+  currentBatchIdx = idx;
+  return true;
+}
+
+document.getElementById('btn-split-current-batch').addEventListener('click', () => {
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (!canSplit(cur)) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = cur.status === 'SAVED'
+      ? '【拆批拒絕】：此批已驗證並暫存，不可拆分或重跑。若確需重做，請先「作廢此批暫存」。'
+      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`;
+    return;
+  }
+  const hasInput = document.getElementById('field-trans-result').value.trim().length > 0;
+  const ok = confirm(`將第 ${cur.batchNum} 批（#${cur.startSeq} ~ #${cur.endSeq}，${cur.cues.length} 條）拆成兩批重新翻譯？` +
+    (hasInput ? '\n目前輸入框中的未暫存內容將被清空。' : '') + '\n其他已暫存批次不受影響。');
+  if (!ok) return;
+  const from = `#${cur.startSeq} ~ #${cur.endSeq}`;
+  splitBatchAt(currentBatchIdx);
+  setTransInputValue('');
+  lockAndClearVerificationState('批次已拆分，請完成所有批次並重新執行全量校驗。');
+  updateBatchUI();
+  if (isGlossaryVerified) generatePromptForBatch(batchList[currentBatchIdx]);
+  statusEl.className = 'status-msg warn';
+  statusEl.textContent = `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`;
+});
+
+// 暫存當前批次
+document.getElementById('btn-save-current-batch').addEventListener('click', () => {
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+
+  lockAndClearVerificationState('批次暫存異動中，請完成所有批次並重新執行全量校驗。');
+
+  if (!rawParsePassed || batchList.length === 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = '【暫存 FAIL】：請先完成步驟 1 原始字幕解析與套用批次設定！';
+    return;
+  }
+
+  const curBatch = batchList[currentBatchIdx];
+  const inputSrt = document.getElementById('field-trans-result').value;
+  const { cues, errors } = parseAndValidateBilingualSrt(inputSrt, curBatch.cues);
+
+  if (errors.length > 0) {
+    statusEl.className = 'status-msg err';
+    const failure = classifyBatchFailure(inputSrt, curBatch.cues, errors);
+    curBatch.failCount += 1;
+    curBatch.lastFailure = failure.label;
+    updateBatchUI();
+    statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join('\n') +
+      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`;
+    return;
+  }
+
+  curBatch.status = 'SAVED';
+  curBatch.failCount = 0;
+  curBatch.lastFailure = '';
+  curBatch.savedSrt = inputSrt;
+  curBatch.savedCues = cues;
+  curBatch.draftSrt = inputSrt;
+  updateBatchUI();
+
+  statusEl.className = 'status-msg ok';
+  statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`;
+});
+
+// 還原至已儲存暫存按鈕
+document.getElementById('btn-revert-current-batch').addEventListener('click', () => {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (cur.status === 'SAVED') {
+    setTransInputValue(cur.savedSrt);
+    cur.draftSrt = cur.savedSrt;
+    updateBatchUI();
+    document.getElementById('status-verify').style.display = 'none';
+  }
+});
+
+// 作廢當前批次暫存（同步清空輸入框）
+document.getElementById('btn-clear-current-batch').addEventListener('click', () => {
+  if (batchList.length === 0) return;
+  const curBatch = batchList[currentBatchIdx];
+  const ok = confirm(`確定要作廢第 ${curBatch.batchNum} 批的暫存資料嗎？這將清空此批暫存與輸入框內容。`);
+  if (!ok) return;
+
+  curBatch.status = 'PENDING';
+  curBatch.savedSrt = '';
+  curBatch.savedCues = [];
+  curBatch.draftSrt = '';
+  setTransInputValue('');
+  updateBatchUI();
+  lockAndClearVerificationState(`第 ${curBatch.batchNum} 批暫存已作廢且輸入框已清空，請重新暫存並執行全量校驗。`);
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+  statusEl.className = 'status-msg warn';
+  statusEl.textContent = `已作廢第 ${curBatch.batchNum} 批暫存狀態並清空輸入框。`;
+});
+
+// 清空目前輸入框
+document.getElementById('btn-clear-trans').addEventListener('click', () => {
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    const cur = batchList[currentBatchIdx];
+    if (cur.status === 'SAVED') {
+      const ok = confirm(`第 ${cur.batchNum} 批已暫存。清空輸入框將會將此批退回「待翻譯」並作廢暫存！確定要清空嗎？`);
+      if (!ok) return;
+      cur.status = 'PENDING';
+      cur.savedSrt = '';
+      cur.savedCues = [];
+      cur.draftSrt = '';
+    } else {
+      cur.draftSrt = '';
+    }
+    updateBatchUI();
+  }
+  setTransInputValue('');
+  document.getElementById('status-verify').style.display = 'none';
+  lockAndClearVerificationState('已清空目前輸入框，當前批次暫存已作廢。');
+});
+
+// 清空所有批次暫存按鈕
+document.getElementById('btn-clear-all-batches').addEventListener('click', () => {
+  if (batchList.length === 0) return;
+  const ok = confirm('確定要清空全部批次的暫存資料嗎？');
+  if (!ok) return;
+
+  batchList.forEach(b => {
+    b.status = 'PENDING';
+    b.savedSrt = '';
+    b.savedCues = [];
+    b.draftSrt = '';
+  });
+  setTransInputValue('');
+  updateBatchUI();
+  lockAndClearVerificationState('已清空所有批次暫存，所有批次重設為「待翻譯」。');
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+  statusEl.className = 'status-msg warn';
+  statusEl.textContent = '所有批次暫存已完全清空重置。';
+});
+
+// 全量校驗按鈕（統一單批與多批；詞庫未驗證硬阻擋）
+document.getElementById('btn-verify-all').addEventListener('click', () => {
+  const statusEl = document.getElementById('status-verify');
+  statusEl.style.display = 'block';
+
+  // 1. 詞庫紅燈在全量校驗入口硬阻擋
+  if (!isGlossaryVerified) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = '【全量校驗 FAIL】：詞庫未載入或驗證失敗（紅燈），禁止執行全量校驗、預覽與 JSON 匯出！請先於步驟 0 載入正確詞庫檔案。';
+    lockAndClearVerificationState('詞庫未驗證，禁止全量校驗。');
+    return;
+  }
+
+  lockAndClearVerificationState('正在執行全量校驗，舊預覽與 QC 已清除...');
+
+  if (!rawParsePassed || parsedRawCues.length === 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = '【全量校驗 FAIL】：原始字幕未通過步驟 1 解析！';
+    return;
+  }
+
+  if (batchList.length === 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = '【全量校驗 FAIL】：尚未套用批次設定！請先點擊「套用設定／建立批次」。';
+    return;
+  }
+
+  // 2. 統一防線：所有批次必須為 SAVED
+  const pendingBatches = batchList.filter(b => b.status !== 'SAVED');
+  if (pendingBatches.length > 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = `【全量校驗 FAIL】：尚有未暫存的批次（第 ${pendingBatches.map(b => b.batchNum).join(', ')} 批）。所有批次必須先點擊「暫存當前批次結果」後，方可執行全量校驗！`;
+    return;
+  }
+
+  // 3. 防線：當前輸入框不能與已存內容不一致
+  const cur = batchList[currentBatchIdx];
+  const currentInputText = document.getElementById('field-trans-result').value;
+  if (cur && cur.status === 'SAVED' && currentInputText !== cur.savedSrt) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = `【全量校驗 FAIL】：第 ${cur.batchNum} 批輸入框中有尚未儲存的修改內容！請先點擊「暫存當前批次結果」更新暫存，或點擊「還原至已儲存暫存」後再執行全量校驗。`;
+    return;
+  }
+
+  const fullTransText = batchList.map(b => b.savedSrt).join('\n\n');
+  const allTargetedRawCues = batchList.flatMap(b => b.cues);
+  const { cues: transCues, errors: verifyErrors } = parseAndValidateBilingualSrt(fullTransText, allTargetedRawCues);
+
+  if (verifyErrors.length > 0) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = `【全量校驗 FAIL】：發現 ${verifyErrors.length} 項嚴重錯誤，已鎖定 QC 並禁止預覽：\n` + verifyErrors.slice(0, 15).join('\n');
+    return;
+  }
+
+  fullyVerifiedCues = transCues;
+  document.getElementById('btn-export-json').disabled = false;
+
+  // 計算落在此次目標範圍內的 warnings（結構化物件陣列）
+  const targetedSeqSet = new Set(fullyVerifiedCues.map(c => c.index));
+  const scopedWarnings = globalRawWarnings
+    .filter(w => targetedSeqSet.has(w.index))
+    .map(w => ({
+      index: w.index,
+      type: w.type || "timestamp_anomaly",
+      message: w.message
+    }));
+
+  statusEl.className = 'status-msg ok';
+  statusEl.textContent = `【全量校驗 PASS】：共 ${transCues.length} 條字幕，段數、序號行、時間戳行與多行日文原文 100% 精準逐字吻合！已解鎖步驟 4 QC 檢查與 JSON 匯出。` +
+    (scopedWarnings.length > 0 ? `\n（包含 ${scopedWarnings.length} 項落在本次範圍內的時間戳警告，將保留至 JSON 匯出）` : '');
+
+  initQcBatchManager(transCues);
+
+  const built = buildVerifiedPlayerCues(transCues, allTargetedRawCues);
+  if (!built.ok) {
+    lockAndClearVerificationState('轉換為播放器資料時對照失敗，已重新鎖定。');
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = `【全量校驗 FAIL（播放器對照）】：已重新鎖定 QC、匯出與播放器。\n` + built.errors.slice(0, 10).join('\n');
+    return;
+  }
+  verifiedPlayerCues = built.map;
+  renderVerifiedPlayer();
+});
+
+// 匯出相容 JSON（依本次字幕範圍嚴格隔離 warnings，並保留結構化物件）
+document.getElementById('btn-export-json').addEventListener('click', () => {
+  if (fullyVerifiedCues.length === 0 || !isGlossaryVerified) return;
+
+  const targetedSeqSet = new Set(fullyVerifiedCues.map(c => c.index));
+  const scopedWarnings = globalRawWarnings
+    .filter(w => targetedSeqSet.has(w.index))
+    .map(w => ({
+      index: w.index,
+      type: w.type || "timestamp_anomaly",
+      message: w.message
+    }));
+
+  const exportPayload = {
+    subtitles: fullyVerifiedCues.map(c => ({
+      index: c.index,
+      start: c.start,
+      end: c.end,
+      ja: c.ja,
+      zh_tw: c.zh_tw
+    })),
+    warnings: scopedWarnings
+  };
+  const jsonStr = JSON.stringify(exportPayload, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hololive_subtitles_${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000); // 延後 10 秒撤銷，確保跨瀏覽器下載順利啟動
+});
+
+// ==================== 步驟 4：分批品質檢查（附完整詞庫） ====================
+function initQcBatchManager(cues) {
+  currentQcBatchIdx = 0;
+  document.getElementById('qc-batch-bar').style.display = 'flex';
+  document.getElementById('btn-copy-qc-prompt').disabled = false;
+  updateQcBatchUI();
+  generateQcPromptForBatch(batchList[0]);
+}
+
+function updateQcBatchUI() {
+  const cur = batchList[currentQcBatchIdx];
+  document.getElementById('qc-batch-label').textContent = 
+    `QC 批次：第 ${cur.batchNum} / ${batchList.length} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)`;
+  document.getElementById('btn-prev-qc-batch').disabled = (currentQcBatchIdx === 0);
+  document.getElementById('btn-next-qc-batch').disabled = (currentQcBatchIdx === batchList.length - 1);
+}
+
+document.getElementById('btn-prev-qc-batch').addEventListener('click', () => {
+  if (currentQcBatchIdx > 0) {
+    currentQcBatchIdx--;
+    updateQcBatchUI();
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+document.getElementById('btn-next-qc-batch').addEventListener('click', () => {
+  if (currentQcBatchIdx < batchList.length - 1) {
+    currentQcBatchIdx++;
+    updateQcBatchUI();
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+document.getElementById('btn-gen-current-qc').addEventListener('click', () => {
+  if (batchList.length > 0) {
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+function generateQcPromptForBatch(batchObj) {
+  const statusEl = document.getElementById('status-qc');
+  statusEl.style.display = 'block';
+
+  // 詞庫未驗證硬阻擋
+  if (!isGlossaryVerified) {
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = '【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生 QC Prompt！';
+    document.getElementById('field-qc-prompt').value = '';
+    document.getElementById('btn-copy-qc-prompt').disabled = true;
+    return;
+  }
+
+  let diffTable = "";
+  batchObj.savedCues.forEach((t, i) => {
+    const r = batchObj.cues[i];
+    diffTable += `[#${t.index}]\n- 原始: [${r.rawTimeLine}]\n${r.ja}\n- 輸出:\n${t.zh_tw}\n${t.ja}\n\n`;
+  });
+
+  const qcPrompt = `你現在是專業的字幕品質檢查助手（Gemini 3.5 Flash-Lite）。請針對以下【第 ${batchObj.batchNum} / ${batchObj.totalBatches} 批字幕對照表】（編號 #${batchObj.startSeq} 至 #${batchObj.endSeq}，共 ${batchObj.cues.length} 條），以原始日文與附帶之專用詞庫為依據進行語意與術語品質稽核：
+
+【專用詞庫核對依據（原始全文）】
+${loadedGlossaryRawContent}
+
+【檢查指標】
+1. 台灣繁體中文規範：是否誤用簡體字或中國大陸用語（如：視頻、軟件、網絡、信息）？
+2. 詞庫與人名準確度：成員名稱、稱呼、口頭禪是否符合上方提供的專用詞庫？是否有把未確認之 ASR 錯字擅自當成確定事實而不加標註的問題？
+3. 漏譯或亂補：繁體中文是否有漏翻句子或憑空捏造原文沒有的語意？
+4. 非語言標記：[笑い] -> [笑聲]、[叫び声] -> [尖叫聲] 是否正確保留對應？
+
+請列出所有有疑慮的字幕序號（#${batchObj.startSeq} ~ #${batchObj.endSeq}）與具體修正建議。若本批無任何語意與詞庫問題，請回覆「第 ${batchObj.batchNum} 批品質檢查通過」。
+
+【第 ${batchObj.batchNum} 批字幕對照資料】：
+${diffTable}`;
+
+  document.getElementById('field-qc-prompt').value = qcPrompt;
+  document.getElementById('btn-copy-qc-prompt').disabled = false;
+  statusEl.className = 'status-msg ok';
+  statusEl.textContent = `已產生【第 ${batchObj.batchNum} / ${batchObj.totalBatches} 批】QC Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，已附帶原始全文詞庫依據）。`;
+}
+
+document.getElementById('btn-copy-qc-prompt').addEventListener('click', () => {
+  const p = document.getElementById('field-qc-prompt').value;
+  if (!p) return alert('QC Prompt 內容為空！');
+  navigator.clipboard.writeText(p).then(() => alert('已複製 QC Prompt！'));
+});
+
+// 清空原始字幕按鈕（增加確認視窗防誤觸）
+document.getElementById('btn-clear-raw').addEventListener('click', () => {
+  const currentTransInput = document.getElementById('field-trans-result').value.trim();
+  const hasSavedBatches = batchList.some(b => b.status === 'SAVED');
+  if (hasSavedBatches || currentTransInput.length > 0) {
+    const ok = confirm('確定要清空原始字幕嗎？這將會一併清空現有的批次暫存與翻譯輸入！');
+    if (!ok) return;
+  }
+  document.getElementById('field-raw-ja').value = '';
+  document.getElementById('status-raw').style.display = 'none';
+  setTransInputValue('');
+  lastParsedRawJa = "";
+  globalRawWarnings = [];
+  resetBatchState();
+  lockAndClearVerificationState('已清空原始字幕。');
+  parsedRawCues = [];
+  rawParsePassed = false;
+});
+
+
+// ==================== 整合層（新增）：SRT 序列化、播放器轉換、狀態列 ====================
+function toSrtTime(sec) {
+  const total = Math.round(sec * 1000);
+  const p = (n, w) => String(n).padStart(w, "0");
+  return p(Math.floor(total / 3600000), 2) + ":" + p(Math.floor(total / 60000) % 60, 2) + ":" +
+    p(Math.floor(total / 1000) % 60, 2) + "," + p(total % 1000, 3);
+}
+function setPlayerState(msg) { const el = $("player-state"); if (el) el.textContent = msg; }
+function hasTranslationWork() {
+  return batchList.some(b => b.status === 'SAVED') ||
+    document.getElementById('field-trans-result').value.trim().length > 0 || fullyVerifiedCues.length > 0;
+}
+function currentVideoId() { const p = parseYouTubeUrl($("yturl").value.trim()); return p.ok ? p.id : ""; }
+
+// cues（播放器格式 {start,end,text}，秒）→ 標準 SRT 文字。唯一的改動：丟棄空白行；全空白的字幕不輸出（會回報）。
+function serializeCuesToSrt(cues) {
+  const items = [], notes = [];
+  let skipped = 0, blankDropped = 0;
+  cues.forEach(c => {
+    const raw = String(c.text);
+    const lines = raw.replace(/\r\n?/g, "\n").split("\n").filter(l => l.trim() !== "");
+    if (!lines.length) { skipped++; return; }
+    const ja = lines.join("\n");
+    if (ja !== raw) blankDropped++;
+    items.push({ index: items.length + 1, start: toSrtTime(c.start), end: toSrtTime(c.end), ja });
+  });
+  if (skipped) notes.push(`有 ${skipped} 句內容全為空白，未送入翻譯流程（原字幕 ${cues.length} 句 → ${items.length} 句）。`);
+  if (blankDropped) notes.push(`有 ${blankDropped} 句含空白行／換行格式差異，已移除空白行（SRT 區塊不可含空白行）。`);
+  const srt = items.map(it => `${it.index}\n${it.start} --> ${it.end}\n${it.ja}`).join("\n\n");
+  return { srt, items, notes };
+}
+
+function roundTripProblems(items) {
+  const p = [];
+  if (!rawParsePassed) return ["原始字幕未通過嚴格解析。"];
+  if (parsedRawCues.length !== items.length) p.push(`段數不符：序列化 ${items.length} 句，解析後 ${parsedRawCues.length} 句。`);
+  items.forEach((it, i) => {
+    const c = parsedRawCues[i];
+    if (!c) { p.push(`缺少第 ${it.index} 句。`); return; }
+    if (c.index !== it.index) p.push(`第 ${it.index} 句序號不符（${c.index}）。`);
+    if (c.rawStart !== it.start || c.rawEnd !== it.end) p.push(`第 ${it.index} 句時間戳不符。`);
+    if (c.ja !== it.ja) p.push(`第 ${it.index} 句日文原文不符。`);
+  });
+  return p;
+}
+
+// 把來源 SRT 文字送入翻譯流程：先重設翻譯狀態，再交給原有的嚴格解析按鈕處理
+function loadRawIntoTranslation(text, items, notes) {
+  rawParsePassed = false; parsedRawCues = []; globalRawWarnings = []; lastParsedRawJa = "";
+  setTransInputValue('');
+  resetBatchState();
+  lockAndClearVerificationState('已載入新的原始字幕，請重新翻譯與校驗。');
+  document.getElementById('status-verify').style.display = 'none';
+  document.getElementById('field-raw-ja').value = text;
+  document.getElementById('btn-parse-raw').click();
+  const st = document.getElementById('status-raw');
+  if (items) {
+    const probs = roundTripProblems(items);
+    if (probs.length) {
+      rawParsePassed = false; parsedRawCues = []; globalRawWarnings = []; lastParsedRawJa = ""; resetBatchState();
+      st.className = 'status-msg err';
+      st.textContent += `\n【序列化往返驗證 FAIL】已撤銷此來源：\n` + probs.slice(0, 10).join('\n');
+      return false;
+    }
+    st.textContent += `\n【序列化往返驗證 PASS】${items.length} 句：序號、時間戳、日文原文與序列化前逐項一致。`;
+  }
+  if (notes && notes.length) st.textContent += '\n' + notes.join('\n');
+  return rawParsePassed;
+}
+
+// 播放器資料轉換層：由「已通過解析的原始字幕」＋「已驗證譯文（以序號對照）」建立，絕不依賴陣列位置
+function playerCuesFromRaw(zhBySeq) {
+  return parsedRawCues.map(c => ({
+    seq: c.index, start: c.startMs / 1000, end: c.endMs / 1000, text: c.ja,
+    zh: zhBySeq ? zhBySeq.get(c.index) : undefined
+  }));
+}
+function buildVerifiedPlayerCues(transCues, targetedRaw) {
+  const errors = [];
+  const rawBySeq = new Map();
+  parsedRawCues.forEach(c => { if (rawBySeq.has(c.index)) errors.push(`原始序號重複：#${c.index}`); rawBySeq.set(c.index, c); });
+  if (transCues.length !== targetedRaw.length) errors.push(`段數不符：目標 ${targetedRaw.length}，已驗證 ${transCues.length}。`);
+  const map = new Map();
+  transCues.forEach(t => {
+    const r = rawBySeq.get(t.index);
+    if (!r) { errors.push(`#${t.index} 不在原始字幕中。`); return; }
+    if (map.has(t.index)) { errors.push(`#${t.index} 譯文重複。`); return; }
+    if (t.start !== r.rawStart || t.end !== r.rawEnd) errors.push(`#${t.index} 時間戳與原始不符。`);
+    if (t.ja !== r.ja) errors.push(`#${t.index} 日文原文與原始不符。`);
+    if (typeof t.zh_tw !== "string" || !t.zh_tw.trim()) errors.push(`#${t.index} 繁中為空。`);
+    map.set(t.index, t.zh_tw);
+  });
+  const want = new Set(targetedRaw.map(c => c.index));
+  want.forEach(s => { if (!map.has(s)) errors.push(`#${s} 缺少已驗證譯文。`); });
+  return { ok: errors.length === 0, errors, map };
+}
+function ensurePlayer(vid) { if (vid && vid !== pendingVideoId) createYouTubePlayer(vid); }
+function renderSourcePreview() {
+  playerShowsTranslation = false;
+  const vid = currentVideoId();
+  ensurePlayer(vid);
+  renderCues($("autopreview"), playerCuesFromRaw(null), Infinity, vid);
+  setPlayerState(`播放器：已載入 ${parsedRawCues.length} 句日文原文（尚無通過校驗的譯文）。` + (vid ? "" : "\n未設定有效 YouTube 網址，僅靜態預覽，無播放同步。"));
+}
+function renderVerifiedPlayer() {
+  const vid = currentVideoId();
+  ensurePlayer(vid);
+  const cues = playerCuesFromRaw(verifiedPlayerCues);
+  renderCues($("autopreview"), cues, Infinity, vid);
+  playerShowsTranslation = true;
+  setPlayerState(`播放器：已載入通過全量校驗的雙語字幕 ${verifiedPlayerCues.size} 句（全部 ${cues.length} 句，其餘僅日文）。` + (vid ? "" : "\n未設定有效 YouTube 網址，僅靜態預覽，無播放同步。"));
+}
+
+function updatePipeline() {
+  const saved = batchList.filter(b => b.status === 'SAVED').length;
+  const exportOn = !document.getElementById('btn-export-json').disabled;
+  $("pipeline").textContent =
+    `來源：${sourceLabel || "尚未載入"}\n` +
+    `原始字幕：${rawParsePassed ? `已解析 ${parsedRawCues.length} 句（時間戳警告 ${globalRawWarnings.length} 項）` : "未解析"}\n` +
+    `詞庫：${isGlossaryVerified ? "已通過結構驗證" : "未通過／未載入"}\n` +
+    `批次：${batchList.length ? `已暫存 ${saved} / ${batchList.length}` : "尚未建立"}\n` +
+    `全量校驗：${fullyVerifiedCues.length ? `通過（${fullyVerifiedCues.length} 句）` : "未通過／未執行"}\n` +
+    `播放器：${playerShowsTranslation ? "雙語（已校驗）" : (rawParsePassed ? "僅日文" : "無資料")}　匯出：${exportOn ? "可用" : "鎖定"}`;
+}
+setInterval(updatePipeline, 500); updatePipeline();
+
+document.getElementById('field-raw-ja').addEventListener('input', () => { sourceLabel = "手動貼上 SRT"; });
+$("btn-import-to-translation").addEventListener("click", () => {
+  const cues = parseSubs($("subtitletext").value);
+  if (!cues.length) { $("substatus").textContent = "沒有可送入翻譯流程的字幕，請先貼入有效的 SRT／VTT。"; return; }
+  if (hasTranslationWork() && !confirm("送入新字幕將取代目前的翻譯來源，並清空所有批次暫存與翻譯輸入。\n確定要繼續嗎？")) return;
+  const ser = serializeCuesToSrt(cues);
+  sourceLabel = "匯入字幕（SRT/VTT 解析後重新編號）";
+  loadRawIntoTranslation(ser.srt, ser.items, ser.notes);
+  $("substatus").textContent += "\n已送入翻譯流程（見「4. 原始日文字幕」的狀態）。原 SRT 的序號不保留，改為 1..N。";
+});
+
 
 function parseTimestamp(s) {
   const m = s.trim().replace(",",".").match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
