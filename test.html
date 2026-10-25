@@ -81,6 +81,35 @@ a{color:var(--accent);overflow-wrap:anywhere}
   width: min(100%, 391px);
 }
 @media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
+/* 只調整手機直立模式，橫向與桌面維持原樣 */
+@media (max-width: 619px) and (orientation: portrait) {
+  main {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .panel {
+    padding-left: 8px;
+    padding-right: 8px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+
+  /* 播放器盡量貼近螢幕兩側，保留 8px 間距 */
+  #youtube-player-container {
+    width: calc(100% + 16px);
+    margin-left: -8px;
+    margin-right: -8px;
+    padding: 8px;
+  }
+
+  /* 字幕區加寬，保留文字內距 */
+  #autopreview .cue {
+    padding-left: 10px;
+    padding-right: 8px;
+  }
+}
 </style>
 </head>
 <body>
