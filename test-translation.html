@@ -921,13 +921,37 @@ document.getElementById('btn-copy-trans-prompt').addEventListener('click', () =>
 });
 
 // ==================== 步驟 3：嚴格整行逐字比對與統一暫存 ====================
+// 依「序號行 + 緊接的時間戳行」辨識字幕區塊邊界，不再依賴空白行。
+// 邊界偵測刻意寬鬆（容許前後空白），目的只是切出區塊；嚴格逐字比對仍由 parseAndValidateBilingualSrt 負責。
+// 單獨的數字行（後面沒有緊接時間戳行）不會被視為序號。區塊尾端的空白行視為分隔符，區塊內部內容不做任何修改。
+function splitBilingualBlocks(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const seqRe = /^\s*\d+\s*$/;
+  const timeRe = /^\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*$/;
+  const starts = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (seqRe.test(lines[i]) && timeRe.test(lines[i + 1])) starts.push(i);
+  }
+  const leading = [];
+  const firstStart = starts.length ? starts[0] : lines.length;
+  for (let i = 0; i < firstStart; i++) {
+    if (lines[i].trim().length > 0) leading.push(i + 1);   // 記錄行號
+  }
+  const blocks = starts.map((st, k) => {
+    let end = (k + 1 < starts.length) ? starts[k + 1] : lines.length;
+    while (end > st + 1 && lines[end - 1].trim().length === 0) end--;   // 只剝除尾端分隔用空白行
+    return lines.slice(st, end).join('\n');
+  });
+  return { blocks, leadingLineNumbers: leading };
+}
+
 function parseAndValidateBilingualSrt(text, expectedRawCues) {
   const errors = [];
   const warnings = [];
   const cues = [];
 
-  if (!text || text.length === 0) {
-    errors.push("雙語字幕輸入內容為空。");
+  if (!text || text.trim().length === 0) {
+    errors.push("【輸入為空】雙語字幕輸入內容為空。");
     return { cues, errors, warnings };
   }
 
@@ -935,8 +959,15 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
     errors.push("偵測到 Markdown 程式碼框符號 (```)，請只貼入純 SRT 內容！");
   }
 
-  const normalizedText = text.replace(/\r\n/g, '\n');
-  const blocks = normalizedText.split(/\n\s*\n+/).filter(b => b.length > 0);
+  const { blocks, leadingLineNumbers } = splitBilingualBlocks(text);
+
+  if (blocks.length === 0) {
+    errors.push('【區塊解析失敗】找不到任何有效字幕區塊（每條字幕需以「序號行」開頭，且下一行必須是時間戳行）。');
+    return { cues, errors, warnings };
+  }
+  if (leadingLineNumbers.length > 0) {
+    errors.push(`【區塊解析失敗】第一個有效字幕區塊之前有 ${leadingLineNumbers.length} 行無法歸屬的內容（第 ${leadingLineNumbers.slice(0, 5).join(', ')} 行起）。`);
+  }
 
   if (blocks.length !== expectedRawCues.length) {
     errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 條字幕，實際解析出 ${blocks.length} 個字幕區塊！`);
@@ -963,6 +994,10 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
     const expectedJaLineCount = exp.jaLines.length;
     const expectedTotalLines = 3 + expectedJaLineCount;
 
+    if (rawLines.length < expectedTotalLines) {
+      errors.push(`字幕 ${labelNum} 缺少內容：原始日文為 ${expectedJaLineCount} 行，區塊應為 ${expectedTotalLines} 行，實際僅 ${rawLines.length} 行（可能缺少繁中翻譯或原始日文）：\n"${rawBlock}"`);
+      continue;
+    }
     if (rawLines.length !== expectedTotalLines) {
       errors.push(`字幕 ${labelNum} 行數不符規格：原始日文為 ${expectedJaLineCount} 行，雙語區塊應剛好為 ${expectedTotalLines} 行（1行序號 + 1行時間戳 + 1行繁中 + ${expectedJaLineCount}行日文），實際為 ${rawLines.length} 行：\n"${rawBlock}"`);
       continue;
@@ -971,6 +1006,10 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
     // 1. 檢查序號行（完全逐字比對原始字串，不容許前後空格）
     const actualSeqLine = rawLines[0];
     if (actualSeqLine !== exp.rawSeqLine) {
+      if (/^\d+$/.test(actualSeqLine) && seqSet.has(parseInt(actualSeqLine, 10))) {
+        errors.push(`字幕 ${labelNum} 發現重複序號: #${parseInt(actualSeqLine, 10)}（此位置應為 "${exp.rawSeqLine}"）`);
+        continue;
+      }
       errors.push(`字幕 ${labelNum} 序號行未整行逐字保留：原始為 "${exp.rawSeqLine}"，輸出為 "${actualSeqLine}"`);
       continue;
     }
@@ -1023,6 +1062,11 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
 // 回傳 { type, label, advice(batch) }；type: QUOTA | TRUNCATED | VALIDATION
 function classifyBatchFailure(text, expectedCues, errors) {
   const t = String(text || '');
+  // 0. 空輸入
+  if (t.trim().length === 0) {
+    return { type: 'EMPTY', label: '輸入為空',
+      advice: () => '輸入框是空的。請貼入 Gemini 回覆的雙語 SRT 後再暫存。' };
+  }
   // 1. 配額/限流：貼入的是錯誤訊息而非字幕。拆批無法解決，必須等待或改用其他模型，不可持續重試。
   if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|too many requests|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)|try again later|稍後再試/i.test(t)
       && !/-->/.test(t)) {
@@ -1035,7 +1079,7 @@ function classifyBatchFailure(text, expectedCues, errors) {
       advice: () => '貼入內容像是連線或伺服器錯誤，不是字幕。請勿拆批；確認網路後重新送出同一批。' };
   }
   // 2. 輸出截斷：區塊數不足，且已輸出的前段與原始序號、時間戳完全一致（只是缺尾）。
-  const blocks = t.replace(/\r\n/g, '\n').split(/\n\s*\n+/).filter(b => b.length > 0);
+  const blocks = splitBilingualBlocks(t).blocks;
   if (blocks.length > 0 && blocks.length < expectedCues.length) {
     let prefixOk = true;
     for (let i = 0; i < blocks.length; i++) {
@@ -1052,11 +1096,21 @@ function classifyBatchFailure(text, expectedCues, errors) {
           : '回覆在中途結束，但此批已達最大拆分深度或段數過少，無法再拆。請人工重試此批，或縮小「每批上限」後重新建立批次。' };
     }
   }
-  // 3. 其他驗證失敗：序號／時間戳／日文原文不一致、行數不符等。拆批不能修正，應重試同一批。
-  return { type: 'VALIDATION', label: '驗證失敗',
-    advice: (b) => b.failCount >= 3
-      ? '同一批已連續驗證失敗 3 次以上。請人工檢查 Gemini 回覆是否改動了序號、時間戳或日文原文；若回覆很長，可手動按「將此批拆成兩批」。'
-      : '回覆內容與原始字幕不一致（非單純截斷）。拆批通常無法修正，請要求 Gemini 重新輸出此批，並提醒逐字保留序號、時間戳與日文。' };
+  // 3. 其他失敗：依實際錯誤內容分項回報，只列出真正出現的問題類別
+  const errs = (errors || []).map(String);
+  const has = re => errs.some(e => re.test(e));
+  const hasOther = re => errs.some(e => !/區塊解析失敗/.test(e) && re.test(e));   // 解析失敗訊息本身的說明文字不計入其他類別
+  const cats = [];
+  if (has(/區塊解析失敗/)) cats.push(['解析失敗', '無法依「序號行＋時間戳行」切出字幕區塊，請確認貼入的是完整的雙語 SRT（不含說明文字）。']);
+  if (hasOther(/總段數不符|遺漏字幕|多出額外/)) cats.push(['段數不符', '回覆的字幕條數與本批預期不同，請看錯誤訊息中的實際與預期段數。']);
+  if (hasOther(/序號行|重複序號/)) cats.push(['序號', '有序號被改動、重複或缺漏，必須逐字沿用原始序號。']);
+  if (hasOther(/時間戳行/)) cats.push(['時間戳', '有時間戳被改動，必須逐字保留。']);
+  if (hasOther(/繁體中文翻譯為空|缺少內容/)) cats.push(['翻譯或內容缺漏', '有條目缺少繁中翻譯或原始日文。']);
+  if (hasOther(/日文原文未逐字|行數不符/)) cats.push(['日文原文／行數', '日文原文被改動，或區塊行數與規格不符。']);
+  const label = cats.length ? '驗證失敗：' + cats.map(c => c[0]).join('、') : '驗證失敗';
+  return { type: 'VALIDATION', label,
+    advice: (b) => (cats.length ? cats.map(c => '・' + c[1]).join('\n') : '請參考上方錯誤訊息。') +
+      (b.failCount >= 3 ? '\n同一批已連續失敗 3 次以上，請人工檢查回覆；若回覆很長，可手動按「將此批拆成兩批」。' : '') };
 }
 
 function canSplit(b) {
