@@ -5,180 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>【TEST 測試版】Hololive 雙語字幕工作台</title>
   <style>
-    :root {
-      --bg: #0b0f19;
-      --panel: #161f36;
-      --border: #243254;
-      --primary: #38bdf8;
-      --err: #f43f5e;
-      --ok: #10b981;
-      --warn: #f59e0b;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 16px;
-    }
-    .container { max-width: 1400px; margin: 0 auto; }
-    .badge-test {
-      background: var(--err);
-      color: #fff;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      vertical-align: middle;
-      font-weight: 700;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-    @media(min-width: 960px) {
-      .grid { grid-template-columns: 1fr 1fr; }
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-    }
-    h2 { font-size: 1.05rem; margin-top: 0; margin-bottom: 8px; color: var(--primary); }
-    label { font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
-    input[type="text"], input[type="file"], textarea {
-      width: 100%;
-      background: #070a12;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      padding: 8px 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.82rem;
-      margin-bottom: 8px;
-    }
-    textarea { resize: vertical; min-height: 140px; line-height: 1.4; }
-    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-    button {
-      background: var(--primary);
-      color: #04101e;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 0.82rem;
-      transition: opacity .2s;
-    }
-    button:hover:not(:disabled) { opacity: 0.85; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    button.btn-secondary { background: #243254; color: var(--text); }
-    button.btn-accent { background: #6366f1; color: #fff; }
-    button.btn-save { background: #10b981; color: #04101e; }
-    button.btn-danger { background: #e11d48; color: #fff; }
-    .status-msg {
-      background: #070a12;
-      border-left: 4px solid var(--border);
-      border-radius: 4px;
-      padding: 10px;
-      font-size: 0.82rem;
-      white-space: pre-wrap;
-      font-family: monospace;
-      max-height: 240px;
-      overflow-y: auto;
-      margin-top: 6px;
-    }
-    .status-msg.err { border-left-color: var(--err); color: #fca5a5; }
-    .status-msg.ok { border-left-color: var(--ok); color: #6ee7b7; }
-    .status-msg.warn { border-left-color: var(--warn); color: #fde047; }
-    
-    .batch-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #0d1527;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .batch-info { font-size: 0.85rem; font-weight: 600; color: #38bdf8; }
-    .batch-tag { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-    .batch-tag.saved { background: #10b981; color: #04101e; }
-    .batch-tag.pending { background: #eab308; color: #04101e; }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      border-radius: 6px;
-      font-size: 0.84rem;
-      font-weight: 700;
-    }
-    .status-badge.ok { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981; }
-    .status-badge.err { background: rgba(244, 63, 94, 0.2); color: #fda4af; border: 1px solid #f43f5e; }
-    
-    #youtube-player-container {
-      background: var(--panel);
-      padding: 8px 0;
-    }
-    #youtube-player {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #000;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    #autopreview {
-      margin-top: 12px;
-      max-height: 420px;
-      overflow-y: auto;
-      border: 1px solid var(--border);
-      padding: 12px;
-      background: #070a12;
-      border-radius: 6px;
-    }
-    .cue { padding: 8px 10px; border-bottom: 1px solid #1a233a; }
-    .cue:last-child { border-bottom: none; }
-    .cue-meta { font-size: 0.75rem; color: #818cf8; font-family: monospace; margin-bottom: 2px; }
-    .cue-translation { font-size: 0.98rem; font-weight: 600; color: #ffffff; line-height: 1.45; white-space: pre-wrap; }
-    .cue-original { font-size: 0.85rem; color: var(--muted); margin-top: 3px; line-height: 1.4; white-space: pre-wrap; }
-  </style>
+:root{color-scheme:dark;--bg:#000000;--panel:#1c1c1e;--field:#2c2c2e;--fill:#3a3a3c;--line:#38383a;--text:#f5f5f7;--muted:#98989f;--accent:#0a84ff;--ok:#30d158;--bad:#ff453a;--warn:#ffd60a;--err:var(--bad);--primary:var(--accent);--border:var(--line)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;overflow-x:hidden}
+.container{max-width:760px;margin:auto;padding:22px 8px 40px}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px;color:var(--text)}
+.intro{color:var(--muted);margin:0 0 20px}
+.badge-test{background:var(--bad);color:#fff;padding:2px 8px;border-radius:99px;font-size:.78rem;vertical-align:middle;font-weight:700}
+.grid{display:block}
+.card{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px;margin:14px 0;min-width:0}
+label{display:block;font-weight:650;margin:12px 0 6px;color:var(--text);font-size:1rem}
+input[type=text],input[type=file],textarea{display:block;width:100%;max-width:100%;min-width:0;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text);font:inherit}
+input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input[type=file]{padding:0;background:none}
+textarea{resize:vertical;min-height:140px;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+.hint{color:var(--muted);font-size:.85rem;margin-top:6px;overflow-wrap:anywhere}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+button{display:inline-block;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-weight:600;padding:11px 14px;cursor:pointer;max-width:100%}
+button:active{opacity:.7}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.btn-secondary{background:var(--fill);color:var(--text)}
+button.btn-accent{background:var(--accent);color:#fff}
+button.btn-save{background:var(--ok);color:#000}
+button.btn-danger{background:var(--bad);color:#fff}
+#btn-load-yt{white-space:nowrap}
+.inline-row{display:flex;gap:10px;align-items:flex-start}
+.inline-row input{flex:1 1 auto}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.three-col>div{min-width:0}
+@media(max-width:520px){.three-col{grid-template-columns:1fr}.inline-row{flex-direction:column}}
+.status-msg{padding:12px;border-radius:12px;background:var(--field);border:1px solid transparent;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:260px;overflow-y:auto}
+.status-msg.err{color:var(--bad)}
+.status-msg.ok{color:var(--ok)}
+.status-msg.warn{color:var(--warn)}
+.batch-bar{display:flex;align-items:center;gap:10px;background:var(--field);padding:12px;border-radius:12px;margin:10px 0;flex-wrap:wrap}
+.batch-info{flex:1 1 100%;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
+.batch-tag{font-size:.8rem;padding:2px 8px;border-radius:99px;font-weight:700}
+.batch-tag.saved{background:var(--ok);color:#000}
+.batch-tag.pending{background:var(--warn);color:#000}
+.batch-bar button{margin:0}
+.status-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:99px;font-size:.88rem;font-weight:700;overflow-wrap:anywhere}
+.status-badge.ok{background:rgba(48,209,88,.15);color:var(--ok)}
+.status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
+#youtube-player-container{padding:8px 0}
+#youtube-player{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden}
+#youtube-player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#autopreview{margin-top:10px;max-height:420px;overflow-y:auto;background:var(--field);border-radius:12px;padding:6px}
+.cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.cue:last-child{border-bottom:none}
+.cue-meta{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cue-translation{font-weight:600;color:var(--text);white-space:pre-wrap}
+.cue-original{color:var(--muted);font-size:.92em;margin-top:4px;white-space:pre-wrap}
+</style>
 </head>
 <body>
 
 <div class="container">
   <h1>【TEST】Hololive 雙語字幕工作台 <span class="badge-test">TEST ONLY</span></h1>
-  <p style="color:var(--muted); font-size: 0.85rem; margin-top:-8px;">
-    正式版保持不動。需選取實體詞庫檔案（結構檢驗＋SHA-256 雜湊）。防競態作廢、先驗證後提交批次、重解析防遺失確認、Warnings 結構化與序號精確對齊。
-  </p>
+  <p class="intro">依序完成 0～4 步驟：載入詞庫、貼入日文字幕、翻譯、校驗、品質檢查。</p>
 
-  <div class="card" style="margin-bottom: 16px;">
+  <div class="card">
     <h2>步驟 0：詞庫載入狀態與 YouTube 嵌入</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+    <div>
       <div>
         <label>選取專案原始 hololive 字幕專用詞庫（整合版）檔案（.txt 或 .md）：</label>
         <input type="file" id="glossary-file-input" accept=".txt,.md">
-        <div style="margin-top: 4px;">
+        <div>
           <span id="glossary-status-badge" class="status-badge err">● 詞庫未載入：請選擇原始詞庫檔案</span>
         </div>
-        <div id="glossary-status-desc" style="font-size: 0.78rem; color: var(--muted); margin-top: 4px;">未通過基本結構驗證前禁止產生翻譯 Prompt、QC Prompt 與全量校驗解鎖。</div>
+        <div id="glossary-status-desc" class="hint">未通過基本結構驗證前禁止產生翻譯 Prompt、QC Prompt 與全量校驗解鎖。</div>
       </div>
       <div>
         <label>YouTube 影片網址或 ID（僅更新播放器預覽，無時間軸自動同步）</label>
-        <div style="display: flex; gap: 6px;">
+        <div class="inline-row">
           <input type="text" id="yt-url" value="https://www.youtube.com/live/Uy-KPheZe7U" placeholder="https://www.youtube.com/watch?v=...">
-          <button id="btn-load-yt" class="btn-secondary" style="white-space:nowrap;">更新嵌入影片</button>
+          <button id="btn-load-yt" class="btn-secondary">更新嵌入影片</button>
         </div>
       </div>
     </div>
@@ -201,7 +103,7 @@
       <h2>2. Gemini 3.8 Flash 翻譯 Prompt (範圍與分批設定)</h2>
       
       <!-- 起始序號、段數與每批上限設定 -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px;">
+      <div class="three-col">
         <div>
           <label>起始序號 (需實際存在)</label>
           <input type="text" id="cfg-start-seq" value="1" placeholder="例如 1 或 51">
@@ -216,7 +118,7 @@
         </div>
       </div>
 
-      <div class="btn-group" style="margin-bottom: 8px;">
+      <div class="btn-group">
         <button id="btn-apply-batch-config" class="btn-accent">套用設定／建立批次</button>
       </div>
 
@@ -245,7 +147,7 @@
         <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
         <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
       </div>
-      <div class="btn-group" style="margin-top: 4px;">
+      <div class="btn-group">
         <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
         <button class="btn-secondary" id="btn-clear-all-batches">清空所有批次暫存</button>
       </div>
@@ -270,7 +172,7 @@
     </div>
   </div>
 
-  <div class="card" style="margin-top: 16px;">
+  <div class="card">
     <h2>YouTube 影片嵌入與雙語字幕靜態預覽（繁中在上 / 日文在下；未實作播放時間自動同步）</h2>
     <div id="youtube-player-container">
       <div id="youtube-player">
