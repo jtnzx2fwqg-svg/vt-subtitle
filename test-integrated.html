@@ -43,7 +43,8 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue time{display:block;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
 .cue time a{text-decoration:none}
 .cue-text{white-space:pre-wrap}
-.cue-zh{margin-top:4px;color:var(--muted);font-size:.92em;white-space:pre-wrap}
+.cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
+.cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
 /* Apple Music 歌詞式字幕：離目前句越遠越暗、越小；右側留白是為了讓放大時不超出版面 */
 #autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
 #autopreview .cue.active + .cue + .cue + .cue{opacity:.38;transform:scale(.95)}
@@ -58,8 +59,8 @@ a{color:var(--accent);overflow-wrap:anywhere}
 #autopreview .cue time{transform-origin:left bottom}
 #autopreview .cue .cue-body{transform-origin:left top}
 #autopreview .cue.active time,#autopreview .cue.active .cue-body{transform:scale(1.1)}
-#autopreview .cue.active .cue-zh{color:var(--text)}
 #autopreview .cue-text{font-weight:600}
+#autopreview .cue.has-zh .cue-text{font-weight:400}
 #youtube-player-container {
   position: sticky;
   top: 0;
@@ -464,13 +465,15 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
 
     const body = document.createElement("div");
     body.className = "cue-body";
-    body.append(txt);
 
     if (c.zh) {
       const zh = document.createElement("div");
       zh.className = "cue-zh";
       zh.textContent = c.zh;
-      body.append(zh);
+      d.classList.add("has-zh");
+      body.append(zh, txt);   // 中文在上（主要字幕），日文在下（輔助）
+    } else {
+      body.append(txt);
     }
 
     d.append(time, body);
