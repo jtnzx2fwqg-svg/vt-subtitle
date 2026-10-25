@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -34,6 +33,16 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .cue time{display:block;color:var(--muted);font-size:.85rem}
 .cue-text{white-space:pre-wrap}
+/* Apple Music 歌詞式字幕：離目前句越遠越暗、越小；右側留白是為了讓放大時不超出版面 */
+#autopreview .cue{position:relative;padding:14px 12% 14px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
+#autopreview .cue.active + .cue + .cue + .cue{opacity:.38;transform:scale(.95)}
+#autopreview .cue.active + .cue + .cue{opacity:.5;transform:scale(.96)}
+#autopreview .cue.active + .cue{opacity:.7;transform:scale(.98)}
+#autopreview .cue:has(+ .cue + .cue + .cue.active){opacity:.38;transform:scale(.95)}
+#autopreview .cue:has(+ .cue + .cue.active){opacity:.5;transform:scale(.96)}
+#autopreview .cue:has(+ .cue.active){opacity:.7;transform:scale(.98)}
+#autopreview .cue.active{z-index:1;opacity:1;transform:scale(1.1);background:rgba(138,180,255,.12)}
+#autopreview .cue-text{font-weight:600}
 #youtube-player-container {
   position: sticky;
   top: 0;
@@ -191,6 +200,65 @@ function seekToTimestamp(videoId, seconds) {
   youtubePlayer.loadVideoById(videoId, seconds);
 }
 
+
+// ===== 字幕跟隨播放進度 =====
+const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
+const FOLLOW_PAUSE_MS = 4000;  // 使用者手動捲動後，暫停自動跟隨的毫秒數
+const SYNC_INTERVAL_MS = 250;  // 每隔多久檢查一次播放進度
+const FOLLOW_POSITION = 0.4;   // 目前字幕落在播放器下方可視區的位置（0 最上、0.5 正中、1 最下）
+
+let syncTrack = null;
+let lastActiveIndex = -1;
+let followPausedUntil = 0;
+
+function findActiveIndex(cues, t) {
+  let lo = 0, hi = cues.length - 1, idx = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[mid].start <= t) { idx = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  if (idx >= 0 && t > cues[idx].end + ACTIVE_GRACE) return -1;
+  return idx;
+}
+
+function scrollCueIntoPlace(el) {
+  const player = $("youtube-player-container");
+  const topLimit = (player && !player.hidden ? player.offsetHeight : 0) + 8;
+  const bottomLimit = window.innerHeight - 8;
+  const rect = el.getBoundingClientRect();
+  const center = rect.top + rect.height / 2;
+  const half = el.offsetHeight * 1.1 / 2;
+  let desired = topLimit + (bottomLimit - topLimit) * FOLLOW_POSITION;
+  desired = Math.max(desired, topLimit + half);
+  const top = window.scrollY + center - desired;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
+function setActiveCue(index) {
+  if (!syncTrack || index === lastActiveIndex) return;
+  const prev = syncTrack.els[lastActiveIndex];
+  if (prev) prev.classList.remove("active");
+  lastActiveIndex = index;
+  const el = syncTrack.els[index];
+  if (!el) return;
+  el.classList.add("active");
+  if (Date.now() < followPausedUntil) return;
+  scrollCueIntoPlace(el);
+}
+
+["touchstart", "touchmove", "wheel"].forEach(name => {
+  window.addEventListener(name, () => {
+    followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+  }, { passive: true });
+});
+
+setInterval(() => {
+  if (!syncTrack || !youtubePlayer || typeof youtubePlayer.getCurrentTime !== "function") return;
+  const t = youtubePlayer.getCurrentTime();
+  if (typeof t !== "number" || Number.isNaN(t)) return;
+  setActiveCue(findActiveIndex(syncTrack.cues, t));
+}, SYNC_INTERVAL_MS);
+
 function parseYouTubeUrl(raw) {
   let u;
   try {
@@ -231,10 +299,13 @@ function fmt(t) {
 function renderCues(container, cues, limit = Infinity, videoId = "") {
   container.replaceChildren();
   const fragment = document.createDocumentFragment();
+  const track = videoId ? { cues: cues.slice(0, limit), els: [] } : null;
+  if (track) { syncTrack = track; lastActiveIndex = -1; }
 
   cues.slice(0, limit).forEach(c => {
     const d = document.createElement("div");
     d.className = "cue";
+    if (track) track.els.push(d);
 
     const time = document.createElement("time");
 
@@ -245,6 +316,7 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
 
       link.addEventListener("click", event => {
         event.preventDefault();
+        followPausedUntil = 0;
         seekToTimestamp(videoId, c.start);
       });
 
