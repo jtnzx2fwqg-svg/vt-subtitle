@@ -224,6 +224,8 @@ button:disabled{cursor:not-allowed}
         <button id="btn-split-current-batch" class="btn-secondary" style="display:none;">將此批拆成兩批</button>
         <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
         <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
+        <button id="btn-import-json" class="btn-secondary">匯入雙語 JSON</button>
+        <input type="file" id="json-import-input" accept=".json,application/json" style="display:none">
       </div>
       <div class="btn-group">
         <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
@@ -231,6 +233,7 @@ button:disabled{cursor:not-allowed}
       </div>
       <textarea id="field-trans-result" placeholder="貼入 Gemini 產出之雙語 SRT..."></textarea>
       <div id="status-verify" class="status-msg" style="display:none;"></div>
+      <div id="status-import" class="status-msg" style="display:none;"></div>
     </div>
 
     <div class="card">
@@ -1663,7 +1666,8 @@ document.getElementById('btn-clear-all-batches').addEventListener('click', () =>
 });
 
 // 全量校驗按鈕（統一單批與多批；詞庫未驗證硬阻擋）
-document.getElementById('btn-verify-all').addEventListener('click', () => {
+// 全量校驗核心：按鈕與 JSON 匯入共用同一份規則；回傳 true＝通過並已解鎖，false＝失敗（已鎖定）
+function runFullVerification() {
   const statusEl = document.getElementById('status-verify');
   statusEl.style.display = 'block';
 
@@ -1672,7 +1676,7 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
     statusEl.className = 'status-msg err';
     statusEl.textContent = '【全量校驗 FAIL】：詞庫未載入或驗證失敗（紅燈），禁止執行全量校驗、預覽與 JSON 匯出！請先於步驟 0 載入正確詞庫檔案。';
     lockAndClearVerificationState('詞庫未驗證，禁止全量校驗。');
-    return;
+    return false;
   }
 
   lockAndClearVerificationState('正在執行全量校驗，舊預覽與 QC 已清除...');
@@ -1680,13 +1684,13 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
   if (!rawParsePassed || parsedRawCues.length === 0) {
     statusEl.className = 'status-msg err';
     statusEl.textContent = '【全量校驗 FAIL】：原始字幕未通過步驟 1 解析！';
-    return;
+    return false;
   }
 
   if (batchList.length === 0) {
     statusEl.className = 'status-msg err';
     statusEl.textContent = '【全量校驗 FAIL】：尚未套用批次設定！請先點擊「套用設定／建立批次」。';
-    return;
+    return false;
   }
 
   // 2. 統一防線：所有批次必須為 SAVED
@@ -1694,7 +1698,7 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
   if (pendingBatches.length > 0) {
     statusEl.className = 'status-msg err';
     statusEl.textContent = `【全量校驗 FAIL】：尚有未暫存的批次（第 ${pendingBatches.map(b => b.batchNum).join(', ')} 批）。所有批次必須先點擊「暫存當前批次結果」後，方可執行全量校驗！`;
-    return;
+    return false;
   }
 
   // 3. 防線：當前輸入框不能與已存內容不一致
@@ -1703,7 +1707,7 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
   if (cur && cur.status === 'SAVED' && currentInputText !== cur.savedSrt) {
     statusEl.className = 'status-msg err';
     statusEl.textContent = `【全量校驗 FAIL】：第 ${cur.batchNum} 批輸入框中有尚未儲存的修改內容！請先點擊「暫存當前批次結果」更新暫存，或點擊「還原至已儲存暫存」後再執行全量校驗。`;
-    return;
+    return false;
   }
 
   const fullTransText = batchList.map(b => b.savedSrt).join('\n\n');
@@ -1713,7 +1717,7 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
   if (verifyErrors.length > 0) {
     statusEl.className = 'status-msg err';
     statusEl.textContent = `【全量校驗 FAIL】：發現 ${verifyErrors.length} 項嚴重錯誤，已鎖定 QC 並禁止預覽：\n` + verifyErrors.slice(0, 15).join('\n');
-    return;
+    return false;
   }
 
   fullyVerifiedCues = transCues;
@@ -1740,11 +1744,13 @@ document.getElementById('btn-verify-all').addEventListener('click', () => {
     lockAndClearVerificationState('轉換為播放器資料時對照失敗，已重新鎖定。');
     statusEl.className = 'status-msg err';
     statusEl.textContent = `【全量校驗 FAIL（播放器對照）】：已重新鎖定 QC、匯出與播放器。\n` + built.errors.slice(0, 10).join('\n');
-    return;
+    return false;
   }
   verifiedPlayerCues = built.map;
   renderVerifiedPlayer();
-});
+  return true;
+}
+document.getElementById('btn-verify-all').addEventListener('click', () => { runFullVerification(); });
 
 // 匯出相容 JSON（依本次字幕範圍嚴格隔離 warnings，並保留結構化物件）
 document.getElementById('btn-export-json').addEventListener('click', () => {
@@ -1779,6 +1785,156 @@ document.getElementById('btn-export-json').addEventListener('click', () => {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 10000); // 延後 10 秒撤銷，確保跨瀏覽器下載順利啟動
+});
+
+// ==================== 雙語 JSON 匯入（不信任 JSON 自稱已驗證；一律以原始字幕與既有驗證器重新驗證）====================
+function setImportStatus(cls, msg) {
+  const el = $('status-import');
+  el.style.display = 'block';
+  el.className = 'status-msg ' + cls;
+  el.textContent = msg;
+}
+function fmtSeqRanges(arr, maxShown) {
+  const out = []; let i = 0;
+  while (i < arr.length) {
+    let j = i;
+    while (j + 1 < arr.length && arr[j + 1] === arr[j] + 1) j++;
+    out.push(j > i ? `#${arr[i]}~#${arr[j]}` : `#${arr[i]}`);
+    i = j + 1;
+  }
+  if (maxShown && out.length > maxShown) return out.slice(0, maxShown).join(', ') + `…（另有 ${out.length - maxShown} 個範圍未列出）`;
+  return out.join(', ');
+}
+// 回傳 true＝已提交；false＝失敗或取消（此時完全未改動任何既有狀態）
+function importBilingualJsonTextCore(text) {
+  const fail = lines => {
+    setImportStatus('err', '【JSON 匯入 FAIL】原有工作內容未變動：\n' + lines.slice(0, 15).join('\n') +
+      (lines.length > 15 ? `\n...另有 ${lines.length - 15} 項` : ''));
+    return false;
+  };
+  if (!isGlossaryVerified) return fail(['詞庫未通過驗證（紅燈），不得匯入。']);
+  if (!rawParsePassed || !parsedRawCues.length) return fail(['原始字幕尚未通過解析，請先完成步驟 1。']);
+  if (!batchList.length) return fail(['尚未建立批次，請先點擊「套用設定／建立批次」。']);
+  let root;
+  try { root = JSON.parse(text); } catch (e) { return fail(['JSON 無法解析：' + e.message]); }
+  if (!root || typeof root !== 'object' || Array.isArray(root) || !Array.isArray(root.subtitles)) return fail(['JSON 根物件必須含 subtitles 陣列。']);
+  if (root.warnings !== undefined && !Array.isArray(root.warnings)) return fail(['warnings 必須是陣列。']);
+  if (root.subtitles.length === 0) return fail(['subtitles 為空。']);
+
+  const targeted = batchList.flatMap(b => b.cues);
+  const pos = new Map(); targeted.forEach((c, i) => pos.set(c.index, i));
+  const rawBySeq = new Map(); parsedRawCues.forEach(c => rawBySeq.set(c.index, c));
+  const errs = [], zhBySeq = new Map();
+  let lastPos = -1;
+  root.subtitles.forEach((it, i) => {
+    const lb = `第 ${i + 1} 筆`;
+    if (!it || typeof it !== 'object' || Array.isArray(it)) { errs.push(`${lb}不是物件。`); return; }
+    let idx = it.index;
+    if (typeof idx === 'string' && /^[1-9]\d*$/.test(idx)) idx = Number(idx);
+    if (!Number.isInteger(idx) || idx < 1) { errs.push(`${lb} index 不是正整數。`); return; }
+    if (zhBySeq.has(idx)) { errs.push(`${lb} 序號 #${idx} 重複。`); return; }
+    const raw = rawBySeq.get(idx);
+    if (!raw) { errs.push(`${lb} 序號 #${idx} 不存在於原始字幕（未知序號）。`); return; }
+    if (!pos.has(idx)) { errs.push(`${lb} 序號 #${idx} 不在目前批次範圍內。`); return; }
+    const p = pos.get(idx);
+    if (p <= lastPos) errs.push(`${lb} 序號 #${idx} 順序錯誤（必須與原始字幕順序一致）。`);
+    lastPos = Math.max(lastPos, p);
+    if (it.start !== raw.rawStart || it.end !== raw.rawEnd) errs.push(`#${idx} 時間戳與原始不符（原始 ${raw.rawStart} --> ${raw.rawEnd}）。`);
+    if (typeof it.ja !== 'string' || it.ja !== raw.ja) errs.push(`#${idx} 日文原文與原始字幕不一致。`);
+    const zh = it.zh_tw;
+    if (typeof zh !== 'string' || zh.trim() === '') errs.push(`#${idx} zh_tw 必須是非空字串。`);
+    else if (/[\r\n]/.test(zh)) errs.push(`#${idx} zh_tw 不可含換行（既有規格要求繁中為單行）。`);
+    else if (zh.includes('```')) errs.push(`#${idx} zh_tw 含 Markdown 程式碼框符號。`);
+    zhBySeq.set(idx, zh);
+  });
+  if (errs.length) return fail(errs);
+
+  const missing = targeted.filter(c => !zhBySeq.has(c.index)).map(c => c.index);
+  const plan = [];
+  for (const b of batchList) {
+    if (!b.cues.every(c => zhBySeq.has(c.index))) continue;
+    const srt = b.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${zhBySeq.get(c.index)}\n${c.jaLines.join('\n')}`).join('\n\n');
+    const r = parseAndValidateBilingualSrt(srt, b.cues);   // 既有驗證器，規則不放寬
+    if (r.errors.length) return fail([`第 ${b.batchNum} 批未通過既有驗證：`, ...r.errors]);
+    plan.push({ b, srt, cues: r.cues });
+  }
+  if (!plan.length) return fail(['沒有任何批次被 JSON 完整涵蓋，無法匯入。缺少編號：' + fmtSeqRanges(missing, 5)]);
+
+  const planned = new Set(plan.map(p => p.b));
+  const cur = batchList[currentBatchIdx];
+  const input = $('field-trans-result').value;
+  const newCurSrt = planned.has(cur) ? plan.find(p => p.b === cur).srt : cur.savedSrt;
+  const curEndsSaved = planned.has(cur) || cur.status === 'SAVED';
+  const draftLost = curEndsSaved && input.trim() !== '' && input !== newCurSrt;
+  const overwritten = plan.filter(p => p.b.status === 'SAVED' && p.b.savedSrt !== p.srt).map(p => p.b.batchNum);
+  const skippedCues = root.subtitles.length - plan.reduce((n, p) => n + p.cues.length, 0);
+  const notes = [];
+  if (missing.length) notes.push(`JSON 缺少 ${missing.length} 條字幕：${fmtSeqRanges(missing, 5)}。`);
+  if (skippedCues > 0) notes.push(`其中 ${skippedCues} 條屬於未被完整涵蓋的批次，不會匯入。`);
+  if (overwritten.length) notes.push(`將覆蓋已暫存且內容不同的第 ${overwritten.join(', ')} 批。`);
+  if (draftLost) notes.push('目前輸入框中未暫存的內容將被取代。');
+  if (missing.length || overwritten.length || draftLost) {
+    if (!confirm('JSON 匯入確認：\n' + notes.join('\n') + '\n\n確定要匯入嗎？按「取消」將完全保留原有內容。')) {
+      setImportStatus('warn', '已取消匯入，原有工作內容未變動。');
+      return false;
+    }
+  }
+
+  // ---- 提交：先快照，若中途發生未預期例外則完整回滾，避免半完成狀態 ----
+  const snap = batchList.map(b => ({ b, status: b.status, failCount: b.failCount, lastFailure: b.lastFailure,
+    savedSrt: b.savedSrt, savedCues: b.savedCues, draftSrt: b.draftSrt }));
+  const snapInput = input;
+  try {
+  lockAndClearVerificationState('JSON 匯入異動中，需重新全量校驗。');
+  plan.forEach(p => {
+    p.b.status = 'SAVED'; p.b.failCount = 0; p.b.lastFailure = '';
+    p.b.savedSrt = p.srt; p.b.savedCues = p.cues; p.b.draftSrt = p.srt;
+  });
+  if (cur.status === 'SAVED') setTransInputValue(cur.savedSrt);
+  updateBatchUI();
+  $('status-verify').style.display = 'none';
+  const pending = batchList.filter(b => b.status !== 'SAVED');
+  if (pending.length === 0) {
+    const ok = runFullVerification();   // 共用既有全量校驗核心；成敗以回傳值判斷，不讀 CSS class
+    setImportStatus(ok ? 'ok' : 'err', (ok ? '【JSON 匯入 PASS】' : '【JSON 匯入後全量校驗未通過】') +
+      `已匯入 ${plan.length} 批（${plan.reduce((n, p) => n + p.cues.length, 0)} 條），並以既有全量校驗重新驗證。\n` + $('status-verify').textContent);
+  } else {
+    setImportStatus('warn', `【JSON 部分匯入】已匯入 ${plan.length} 批；第 ${pending.map(b => b.batchNum).join(', ')} 批仍待翻譯。\n` +
+      notes.join('\n') + '\n匯出與雙語播放器維持鎖定，直到所有批次完成並通過全量校驗。');
+  }
+  return true;
+  } catch (err) {
+    snap.forEach(x => { x.b.status = x.status; x.b.failCount = x.failCount; x.b.lastFailure = x.lastFailure;
+      x.b.savedSrt = x.savedSrt; x.b.savedCues = x.savedCues; x.b.draftSrt = x.draftSrt; });
+    setTransInputValue(snapInput);
+    throw err;   // 交由外層統一顯示錯誤並鎖定
+  }
+}
+function handleImportException(err) {
+  console.error('JSON 匯入未預期錯誤：', err);
+  lockAndClearVerificationState('JSON 匯入發生未預期錯誤，已重新鎖定。');   // 匯出與雙語播放器鎖定
+  const msg = err && err.message ? err.message : String(err);
+  setImportStatus('err', '【JSON 匯入 FAIL】發生未預期錯誤（' + msg + '）。未完成的匯入已撤回，匯出與雙語播放器維持鎖定，請重新操作或重新選取檔案。');
+  try { updateBatchUI(); } catch (e2) { console.error(e2); }
+}
+function importBilingualJsonText(text) {
+  try { return importBilingualJsonTextCore(text); }
+  catch (err) { handleImportException(err); return false; }
+}
+$('btn-import-json').addEventListener('click', () => $('json-import-input').click());
+$('json-import-input').addEventListener('change', async e => {
+  const input = e.target;
+  const f = input.files && input.files[0];
+  if (!f) return;
+  try {
+    let text;
+    try { text = await f.text(); } catch { setImportStatus('err', '【JSON 匯入 FAIL】讀取檔案失敗，原有工作內容未變動。'); return; }
+    importBilingualJsonText(text);
+  } catch (err) {
+    handleImportException(err);
+  } finally {
+    input.value = '';   // 允許再次選取同一個檔案
+  }
 });
 
 // ==================== 步驟 4：分批品質檢查（附完整詞庫） ====================
