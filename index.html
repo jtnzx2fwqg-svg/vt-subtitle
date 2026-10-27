@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="zh-Hant">
 <head>
@@ -47,13 +46,13 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
 /* Apple Music 歌詞式字幕：離目前句越遠越暗、越小；右側留白是為了讓放大時不超出版面 */
-#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
-#autopreview .cue.active + .cue + .cue + .cue{opacity:.38;transform:scale(.95)}
-#autopreview .cue.active + .cue + .cue{opacity:.5;transform:scale(.96)}
-#autopreview .cue.active + .cue{opacity:.7;transform:scale(.98)}
-#autopreview .cue:has(+ .cue + .cue + .cue.active){opacity:.38;transform:scale(.95)}
-#autopreview .cue:has(+ .cue + .cue.active){opacity:.5;transform:scale(.96)}
-#autopreview .cue:has(+ .cue.active){opacity:.7;transform:scale(.98)}
+#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
+#autopreview .cue.active + .cue + .cue + .cue:not(.active){opacity:.38}
+#autopreview .cue.active + .cue + .cue:not(.active){opacity:.5}
+#autopreview .cue.active + .cue:not(.active){opacity:.7}
+#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active){opacity:.38}
+#autopreview .cue:not(.active):has(+ .cue + .cue.active){opacity:.5}
+#autopreview .cue:not(.active):has(+ .cue.active){opacity:.7}
 #autopreview .cue.active{z-index:1;opacity:1;transform:none;background:rgba(255,255,255,.09)}
 /* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
 #autopreview .cue time,#autopreview .cue .cue-body{transition:transform .3s ease}
@@ -342,21 +341,47 @@ function seekToTimestamp(videoId, seconds) {
 // ===== 字幕跟隨播放進度 =====
 const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
 const FOLLOW_PAUSE_MS = 4000;  // 使用者手動捲動後，暫停自動跟隨的毫秒數
-const SYNC_INTERVAL_MS = 250;  // 每隔多久檢查一次播放進度
+const SYNC_INTERVAL_MS = 80;  // 每隔多久檢查一次播放進度
 const FOLLOW_POSITION = 0.4;   // 目前字幕落在播放器下方可視區的位置（0 最上、0.5 正中、1 最下）
 
 let syncTrack = null;
 let lastActiveIndex = -1;
 let followPausedUntil = 0;
 
-function findActiveIndex(cues, t) {
-  let lo = 0, hi = cues.length - 1, idx = -1;
+// 模型 R 預先計算（不改 cues／els 的內容與順序）：
+// estar＝有效結束值 e*＝max(start, end)；ord＝依 (start, 原始索引) 排序的索引表；pm＝沿 ord 的 e* 前綴最大值
+function buildTrackIndex(track) {
+  const cues = track.cues;
+  track.estar = cues.map(c => Math.max(c.start, c.end));
+  track.ord = cues.map((_, i) => i).sort((a, b) => cues[a].start - cues[b].start || a - b);
+  track.pm = [];
+  track.ord.forEach((i, k) => { track.pm[k] = Math.max(k ? track.pm[k - 1] : -Infinity, track.estar[i]); });
+  track.active = [];   // 上一次亮起的索引集合（原始列表位置，遞增）
+}
+
+// 模型 R（純函式，只依 track 與 t）：回傳此刻應亮起的字幕索引（原始列表位置，遞增）
+//  規則 1：start <= t <= e* 顯示；規則 2：有 start 更晚且已開始者則退場（同 start 同一批）；
+//  規則 3：資料中仍有 start > t 的字幕則保留；規則 4：最後一批且無任何字幕處於區間內，才依 t <= e* + ACTIVE_GRACE 保留
+function findActiveIndices(track, t) {
+  const cues = track.cues, ord = track.ord, pm = track.pm, est = track.estar, n = cues.length;
+  let lo = 0, hi = n - 1, h = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (cues[mid].start <= t) { idx = mid; lo = mid + 1; } else { hi = mid - 1; }
+    if (cues[ord[mid]].start <= t) { h = mid; lo = mid + 1; } else { hi = mid - 1; }
   }
-  if (idx >= 0 && t > cues[idx].end + ACTIVE_GRACE) return -1;
-  return idx;
+  if (h < 0) return [];
+  const L = cues[ord[h]].start;     // 已開始字幕中最晚的 start
+  const fut = h < n - 1;            // 是否仍有 start > t 的字幕
+  let anyIn = false;                // 是否有任何字幕處於 start <= t <= e*
+  for (let k = h; k >= 0 && pm[k] >= t; k--) { if (est[ord[k]] >= t) { anyIn = true; break; } }
+  const out = [];
+  for (let k = h; k >= 0; k--) {
+    const i = ord[k];
+    if (t <= est[i]) out.push(i);
+    else if (cues[i].start === L && (fut || (!anyIn && t <= est[i] + ACTIVE_GRACE))) out.push(i);
+    if (cues[i].start < L && pm[k] < t - ACTIVE_GRACE) break;   // 已證明不會漏掉任何應亮的字幕
+  }
+  return out.sort((a, b) => a - b);
 }
 
 function scrollCueIntoPlace(el) {
@@ -372,14 +397,22 @@ function scrollCueIntoPlace(el) {
   window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
 }
 
-function setActiveCue(index) {
-  if (!syncTrack || index === lastActiveIndex) return;
-  const prev = syncTrack.els[lastActiveIndex];
-  if (prev) prev.classList.remove("active");
-  lastActiveIndex = index;
-  const el = syncTrack.els[index];
+// 以集合差異更新 .active；集合未變時完全不碰 DOM。lastActiveIndex 改為「捲動錨點」：
+// 錨點＝亮著的字幕中 start 最早者（同 start 取原始列表較前者）；只有錨點改變才捲動。
+function setActiveCues(next) {
+  if (!syncTrack) return;
+  const prev = syncTrack.active;
+  if (prev.length === next.length && prev.every((v, k) => v === next[k])) return;
+  const nextSet = new Set(next), prevSet = new Set(prev);
+  prev.forEach(i => { if (!nextSet.has(i)) syncTrack.els[i].classList.remove("active"); });
+  next.forEach(i => { if (!prevSet.has(i)) syncTrack.els[i].classList.add("active"); });
+  syncTrack.active = next;
+  let anchor = -1;
+  next.forEach(i => { if (anchor < 0 || syncTrack.cues[i].start < syncTrack.cues[anchor].start) anchor = i; });
+  if (anchor === lastActiveIndex) return;
+  lastActiveIndex = anchor;
+  const el = syncTrack.els[anchor];
   if (!el) return;
-  el.classList.add("active");
   if (Date.now() < followPausedUntil) return;
   scrollCueIntoPlace(el);
 }
@@ -393,8 +426,8 @@ function setActiveCue(index) {
 setInterval(() => {
   if (!syncTrack || !youtubePlayer || typeof youtubePlayer.getCurrentTime !== "function") return;
   const t = youtubePlayer.getCurrentTime();
-  if (typeof t !== "number" || Number.isNaN(t)) return;
-  setActiveCue(findActiveIndex(syncTrack.cues, t));
+  if (typeof t !== "number" || !Number.isFinite(t)) return;
+  setActiveCues(findActiveIndices(syncTrack, t));
 }, SYNC_INTERVAL_MS);
 
 function parseYouTubeUrl(raw) {
@@ -438,7 +471,7 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
   container.replaceChildren();
   const fragment = document.createDocumentFragment();
   const track = videoId ? { cues: cues.slice(0, limit), els: [] } : null;
-  if (track) { syncTrack = track; lastActiveIndex = -1; }
+  if (track) { buildTrackIndex(track); syncTrack = track; lastActiveIndex = -1; }
 
   cues.slice(0, limit).forEach(c => {
     const d = document.createElement("div");
