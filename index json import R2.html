@@ -46,13 +46,13 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
 /* Apple Music 歌詞式字幕：離目前句越遠越暗、越小；右側留白是為了讓放大時不超出版面 */
-#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform:scale(.94);transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
-#autopreview .cue.active + .cue + .cue + .cue:not(.active){opacity:.38;transform:scale(.95)}
-#autopreview .cue.active + .cue + .cue:not(.active){opacity:.5;transform:scale(.96)}
-#autopreview .cue.active + .cue:not(.active){opacity:.7;transform:scale(.98)}
-#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active){opacity:.38;transform:scale(.95)}
-#autopreview .cue:not(.active):has(+ .cue + .cue.active){opacity:.5;transform:scale(.96)}
-#autopreview .cue:not(.active):has(+ .cue.active){opacity:.7;transform:scale(.98)}
+#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;transform-origin:left center;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,transform .3s ease,background-color .3s ease}
+#autopreview .cue.active + .cue + .cue + .cue:not(.active){opacity:.38}
+#autopreview .cue.active + .cue + .cue:not(.active){opacity:.5}
+#autopreview .cue.active + .cue:not(.active){opacity:.7}
+#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active){opacity:.38}
+#autopreview .cue:not(.active):has(+ .cue + .cue.active){opacity:.5}
+#autopreview .cue:not(.active):has(+ .cue.active){opacity:.7}
 #autopreview .cue.active{z-index:1;opacity:1;transform:none;background:rgba(255,255,255,.09)}
 /* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
 #autopreview .cue time,#autopreview .cue .cue-body{transition:transform .3s ease}
