@@ -88,7 +88,20 @@ a{color:var(--accent);overflow-wrap:anywhere}
   border: 0;
 }
 @media(min-width:620px){.grid{grid-template-columns:1fr 1fr}}
+@media (max-width: 619px) {
+  #youtube-player-container {
+    width: 100vw;
+    max-width: none;
+    margin-left: calc(50% - 50vw);
+    margin-right: 0;
+    padding: 0;
+  }
 
+  #youtube-player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+}
 :root{--err:var(--bad)}
 input[type=text]{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
 input[type=text]:focus{outline:none;border-color:var(--accent)}
