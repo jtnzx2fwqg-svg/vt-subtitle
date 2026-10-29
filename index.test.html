@@ -54,8 +54,9 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
 /* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，確保較近距離永遠優先 */
-/* 整塊（底色＋文字）一起放大，靠右側 padding 預留空間，不會超出面板 */
-#autopreview .cue{position:relative;padding:14px 12% 18px 10px;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,background-color .3s ease,transform .3s ease;transform-origin:left center}
+/* 置中對稱放大（transform-origin:center center）搭配 flex gap 間距，解決字塊往右偏與多塊同時亮起時的重疊問題 */
+#autopreview{display:flex;flex-direction:column;gap:10px}
+#autopreview .cue{position:relative;margin:0 6px;padding:14px 16px 18px;border-radius:12px;border-bottom:0;background:transparent;transition:opacity .3s ease,background-color .3s ease,transform .3s ease;transform-origin:center center}
 :where(#autopreview .cue){opacity:.3}
 :where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active)){opacity:.38}
@@ -63,7 +64,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue.active)){opacity:.5}
 :where(#autopreview .cue.active + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue.active)){opacity:.7}
-#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09);transform:scale(1.05)}
+#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09);transform:scale(1.03)}
 #autopreview .cue.active .cue-zh{font-size:1.4em}
 #autopreview .cue.active .cue-text{font-size:1.05em}
 #autopreview .cue-text{font-weight:600}
