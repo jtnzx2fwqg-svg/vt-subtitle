@@ -1,0 +1,2237 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>【TEST】VT 字幕整合測試頁</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bottom-gap:76px; /* 預留給 iOS Safari 底部懸浮網址列的緩衝高度 */
+  --bg:#000000;
+  --panel:#1c1c1e;
+  --field:#2c2c2e;
+  --fill:#3a3a3c;
+  --line:#38383a;
+  --text:#f5f5f7;
+  --muted:#98989f;
+  --accent:#0a84ff;
+  --ok:#30d158;
+  --bad:#ff453a;
+  --warn:#ffd60a;
+}
+*{box-sizing:border-box}
+html{background-color:var(--bg)}
+body{min-height:100dvh;margin:0;color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + var(--bottom-gap)) max(8px,env(safe-area-inset-left,0px))}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
+.intro{color:var(--muted);margin:0 0 20px}
+.panel,.card{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px;margin:14px 0;min-width:0}
+label{display:block;font-weight:650;margin:12px 0 6px}
+input,textarea,button{font:inherit}
+input[type=url],input[type=text],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
+input[type=url]:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent)}
+input[type=file]{width:100%;max-width:100%}
+.card textarea{display:block;min-height:140px;resize:vertical;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
+button{display:inline-block;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;padding:11px 14px;cursor:pointer;margin-top:10px}
+button:active{opacity:.7}
+button.secondary,button.btn-secondary{background:var(--fill);color:var(--text)}
+button.btn-accent{background:var(--accent);color:#fff}
+button.btn-save{background:var(--ok);color:#000}
+button.btn-danger{background:var(--bad);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+small,.muted,.hint{color:var(--muted)}
+.hint{font-size:.85rem;margin-top:6px;overflow-wrap:anywhere}
+.status,.status-msg{padding:12px;border-radius:12px;background:var(--field);border:1px solid transparent;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.status-msg{max-height:260px;overflow-y:auto}
+.status-msg.err{color:var(--bad)}.status-msg.ok{color:var(--ok)}.status-msg.warn{color:var(--warn)}
+a{color:var(--accent);overflow-wrap:anywhere}
+.cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.cue time{display:block;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.cue time a{text-decoration:none}
+.cue-text{white-space:pre-wrap}
+.cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
+.cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
+/* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，確保較近距離永遠優先 */
+/* 置中對稱放大（transform-origin:center center）搭配 flex gap 間距，解決字塊往右偏與多塊同時亮起時的重疊問題 */
+#autopreview{display:flex;flex-direction:column;gap:10px}
+#autopreview .cue{position:relative;margin:0 6px;padding:14px 16px 18px;border-radius:12px;border-bottom:0;background:transparent;transition:opacity .3s ease,background-color .3s ease,transform .3s ease;transform-origin:center center}
+:where(#autopreview .cue){opacity:.3}
+:where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active)){opacity:.38}
+:where(#autopreview .cue.active + .cue + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue + .cue.active)){opacity:.5}
+:where(#autopreview .cue.active + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue.active)){opacity:.7}
+#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09);transform:scale(1.03)}
+#autopreview .cue.active .cue-zh{font-size:1.4em}
+#autopreview .cue.active .cue-text{font-size:1.05em}
+#autopreview .cue-text{font-weight:600}
+#autopreview .cue.has-zh .cue-text{font-weight:400}
+/* Safari 26 Liquid Glass 相容：sticky 元素本身保持 background:transparent，將背景移至 ::before 並向上延伸覆蓋安全區間隙 */
+#youtube-player-container{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;background:transparent;padding:8px 0;width:100%}
+#youtube-player-container::before{content:"";position:absolute;top:calc(-1 * env(safe-area-inset-top,0px));right:0;bottom:0;left:0;background:var(--bg);z-index:-1;pointer-events:none}
+#youtube-player{position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden}
+#youtube-player iframe{position:absolute;top:0;left:0;display:block;width:100% !important;height:100% !important;border:0}
+@media (max-width: 619px){
+  #youtube-player-container{width:100vw;max-width:none;margin-left:calc(50% - 50vw);padding:0}
+}
+.badge-test{background:var(--bad);color:#fff;padding:2px 8px;border-radius:99px;font-size:.78rem;vertical-align:middle;font-weight:700}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.btn-group button,.batch-bar button{margin-top:0;max-width:100%}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.three-col>div{min-width:0}
+@media(max-width:520px){.three-col{grid-template-columns:1fr}}
+.batch-bar{display:flex;align-items:center;gap:10px;background:var(--field);padding:12px;border-radius:12px;margin:10px 0;flex-wrap:wrap}
+.batch-info{flex:1 1 100%;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
+.batch-tag{font-size:.8rem;padding:2px 8px;border-radius:99px;font-weight:700}
+.batch-tag.saved{background:var(--ok);color:#000}.batch-tag.pending{background:var(--warn);color:#000}
+.status-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:99px;font-size:.88rem;font-weight:700;overflow-wrap:anywhere}
+.status-badge.ok{background:rgba(48,209,88,.15);color:var(--ok)}
+.status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
+#pipeline{font-size:.92rem;margin-top:0}
+.url-bar,.status-grid,.player-lyrics-layout{display:contents}
+/* 電腦版寬螢幕適配（>= 900px）：拓寬容器、輸入列與狀態列並排、播放器與歌詞左右分欄避免播放器過大佔滿垂直畫面 */
+@media (min-width: 900px){
+  main{max-width:1120px;padding:32px 24px 64px}
+  h1{font-size:1.72rem}
+  h2{font-size:1.12rem}
+  .panel,.card{padding:20px 24px;margin:16px 0}
+  input[type=url],input[type=text],textarea{padding:10px 12px;font-size:.95rem}
+  button{padding:9px 16px;font-size:.95rem}
+  .card textarea{min-height:180px}
+  .url-bar{display:flex;gap:10px;align-items:center}
+  .url-bar input{flex:1}
+  .url-bar button{margin-top:0;white-space:nowrap;flex-shrink:0}
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .status-grid .status{margin-top:12px}
+  .player-lyrics-layout:has(#youtube-player-container:not([hidden])){
+    display:grid;
+    grid-template-columns:minmax(360px,45%) minmax(0,1fr);
+    gap:22px;
+    align-items:start;
+    margin-top:14px;
+  }
+  .player-lyrics-layout:has(#youtube-player-container:not([hidden])) #youtube-player-container{
+    top:20px;
+    padding:0;
+  }
+  #youtube-player{border-radius:12px}
+  #autopreview .cue{padding:12px 16px 14px}
+  #autopreview .cue.active{transform:scale(1.02)}
+  #autopreview .cue.active .cue-zh{font-size:1.26em}
+  #autopreview .cue.active .cue-text{font-size:1em}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>VT 字幕整合測試頁 <span class="badge-test">TEST ONLY</span></h1>
+  <p class="intro">取得／匯入日文字幕 → 詞庫驗證 → 分批翻譯與暫存 → 全量校驗 → 雙語字幕載入播放器。僅供測試，未連動正式版。</p>
+
+  <section class="panel"><h2>整合流程狀態</h2><div id="pipeline" class="status">…</div></section>
+
+  <section class="panel">
+    <h2>1. 取得 YouTube 日文字幕</h2>
+    <label for="yturl">影片網址</label>
+    <div class="url-bar">
+      <input id="yturl" type="url" inputmode="url"
+        placeholder="https://www.youtube.com/watch?v=..."
+        value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
+      <button id="check">取得日文字幕</button>
+    </div>
+    <div class="status-grid">
+      <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
+      <div id="player-state" class="status" aria-live="polite">播放器：尚未載入字幕。</div>
+    </div>
+    <div class="player-lyrics-layout">
+      <div id="youtube-player-container" hidden>
+        <div id="youtube-player"></div>
+      </div>
+      <div id="autopreview"></div>
+    </div>
+
+    <p class="muted"><small>本功能透過 Cloudflare Worker 取得字幕。能否取得字幕，取決於影片是否有可用的日文字幕，以及字幕服務的處理結果。</small></p>
+  </section>
+
+  <section class="panel">
+    <h2>2. 匯入字幕檔（備援功能；可送入翻譯流程）</h2>
+    <p class="muted">可匯入 SRT／VTT 字幕檔，或直接貼上字幕內容。</p>
+    <label for="subtitlefile">選擇字幕檔</label>
+    <input id="subtitlefile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
+    <label for="subtitletext">或貼上字幕內容</label>
+    <textarea id="subtitletext" rows="7" placeholder="可貼上 SRT 或 WebVTT 內容"></textarea>
+    <button id="parse">解析字幕</button>
+    <button id="clear" class="secondary">清除</button>
+    <button id="btn-import-to-translation">送入翻譯流程（以解析結果重新編號 1..N）</button>
+    <div id="substatus" class="status" aria-live="polite">尚未載入字幕。</div>
+    <div id="preview"></div>
+  </section>
+
+  <div>
+    <div class="card">
+      <h2>3. 詞庫（翻譯步驟 0）</h2>
+      <label for="glossary-file-input">選取詞庫檔案 hololive_glossary.txt（專案實際檔名；本頁不自動讀取詞庫，必須手動選檔）：</label>
+      <input type="file" id="glossary-file-input" accept=".txt,text/plain">
+      <div><span id="glossary-status-badge" class="status-badge err">● 詞庫未載入：請選擇 hololive_glossary.txt</span></div>
+      <div id="glossary-status-desc" class="hint">未通過結構驗證（≥500 行、27 個必要章節）前，禁止產生翻譯 Prompt、QC Prompt，也禁止全量校驗解鎖。</div>
+    </div>
+
+    <div class="card">
+      <h2>4. 原始日文字幕 SRT（翻譯步驟 1）</h2>
+      <label for="field-raw-ja">貼入原始字幕（解析前防誤觸保護；零長度/重疊時間戳記錄至 warnings 保留）：</label>
+      <div class="btn-group">
+        <button id="btn-parse-raw" class="btn-accent">解析原始字幕</button>
+        <button class="btn-secondary" id="btn-clear-raw">清空原始字幕</button>
+      </div>
+      <textarea id="field-raw-ja" placeholder="請貼入日文原始字幕..."></textarea>
+      <div class="hint">上方「取得日文字幕」或「送入翻譯流程」會自動把字幕序列化為 SRT 填入此處並解析；也可手動貼入標準 SRT。</div>
+      <div id="status-raw" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>5. 翻譯 Prompt 與批次（翻譯步驟 2）</h2>
+      <div class="three-col">
+        <div>
+          <label for="cfg-start-seq">起始序號 (需實際存在)</label>
+          <input type="text" id="cfg-start-seq" inputmode="numeric" pattern="[1-9][0-9]*" value="1" placeholder="例如 1 或 51">
+        </div>
+        <div>
+          <label for="cfg-limit-count">處理段數 (留空代表全部)</label>
+          <input type="text" id="cfg-limit-count" inputmode="numeric" pattern="[1-9][0-9]*" value="" placeholder="留空代表全部">
+        </div>
+        <div>
+          <label for="cfg-batch-size">每批上限 (1~300，建議 100~300)</label>
+          <input type="text" id="cfg-batch-size" inputmode="numeric" pattern="[1-9][0-9]*" value="200" placeholder="1~300，預設 200">
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-apply-batch-config" class="btn-accent">套用設定／建立批次</button>
+      </div>
+
+      <div id="batch-control-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="batch-info-label">批次 1 / 1</span>
+        <span id="batch-status-tag" class="batch-tag pending">待翻譯</span>
+        <button id="btn-prev-batch" class="btn-secondary" disabled>上一批</button>
+        <button id="btn-next-batch" class="btn-secondary" disabled>下一批</button>
+        <button id="btn-gen-batch-prompt" class="btn-accent">產生此批 Prompt</button>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-copy-trans-prompt" disabled>複製 Prompt</button>
+      </div>
+      <textarea id="field-trans-prompt" readonly placeholder="請先完成步驟 0 載入詞庫、步驟 1 解析原始字幕並套用批次設定..."></textarea>
+      <div id="status-prompt-info" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>6. 雙語結果暫存、全量校驗與匯出（翻譯步驟 3）</h2>
+      <label for="field-trans-result">貼入雙語 SRT（單批與多批均強制要求先暫存；修改將標記未存並鎖定全量校驗）：</label>
+      <div class="btn-group">
+        <button id="btn-save-current-batch" class="btn-save" style="display:none;">暫存當前批次結果</button>
+        <button id="btn-revert-current-batch" class="btn-secondary" style="display:none;">還原至已儲存暫存</button>
+        <button id="btn-clear-current-batch" class="btn-danger" style="display:none;">作廢此批暫存</button>
+        <button id="btn-split-current-batch" class="btn-secondary" style="display:none;">將此批拆成兩批</button>
+        <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
+        <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
+        <button id="btn-import-json" class="btn-secondary">匯入雙語 JSON</button>
+        <input type="file" id="json-import-input" accept=".json,application/json" style="display:none">
+      </div>
+      <div class="btn-group">
+        <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
+        <button class="btn-secondary" id="btn-clear-all-batches">清空所有批次暫存</button>
+      </div>
+      <textarea id="field-trans-result" placeholder="貼入 Gemini 產出之雙語 SRT..."></textarea>
+      <div id="status-verify" class="status-msg" style="display:none;"></div>
+      <div id="status-import" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>7. 品質檢查 Prompt（翻譯步驟 4）</h2>
+      <label for="field-qc-prompt">僅在通過步驟 3 全量校驗後解鎖（詞庫紅燈或輸入變更將立即重新鎖定）：</label>
+      <div id="qc-batch-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="qc-batch-label">QC 批次 1 / 1</span>
+        <button id="btn-prev-qc-batch" class="btn-secondary" disabled>QC 上一批</button>
+        <button id="btn-next-qc-batch" class="btn-secondary" disabled>QC 下一批</button>
+        <button id="btn-gen-current-qc" class="btn-accent">產生此批 QC Prompt</button>
+      </div>
+      <div class="btn-group">
+        <button id="btn-copy-qc-prompt" disabled>複製 QC Prompt</button>
+      </div>
+      <textarea id="field-qc-prompt" readonly placeholder="通過全量雙語校驗後，此處將解鎖產生 QC Prompt..."></textarea>
+      <div id="status-qc" class="status-msg" style="display:none;"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const API = "https://vt-subtitle-api.weide1217.workers.dev/";
+const FETCH_TIMEOUT_MS = 30000;
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 本地檔案大小上限 20MB
+
+function setStatus(idOrEl, cls, msg) {
+  const el = typeof idOrEl === "string" ? $(idOrEl) : idOrEl;
+  if (!el) return;
+  el.style.display = "block";
+  el.className = "status-msg" + (cls ? " " + cls : "");
+  el.textContent = msg;
+}
+
+// ==================== YouTube 播放器管理 ====================
+let youtubePlayer = null;
+let youtubeApiReady = false;
+let youtubePlayerReady = false;
+let loadedVideoId = null;
+let pendingVideoId = null;
+let pendingSeekTime = null;
+
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) {
+    youtubeApiReady = true;
+    return;
+  }
+  if ($("youtube-iframe-api")) return;
+  const script = document.createElement("script");
+  script.id = "youtube-iframe-api";
+  script.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(script);
+}
+
+window.onYouTubeIframeAPIReady = function () {
+  youtubeApiReady = true;
+  if (pendingVideoId) {
+    createYouTubePlayer(pendingVideoId);
+  }
+};
+
+function createYouTubePlayer(videoId) {
+  pendingVideoId = videoId;
+  if (!youtubeApiReady) {
+    loadYouTubeAPI();
+    return;
+  }
+
+  $("youtube-player-container").hidden = false;
+
+  if (youtubePlayer) {
+    if (!youtubePlayerReady) return;
+    if (loadedVideoId !== videoId) {
+      loadedVideoId = videoId;
+      if (pendingSeekTime !== null) {
+        youtubePlayer.loadVideoById(videoId, pendingSeekTime);
+        pendingSeekTime = null;
+      } else {
+        youtubePlayer.cueVideoById(videoId);
+      }
+    } else if (pendingSeekTime !== null) {
+      youtubePlayer.seekTo(pendingSeekTime, true);
+      youtubePlayer.playVideo();
+      pendingSeekTime = null;
+    }
+    return;
+  }
+
+  loadedVideoId = videoId;
+  youtubePlayer = new YT.Player("youtube-player", {
+    width: "100%",
+    height: "220",
+    videoId: videoId,
+    playerVars: { playsinline: 1 },
+    events: {
+      onReady: function () {
+        youtubePlayerReady = true;
+        if (pendingVideoId && pendingVideoId !== loadedVideoId) {
+          loadedVideoId = pendingVideoId;
+          if (pendingSeekTime !== null) {
+            youtubePlayer.loadVideoById(pendingVideoId, pendingSeekTime);
+          } else {
+            youtubePlayer.cueVideoById(pendingVideoId);
+          }
+        } else if (pendingSeekTime !== null) {
+          youtubePlayer.seekTo(pendingSeekTime, true);
+          youtubePlayer.playVideo();
+        }
+        pendingSeekTime = null;
+      }
+    }
+  });
+}
+
+function seekToTimestamp(videoId, seconds) {
+  pendingVideoId = videoId;
+  pendingSeekTime = seconds;
+
+  if (!youtubeApiReady) {
+    loadYouTubeAPI();
+    return;
+  }
+  if (!youtubePlayer || !youtubePlayerReady) {
+    createYouTubePlayer(videoId);
+    return;
+  }
+
+  $("youtube-player-container").hidden = false;
+  if (loadedVideoId !== videoId) {
+    loadedVideoId = videoId;
+    youtubePlayer.loadVideoById(videoId, seconds);
+  } else {
+    youtubePlayer.seekTo(seconds, true);
+    youtubePlayer.playVideo();
+  }
+  pendingSeekTime = null;
+}
+
+// ==================== 字幕跟隨播放進度 ====================
+const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
+const FOLLOW_PAUSE_MS = 4000;  // 手指放開且慣性捲動停止後，等待多少毫秒才跳回高亮處
+const SYNC_INTERVAL_MS = 80;   // 每隔多久檢查一次播放進度
+const SCROLL_ANCHOR = 0.35;    // 0=貼近播放器下緣，0.5=可視區正中；越小越靠上
+
+let syncTrack = null;
+let lastActiveIndex = -1;
+let isTouching = false;        // 手指是否正接觸螢幕（接觸期間完全鎖定自動捲動）
+let followPausedUntil = 0;     // 暫停自動跟隨的截止時間戳
+let autoScrollUntil = 0;       // 程式自身觸發平滑捲動的保護時間窗，避免誤判為手動捲動
+let resumeFollowTimer = null;  // 手放開 3~4 秒後自動跳回目前高亮字幕的計時器
+
+function buildTrackIndex(track) {
+  const cues = track.cues;
+  track.estar = cues.map(c => Math.max(c.start, c.end));
+  track.ord = cues.map((_, i) => i).sort((a, b) => cues[a].start - cues[b].start || a - b);
+  track.pm = [];
+  track.ord.forEach((i, k) => {
+    track.pm[k] = Math.max(k ? track.pm[k - 1] : -Infinity, track.estar[i]);
+  });
+  track.active = [];
+}
+
+function findActiveIndices(track, t) {
+  const cues = track.cues, ord = track.ord, pm = track.pm, est = track.estar, n = cues.length;
+  let lo = 0, hi = n - 1, h = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[ord[mid]].start <= t) { h = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  if (h < 0) return [];
+  const L = cues[ord[h]].start;
+  const fut = h < n - 1;
+  const anyIn = pm[h] >= t; // pm[h] 即為 0..h 的最大結束時間，O(1) 判定是否有字幕仍在區間內
+  const out = [];
+  for (let k = h; k >= 0; k--) {
+    const i = ord[k];
+    if (t <= est[i]) out.push(i);
+    else if (cues[i].start === L && (fut || (!anyIn && t <= est[i] + ACTIVE_GRACE))) out.push(i);
+    if (cues[i].start < L && pm[k] < t) break;
+  }
+  return out.sort((a, b) => a - b);
+}
+
+function scrollCueIntoPlace(el) {
+  if (isTouching || Date.now() < followPausedUntil) return;
+  // 若使用者正在下方輸入框/文字區編輯，或預覽區已捲出畫面外，不強制拉回視窗
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  if (activeTag === "TEXTAREA" || activeTag === "INPUT") return;
+  const previewRect = $("autopreview").getBoundingClientRect();
+  if (previewRect.bottom < 0 || previewRect.top > window.innerHeight) return;
+  const player = $("youtube-player-container");
+  const playerRect = player && !player.hidden ? player.getBoundingClientRect() : null;
+  // 僅在手機版「播放器疊在字幕正上方」時扣除播放器高度；電腦版左右並排時不扣除
+  const isStackedAbove = playerRect &&
+    playerRect.right > previewRect.left + 20 &&
+    playerRect.left < previewRect.right - 20;
+  const playerBottom = isStackedAbove ? Math.max(0, Math.min(playerRect.bottom, player.offsetHeight + 16)) : 0;
+  const targetCenter = playerBottom + (window.innerHeight - playerBottom) * SCROLL_ANCHOR;
+  const r = el.getBoundingClientRect();
+  const delta = r.top + r.height / 2 - targetCenter;
+  if (Math.abs(delta) < 6) return;
+  autoScrollUntil = Date.now() + 900;
+  window.scrollBy({ top: delta, behavior: "smooth" });
+}
+
+function scheduleResumeFollow(ms = FOLLOW_PAUSE_MS) {
+  followPausedUntil = Date.now() + ms;
+  if (resumeFollowTimer) clearTimeout(resumeFollowTimer);
+  resumeFollowTimer = setTimeout(() => {
+    resumeFollowTimer = null;
+    if (isTouching || Date.now() < followPausedUntil) return;
+    if (!syncTrack || lastActiveIndex < 0) return;
+    if (youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getPlayerState === "function" && youtubePlayer.getPlayerState() !== 1) return;
+    const el = syncTrack.els[lastActiveIndex];
+    if (el) scrollCueIntoPlace(el);
+  }, ms + 20);
+}
+
+function setActiveCues(next) {
+  if (!syncTrack) return;
+  const prev = syncTrack.active;
+  if (prev.length === next.length && prev.every((v, k) => v === next[k])) return;
+  const nextSet = new Set(next), prevSet = new Set(prev);
+  prev.forEach(i => { if (!nextSet.has(i)) syncTrack.els[i].classList.remove("active"); });
+  next.forEach(i => { if (!prevSet.has(i)) syncTrack.els[i].classList.add("active"); });
+  syncTrack.active = next;
+  let anchor = -1;
+  next.forEach(i => { if (anchor < 0 || syncTrack.cues[i].start < syncTrack.cues[anchor].start) anchor = i; });
+  if (anchor === lastActiveIndex) return;
+  lastActiveIndex = anchor;
+  const el = syncTrack.els[anchor];
+  if (!el || isTouching || Date.now() < followPausedUntil) return;
+  scrollCueIntoPlace(el);
+}
+
+// 手指接觸與滑動期間：完全鎖定自動捲動，並立即中斷進行中的平滑捲動
+["touchstart", "touchmove"].forEach(name => {
+  window.addEventListener(name, () => {
+    isTouching = true;
+    autoScrollUntil = 0;
+    followPausedUntil = Infinity;
+    if (resumeFollowTimer) {
+      clearTimeout(resumeFollowTimer);
+      resumeFollowTimer = null;
+    }
+  }, { passive: true });
+});
+
+// 手指完全放開後：才開始起算 4 秒倒數
+["touchend", "touchcancel"].forEach(name => {
+  window.addEventListener(name, (e) => {
+    if (e.touches && e.touches.length > 0) return;
+    isTouching = false;
+    scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  }, { passive: true });
+});
+
+// 滑鼠滾輪與鍵盤捲動按鍵：重置 4 秒倒數
+window.addEventListener("wheel", () => {
+  autoScrollUntil = 0;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+window.addEventListener("keydown", (e) => {
+  const tag = document.activeElement ? document.activeElement.tagName : "";
+  if (tag === "TEXTAREA" || tag === "INPUT") return;
+  if (!SCROLL_KEYS.has(e.key)) return;
+  autoScrollUntil = 0;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+// 視窗捲動監聽：僅在已處於手動暫停期間（如手指放開後的 iOS 慣性滑動）且非程式自身捲動時，才順延 4 秒倒數
+window.addEventListener("scroll", () => {
+  if (isTouching) {
+    followPausedUntil = Infinity;
+    return;
+  }
+  if (Date.now() < autoScrollUntil || Date.now() >= followPausedUntil) return;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+setInterval(() => {
+  if (!syncTrack || !youtubePlayer || !youtubePlayerReady || typeof youtubePlayer.getCurrentTime !== "function") return;
+  const t = youtubePlayer.getCurrentTime();
+  if (typeof t !== "number" || !Number.isFinite(t)) return;
+  setActiveCues(findActiveIndices(syncTrack, t));
+}, SYNC_INTERVAL_MS);
+
+// ==================== 時間戳與 YouTube 網址工具 ====================
+function parseYouTubeUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return { ok: false, error: "網址格式不正確，請重新確認。" };
+  }
+
+  const host = u.hostname.toLowerCase().replace(/^www\./, "").replace(/^m\./, "");
+  let id = "";
+
+  if (host === "youtu.be") {
+    id = u.pathname.split("/").filter(Boolean)[0] || "";
+  } else if (["youtube.com", "music.youtube.com"].includes(host)) {
+    if (u.pathname === "/watch") {
+      id = u.searchParams.get("v") || "";
+    } else {
+      const m = u.pathname.match(/^\/(?:live|shorts|embed|v)\/([^/?]+)/);
+      if (m) id = m[1];
+    }
+  }
+
+  if (!id || !/^[\w-]{11}$/.test(id)) {
+    return { ok: false, error: "無法辨識影片 ID，請貼上有效的 YouTube 影片或直播存檔網址。" };
+  }
+  return { ok: true, id };
+}
+
+// 先四捨五入至 0.1 秒再進位計算時分秒，避免 59.96 秒變成 00:60.0
+function fmt(t) {
+  const tenths = Math.round(Math.max(0, t) * 10);
+  const h = Math.floor(tenths / 36000);
+  const m = Math.floor((tenths % 36000) / 600);
+  const s = ((tenths % 600) / 10).toFixed(1).padStart(4, "0");
+  return (h ? String(h).padStart(2, "0") + ":" : "") + String(m).padStart(2, "0") + ":" + s;
+}
+
+function toSrtTime(sec) {
+  const total = Math.round(Math.max(0, sec) * 1000);
+  const p = (n, w) => String(n).padStart(w, "0");
+  return p(Math.floor(total / 3600000), 2) + ":" + p(Math.floor(total / 60000) % 60, 2) + ":" +
+    p(Math.floor(total / 1000) % 60, 2) + "," + p(total % 1000, 3);
+}
+
+function parseStrictTimestampValues(tsStr) {
+  const m = tsStr.match(/^(\d{2}):(\d{2}):(\d{2})[,\.](\d{3})$/);
+  if (!m) return null;
+  const hh = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  const ss = parseInt(m[3], 10);
+  const ms = parseInt(m[4], 10);
+  if (mm >= 60 || ss >= 60) return null;
+  const totalMs = hh * 3600000 + mm * 60000 + ss * 1000 + ms;
+  return { raw: tsStr, totalMs };
+}
+
+function renderCues(container, cues, limit = Infinity, videoId = "") {
+  container.replaceChildren();
+  const sliced = cues.slice(0, limit);
+  const fragment = document.createDocumentFragment();
+  const track = videoId ? { cues: sliced, els: [] } : null;
+  if (track) {
+    buildTrackIndex(track);
+    syncTrack = track;
+    lastActiveIndex = -1;
+  } else if (container.id === "autopreview") {
+    syncTrack = null;
+    lastActiveIndex = -1;
+  }
+
+  sliced.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "cue";
+    if (track) track.els.push(d);
+
+    const time = document.createElement("time");
+    if (videoId) {
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = fmt(c.start) + " → " + fmt(c.end);
+      link.addEventListener("click", event => {
+        event.preventDefault();
+        isTouching = false;
+        followPausedUntil = 0;
+        if (resumeFollowTimer) {
+          clearTimeout(resumeFollowTimer);
+          resumeFollowTimer = null;
+        }
+        seekToTimestamp(videoId, c.start);
+      });
+      time.append(link);
+    } else {
+      time.textContent = fmt(c.start) + " → " + fmt(c.end);
+    }
+
+    const txt = document.createElement("div");
+    txt.className = "cue-text";
+    txt.textContent = c.text;
+
+    const body = document.createElement("div");
+    body.className = "cue-body";
+
+    if (c.zh) {
+      const zh = document.createElement("div");
+      zh.className = "cue-zh";
+      zh.textContent = c.zh;
+      d.classList.add("has-zh");
+      body.append(zh, txt);
+    } else {
+      body.append(txt);
+    }
+
+    d.append(time, body);
+    fragment.append(d);
+  });
+
+  container.append(fragment);
+
+  if (cues.length > limit) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = `目前顯示前 ${limit} 句，共 ${cues.length} 句字幕。`;
+    container.append(note);
+  }
+}
+
+// ==================== 全域狀態管理 ====================
+let verifiedPlayerCues = null;
+let playerShowsTranslation = false;
+let currentQcBatchIdx = 0;
+let sourceLabel = "";
+
+let loadedGlossaryRawContent = "";
+let isGlossaryVerified = false;
+let glossaryLoadToken = 0;
+
+let parsedRawCues = [];
+let rawParsePassed = false;
+let batchList = [];
+let currentBatchIdx = 0;
+const MAX_BATCH_SIZE = 300;
+const MAX_SPLIT_DEPTH = 2;
+const MIN_SPLIT_CUES = 2;
+
+let fullyVerifiedCues = [];
+let globalRawWarnings = [];
+let isProgrammaticInputUpdate = false;
+let lastParsedRawJa = "";
+
+function setPlayerState(msg) {
+  const el = $("player-state");
+  if (el) el.textContent = msg;
+}
+
+function hasTranslationWork() {
+  return batchList.some(b => b.status === "SAVED") ||
+    $("field-trans-result").value.trim().length > 0 ||
+    fullyVerifiedCues.length > 0;
+}
+
+function currentVideoId() {
+  const p = parseYouTubeUrl($("yturl").value.trim());
+  return p.ok ? p.id : "";
+}
+
+function setTransInputValue(val) {
+  isProgrammaticInputUpdate = true;
+  $("field-trans-result").value = val;
+  isProgrammaticInputUpdate = false;
+}
+
+function makeBatch(batchNum, cues, splitDepth = 0) {
+  return {
+    batchNum,
+    startSeq: cues[0].index,
+    endSeq: cues[cues.length - 1].index,
+    cues,
+    status: "PENDING",
+    savedSrt: "",
+    savedCues: [],
+    draftSrt: "",
+    splitDepth,
+    failCount: 0,
+    lastFailure: ""
+  };
+}
+
+function clearBatchData(b) {
+  b.status = "PENDING";
+  b.savedSrt = "";
+  b.savedCues = [];
+  b.draftSrt = "";
+  b.failCount = 0;
+  b.lastFailure = "";
+}
+
+function updatePipeline() {
+  const saved = batchList.filter(b => b.status === "SAVED").length;
+  const exportOn = !$("btn-export-json").disabled;
+  $("pipeline").textContent =
+    `來源：${sourceLabel || "尚未載入"}\n` +
+    `原始字幕：${rawParsePassed ? `已解析 ${parsedRawCues.length} 句（時間戳警告 ${globalRawWarnings.length} 項）` : "未解析"}\n` +
+    `詞庫：${isGlossaryVerified ? "已通過結構驗證" : "未通過／未載入"}\n` +
+    `批次：${batchList.length ? `已暫存 ${saved} / ${batchList.length}` : "尚未建立"}\n` +
+    `全量校驗：${fullyVerifiedCues.length ? `通過（${fullyVerifiedCues.length} 句）` : "未通過／未執行"}\n` +
+    `播放器：${playerShowsTranslation ? "雙語（已校驗）" : (rawParsePassed ? "僅日文" : "無資料")}　匯出：${exportOn ? "可用" : "鎖定"}`;
+}
+
+function lockAndClearVerificationState(reasonMsg) {
+  fullyVerifiedCues = [];
+  verifiedPlayerCues = null;
+  $("qc-batch-bar").style.display = "none";
+  $("btn-copy-qc-prompt").disabled = true;
+  $("field-qc-prompt").value = "";
+  $("status-qc").style.display = "none";
+  $("btn-export-json").disabled = true;
+  if (!rawParsePassed || !parsedRawCues.length) {
+    playerShowsTranslation = false;
+    $("autopreview").replaceChildren();
+    syncTrack = null;
+    lastActiveIndex = -1;
+    setPlayerState("播放器：尚未載入字幕。" + (reasonMsg ? "\n" + reasonMsg : ""));
+  } else {
+    if (playerShowsTranslation) {
+      playerShowsTranslation = false;
+      renderSourcePreview();
+    }
+    setPlayerState("播放器：僅顯示日文原文。" + (reasonMsg ? "\n" + reasonMsg : ""));
+  }
+  updatePipeline();
+}
+
+function resetBatchState() {
+  batchList = [];
+  currentBatchIdx = 0;
+  $("batch-control-bar").style.display = "none";
+  $("btn-save-current-batch").style.display = "none";
+  $("btn-revert-current-batch").style.display = "none";
+  $("btn-clear-current-batch").style.display = "none";
+  $("btn-split-current-batch").style.display = "none";
+  $("field-trans-prompt").value = "";
+  $("btn-copy-trans-prompt").disabled = true;
+  $("status-prompt-info").style.display = "none";
+  updatePipeline();
+}
+
+function clearAllRawAndBatchState(reasonMsg) {
+  rawParsePassed = false;
+  parsedRawCues = [];
+  globalRawWarnings = [];
+  lastParsedRawJa = "";
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState(reasonMsg);
+}
+
+function getScopedWarnings() {
+  const targetedSeqSet = new Set(fullyVerifiedCues.map(c => c.index));
+  return globalRawWarnings
+    .filter(w => targetedSeqSet.has(w.index))
+    .map(w => ({
+      index: w.index,
+      type: w.type,
+      message: w.message
+    }));
+}
+
+async function copyTextWithFallback(text, successMsg) {
+  if (!text) {
+    alert("Prompt 內容為空！");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    alert(successMsg);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      alert(successMsg);
+    } catch {
+      alert("複製失敗，請手動全選複製。");
+    } finally {
+      document.body.removeChild(ta);
+    }
+  }
+}
+
+// ==================== 步驟 0：詞庫讀取、SHA-256 計算與結構驗證 ====================
+function invalidateGlossaryState(reason, token) {
+  if (token !== undefined && token !== glossaryLoadToken) return;
+
+  isGlossaryVerified = false;
+  loadedGlossaryRawContent = "";
+  const badge = $("glossary-status-badge");
+  badge.className = "status-badge err";
+  badge.textContent = "● 詞庫未載入或驗證失敗";
+  $("glossary-status-desc").textContent = reason || "選取檔案中，已撤銷舊詞庫與相關 Prompt。";
+  $("field-trans-prompt").value = "";
+  $("field-qc-prompt").value = "";
+  $("btn-copy-trans-prompt").disabled = true;
+  $("btn-copy-qc-prompt").disabled = true;
+  $("status-prompt-info").style.display = "none";
+  $("status-qc").style.display = "none";
+
+  lockAndClearVerificationState("詞庫已失效，全量校驗、預覽與 JSON 匯出已全面鎖定。");
+}
+
+async function computeSHA256(text) {
+  const enc = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(text));
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function validateGlossaryFileContent(content, token) {
+  if (token !== glossaryLoadToken) return false;
+
+  if (!content || content.trim().length === 0) {
+    invalidateGlossaryState("選取之檔案內容為空，請選取正確的詞庫檔案。", token);
+    return false;
+  }
+
+  const lines = content.replace(/\r\n?/g, "\n").split("\n");
+  if (lines.length < 500) {
+    invalidateGlossaryState(`檔案僅 ${lines.length} 行，原始詞庫應約 931 行。行數不足，判定結構不完整。`, token);
+    return false;
+  }
+
+  const requiredSections = [
+    "1. hololive JP", "1.1 0期生", "1.2 1期生", "1.3 2期生",
+    "1.4 GAMERS", "1.5 3期生", "1.6 4期生", "1.7 5期生", "1.8 holoX",
+    "2. hololive Indonesia", "2.1 AREA 15", "2.2 holoro", "2.3 holoh3ro",
+    "3. hololive English", "3.1 Myth", "3.2 Project: HOPE", "3.3 Council", "3.4 Promise", "3.5 Advent", "3.6 Justice",
+    "4. hololive DEV_IS", "4.1 ReGLOSS", "4.2 FLOW GLOW", "4.3 アソビ★まわり隊！",
+    "5. 跨團體共通規則與字幕翻譯詞彙", "5.3 常見詞的上下文翻譯",
+    "6. 未確認／需人工複核清單"
+  ];
+
+  const missing = requiredSections.filter(sec => !content.includes(sec));
+  if (missing.length > 0) {
+    invalidateGlossaryState(`缺少關鍵章節標記：${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " 等" : ""}。`, token);
+    return false;
+  }
+
+  let sha256 = "（此環境無法計算）";
+  try { sha256 = await computeSHA256(content); } catch {}
+  if (token !== glossaryLoadToken) return false;
+
+  loadedGlossaryRawContent = content;
+  isGlossaryVerified = true;
+  const badge = $("glossary-status-badge");
+  badge.className = "status-badge ok";
+  badge.textContent = "● 詞庫基本結構檢查通過（27 個必要章節）";
+  $("glossary-status-desc").textContent = `行數：${lines.length} 行 | 檔案雜湊 (SHA-256)：${sha256} | 提示：雜湊值供使用者與已知版本手動核對，本系統僅驗證基本結構。`;
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    generatePromptForBatch(batchList[currentBatchIdx]);
+  }
+  updatePipeline();
+  return true;
+}
+
+$("glossary-file-input").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  if (file.size > MAX_FILE_BYTES) {
+    alert("選取的詞庫檔案過大（超過 20MB），請確認是否選到正確的 .txt 檔案。");
+    e.target.value = "";
+    return;
+  }
+
+  if (batchList.some(b => b.status === "SAVED") || fullyVerifiedCues.length > 0) {
+    const ok = confirm("選取新詞庫將使現有的全量校驗結果與 QC Prompt 失效。\n所有批次必須依新詞庫重新進行校驗與 QC。\n確定要更換詞庫嗎？");
+    if (!ok) {
+      e.target.value = "";
+      return;
+    }
+  }
+
+  const currentToken = ++glossaryLoadToken;
+  invalidateGlossaryState("正在讀取新選取的詞庫檔案...", currentToken);
+
+  try {
+    const text = await file.text();
+    const okv = await validateGlossaryFileContent(text, currentToken);
+    if (okv && currentToken === glossaryLoadToken) {
+      const d = $("glossary-status-desc");
+      d.textContent = `檔名：${file.name} | ` + d.textContent +
+        (/^hololive_glossary\.txt$/i.test(file.name) ? "" : "\n注意：檔名不是 hololive_glossary.txt，請確認選到正確檔案。");
+    }
+  } catch {
+    invalidateGlossaryState("詞庫檔案讀取發生錯誤。", currentToken);
+  }
+});
+
+// ==================== 步驟 1：原始字幕解析 ====================
+function parseRawSubtitlesStrict(text) {
+  const errors = [];
+  const warnings = [];
+  const cues = [];
+
+  if (!text || text.trim().length === 0) {
+    errors.push("輸入內容為空。");
+    return { cues: [], errors, warnings: [] };
+  }
+
+  // 移除開頭 UTF-8 BOM、統一換行符號，並僅剝除整份文字首尾的純空白分隔行（保留日文行內空白）
+  const normalizedText = text
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "");
+
+  if (!normalizedText.includes("-->")) {
+    errors.push("輸入內容不包含標準 SRT 時間軸（-->）。時間戳行模式無法確定最後一段結束時間，請改用標準 SRT 格式。");
+    return { cues: [], errors, warnings: [] };
+  }
+
+  const blocks = normalizedText.split(/\n[ \t]*\n+/).filter(b => b.length > 0);
+  blocks.forEach((block, bIdx) => {
+    const rawLines = block.split("\n");
+    if (rawLines.length < 3) {
+      errors.push(`區塊 #${bIdx + 1} 行數不足（至少需有序號、時間戳與日文原文）。`);
+      return;
+    }
+
+    const rawSeqLine = rawLines[0];
+    if (!/^[1-9]\d*$/.test(rawSeqLine)) {
+      errors.push(`區塊 #${bIdx + 1} 序號行格式不符規範（必須為無前後空白之純數字整數，實際為: "${rawSeqLine}"）`);
+      return;
+    }
+    const seq = parseInt(rawSeqLine, 10);
+
+    const rawTimeLine = rawLines[1];
+    const tm = rawTimeLine.match(/^(\d{2}:\d{2}:\d{2}[,\.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,\.]\d{3})$/);
+    if (!tm) {
+      errors.push(`區塊 #${bIdx + 1} 時間戳行格式不符規範（必須為標準 "HH:MM:SS,mmm --> HH:MM:SS,mmm"，且箭頭前後為單空格無多餘空白，實際為: "${rawTimeLine}"）`);
+      return;
+    }
+    const startObj = parseStrictTimestampValues(tm[1]);
+    const endObj = parseStrictTimestampValues(tm[2]);
+    if (!startObj || !endObj) {
+      errors.push(`區塊 #${bIdx + 1} 時間戳數值非合法格式: "${rawTimeLine}"`);
+      return;
+    }
+
+    if (startObj.totalMs === endObj.totalMs) {
+      warnings.push({ index: seq, type: "zero_duration", message: `字幕 #${seq} 時間戳為零長度 (${startObj.raw} --> ${endObj.raw})，保留原始值。` });
+    } else if (startObj.totalMs > endObj.totalMs) {
+      warnings.push({ index: seq, type: "reversed_time", message: `字幕 #${seq} 時間戳開始時間晚於結束時間 (${startObj.raw} --> ${endObj.raw})，依規格保留原始值並提出警告。` });
+    }
+
+    const jaLines = rawLines.slice(2);
+    const jaText = jaLines.join("\n");
+
+    cues.push({
+      index: seq,
+      rawSeqLine,
+      rawTimeLine,
+      rawStart: startObj.raw,
+      rawEnd: endObj.raw,
+      startMs: startObj.totalMs,
+      endMs: endObj.totalMs,
+      jaLines,
+      ja: jaText
+    });
+  });
+
+  if (errors.length === 0) {
+    const seqSet = new Set();
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i];
+      if (seqSet.has(c.index)) {
+        errors.push(`發現重複序號: #${c.index}`);
+      }
+      seqSet.add(c.index);
+
+      if (i > 0) {
+        const prev = cues[i - 1];
+        if (c.startMs < prev.startMs) {
+          warnings.push({ index: c.index, type: "backward_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 早於前一條開始時間 (${prev.rawStart})，保留原始值。` });
+        } else if (c.startMs < prev.endMs) {
+          warnings.push({ index: c.index, type: "overlap_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 與前一條結束時間重疊，保留原始值。` });
+        }
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { cues: [], errors, warnings: [] };
+  }
+  return { cues, errors, warnings };
+}
+
+// 共用的原始字幕解析與套用流程：僅在解析成功後才清空既有批次、同步更新 textarea 與狀態
+function applyRawSubtitles(text, newSourceLabel, extraNotes = []) {
+  const { cues, errors, warnings } = parseRawSubtitlesStrict(text);
+  if (errors.length > 0) {
+    setStatus("status-raw", "err", `【原始字幕解析 FAIL】：發現 ${errors.length} 項嚴重錯誤，保留現有解析資料與批次：\n` + errors.slice(0, 10).join("\n"));
+    return false;
+  }
+
+  sourceLabel = newSourceLabel;
+  lastParsedRawJa = text;
+  if ($("field-raw-ja").value !== text) {
+    $("field-raw-ja").value = text;
+  }
+  rawParsePassed = true;
+  parsedRawCues = cues;
+  globalRawWarnings = warnings;
+
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState("原始字幕已重新解析，請重新完成翻譯與全量校驗。");
+  $("status-verify").style.display = "none";
+
+  setStatus("status-raw", "ok",
+    `【原始字幕解析 PASS】：共 ${cues.length} 條合法字幕。` +
+    (warnings.length > 0 ? `\n【時間戳警告（${warnings.length} 項，已保存）】：\n` + warnings.slice(0, 6).map(w => w.message).join("\n") + (warnings.length > 6 ? `\n...其餘 ${warnings.length - 6} 項警告已完整記錄` : "") : "") +
+    (extraNotes.length > 0 ? "\n" + extraNotes.join("\n") : "") +
+    `\n\n提示：請在步驟 2 設定起始序號、處理段數後，點擊「套用設定／建立批次」開始分批作業。`);
+  renderSourcePreview();
+  updatePipeline();
+  return true;
+}
+
+$("field-raw-ja").addEventListener("input", () => {
+  const currentVal = $("field-raw-ja").value;
+  if (currentVal === lastParsedRawJa) return;
+
+  if (rawParsePassed && hasTranslationWork()) {
+    const ok = confirm("目前已有批次暫存或翻譯輸入！修改原始字幕將會使現有暫存與校驗失效。\n確定要修改原始字幕並放棄現有資料嗎？\n點擊「取消」將還原原始字幕內容並保留所有批次與翻譯。");
+    if (!ok) {
+      $("field-raw-ja").value = lastParsedRawJa;
+      return;
+    }
+  }
+
+  sourceLabel = "手動貼上 SRT";
+  clearAllRawAndBatchState("原始字幕已修改，舊驗證與翻譯內容已清空。請重新解析原始字幕。");
+  $("status-raw").style.display = "none";
+  $("status-verify").style.display = "none";
+});
+
+$("btn-parse-raw").addEventListener("click", () => {
+  if (hasTranslationWork()) {
+    const ok = confirm("目前已有暫存之翻譯資料或輸入框中有翻譯內容！\n重新解析原始字幕將會清空現有的所有批次暫存與翻譯輸入。\n確定要重新解析原始字幕嗎？");
+    if (!ok) return;
+  }
+  applyRawSubtitles($("field-raw-ja").value, sourceLabel || "手動貼上 SRT");
+});
+
+$("btn-clear-raw").addEventListener("click", () => {
+  if (hasTranslationWork()) {
+    const ok = confirm("確定要清空原始字幕嗎？這將會一併清空現有的批次暫存與翻譯輸入！");
+    if (!ok) return;
+  }
+  $("field-raw-ja").value = "";
+  $("status-raw").style.display = "none";
+  sourceLabel = "";
+  clearAllRawAndBatchState("已清空原始字幕。");
+});
+
+// ==================== 步驟 2：批次設定與翻譯 Prompt ====================
+$("btn-apply-batch-config").addEventListener("click", () => {
+  if (!rawParsePassed || parsedRawCues.length === 0) {
+    setStatus("status-prompt-info", "err", "【操作順序錯誤】：請先完成步驟 1 原始字幕解析，方可套用批次設定！");
+    return;
+  }
+
+  const rawStartSeqStr = $("cfg-start-seq").value.trim();
+  if (!/^[1-9]\d*$/.test(rawStartSeqStr)) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：起始序號必須是正整數（輸入為 "${rawStartSeqStr}"）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+  const cfgStartSeq = parseInt(rawStartSeqStr, 10);
+  const startIdx = parsedRawCues.findIndex(c => c.index === cfgStartSeq);
+  if (startIdx === -1) {
+    const availableSample = parsedRawCues.slice(0, 5).map(c => "#" + c.index).join(", ");
+    setStatus("status-prompt-info", "err", `【設定錯誤】：找不到指定的起始序號 #${cfgStartSeq}！請輸入實際存在的字幕序號（現有可用序號範例：${availableSample}${parsedRawCues.length > 5 ? " ... 共 " + parsedRawCues.length + " 個序號" : ""}）。已停止，絕不自動退回第一條。`);
+    return;
+  }
+
+  const rawLimitStr = $("cfg-limit-count").value.trim();
+  const availableRemaining = parsedRawCues.length - startIdx;
+  let cfgLimit = availableRemaining;
+  let isTruncatedNotice = "";
+
+  if (rawLimitStr !== "") {
+    if (!/^[1-9]\d*$/.test(rawLimitStr)) {
+      setStatus("status-prompt-info", "err", `【設定錯誤】：處理段數必須是正整數（輸入為 "${rawLimitStr}"，只有留空才代表處理全部）。已停止，保留現有設定、批次與輸入。`);
+      return;
+    }
+    const parsedLimit = parseInt(rawLimitStr, 10);
+    if (parsedLimit > availableRemaining) {
+      cfgLimit = availableRemaining;
+      isTruncatedNotice = ` (注意：輸入的處理段數 ${parsedLimit} 大於剩餘字幕數 ${availableRemaining}，已自動調整為實際處理 ${availableRemaining} 段)`;
+    } else {
+      cfgLimit = parsedLimit;
+    }
+  }
+
+  const rawBatchSizeStr = $("cfg-batch-size").value.trim();
+  if (!/^[1-9]\d*$/.test(rawBatchSizeStr)) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+  const cfgBatchSize = parseInt(rawBatchSizeStr, 10);
+  if (cfgBatchSize > MAX_BATCH_SIZE) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+
+  if (hasTranslationWork()) {
+    const ok = confirm("目前已有暫存之翻譯或未暫存的輸入內容，重新建立批次將清空現有暫存與輸入！\n確定要放棄並套用新批次設定嗎？");
+    if (!ok) return;
+  }
+
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState("已重新建立批次，請完成翻譯與全量校驗。");
+
+  const targetedCues = parsedRawCues.slice(startIdx, startIdx + cfgLimit);
+  const total = targetedCues.length;
+  const totalBatches = Math.ceil(total / cfgBatchSize);
+
+  for (let b = 0; b < totalBatches; b++) {
+    const bStart = b * cfgBatchSize;
+    const bEnd = Math.min(bStart + cfgBatchSize, total);
+    batchList.push(makeBatch(b + 1, targetedCues.slice(bStart, bEnd), 0));
+  }
+
+  currentBatchIdx = 0;
+  $("batch-control-bar").style.display = "flex";
+  $("btn-save-current-batch").style.display = "inline-block";
+  $("btn-revert-current-batch").style.display = "none";
+  $("btn-clear-current-batch").style.display = "inline-block";
+  $("btn-split-current-batch").style.display = "inline-block";
+  updateBatchUI();
+
+  generatePromptForBatch(batchList[0]);
+  if (isTruncatedNotice) {
+    $("status-prompt-info").textContent += isTruncatedNotice;
+  }
+});
+
+function canSplit(b) {
+  return !!b && b.status !== "SAVED" && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
+}
+
+function updateBatchUI() {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  $("batch-info-label").textContent =
+    `目前批次：第 ${cur.batchNum} / ${batchList.length} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)` +
+    (cur.splitDepth > 0 ? `｜已拆分 ${cur.splitDepth} 層` : "");
+
+  $("btn-split-current-batch").disabled = !canSplit(cur);
+
+  const tag = $("batch-status-tag");
+  const currentInput = $("field-trans-result").value;
+  const hasDraftDiff = cur.status === "SAVED" && cur.savedSrt !== currentInput;
+
+  if (cur.status === "SAVED") {
+    if (hasDraftDiff) {
+      tag.className = "batch-tag pending";
+      tag.textContent = "已暫存 (有未儲存修改)";
+      $("btn-save-current-batch").disabled = false;
+      $("btn-clear-current-batch").disabled = false;
+      $("btn-revert-current-batch").style.display = "inline-block";
+    } else {
+      tag.className = "batch-tag saved";
+      tag.textContent = "已暫存 (鎖定)";
+      $("btn-save-current-batch").disabled = true;
+      $("btn-clear-current-batch").disabled = false;
+      $("btn-revert-current-batch").style.display = "none";
+    }
+  } else {
+    tag.className = "batch-tag pending";
+    tag.textContent = cur.failCount > 0 ? `待翻譯（已失敗 ${cur.failCount} 次：${cur.lastFailure}）` : "待翻譯";
+    $("btn-save-current-batch").disabled = false;
+    $("btn-clear-current-batch").disabled = true;
+    $("btn-revert-current-batch").style.display = "none";
+  }
+
+  $("btn-prev-batch").disabled = (currentBatchIdx === 0);
+  $("btn-next-batch").disabled = (currentBatchIdx === batchList.length - 1);
+  updatePipeline();
+}
+
+function handleBatchSwitch(newIdx) {
+  if (currentBatchIdx === newIdx) return;
+  const cur = batchList[currentBatchIdx];
+  const inputVal = $("field-trans-result").value;
+
+  const hasUnsavedDraft = (cur.status === "PENDING" && inputVal.trim().length > 0) ||
+                          (cur.status === "SAVED" && inputVal !== cur.savedSrt);
+
+  if (hasUnsavedDraft) {
+    const ok = confirm(`目前第 ${cur.batchNum} 批有尚未暫存的修改內容！\n點擊「確定」將放棄未儲存修改並切換批次。\n點擊「取消」將留在原批次並保留目前輸入與暫存。`);
+    if (!ok) return;
+    cur.draftSrt = cur.status === "SAVED" ? cur.savedSrt : "";
+  }
+
+  currentBatchIdx = newIdx;
+  const targetBatch = batchList[currentBatchIdx];
+  const textToLoad = targetBatch.status === "SAVED" ? targetBatch.savedSrt : (targetBatch.draftSrt || "");
+  setTransInputValue(textToLoad);
+  updateBatchUI();
+  generatePromptForBatch(targetBatch);
+}
+
+$("btn-prev-batch").addEventListener("click", () => {
+  if (currentBatchIdx > 0) handleBatchSwitch(currentBatchIdx - 1);
+});
+
+$("btn-next-batch").addEventListener("click", () => {
+  if (currentBatchIdx < batchList.length - 1) handleBatchSwitch(currentBatchIdx + 1);
+});
+
+$("btn-gen-batch-prompt").addEventListener("click", () => {
+  if (batchList.length > 0) generatePromptForBatch(batchList[currentBatchIdx]);
+});
+
+function generatePromptForBatch(batchObj) {
+  if (!isGlossaryVerified) {
+    setStatus("status-prompt-info", "err", "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生翻譯 Prompt！");
+    $("field-trans-prompt").value = "";
+    $("btn-copy-trans-prompt").disabled = true;
+    return;
+  }
+
+  const totalBatches = batchList.length;
+  const srtChunk = batchObj.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${c.ja}`).join("\n\n");
+
+  const prompt = `你現在是專業的 Hololive 日文轉台灣繁體中文雙語字幕翻譯專家。請將以下直播日文字幕翻譯成繁體中文（台灣用語）。
+
+【重要分批指示】
+本任務共 ${totalBatches} 批，此為【第 ${batchObj.batchNum} 批】，字幕序號範圍為 #${batchObj.startSeq} 至 #${batchObj.endSeq}（共 ${batchObj.cues.length} 條）。
+請務必精確輸出此區間的所有字幕，不得跳號、漏段或輸出超出此範圍的字幕。
+
+【參考詞庫與規範（原始全文）】
+${loadedGlossaryRawContent}
+
+【嚴格輸出格式規則】
+1. 每一條字幕的編號行與時間戳行必須整行完全逐字保留（不得修改分隔符號、空格或任何數字），不得修改、合併、刪除或重新排序。
+2. 每條字幕區塊結構固定為：
+   - 第 1 行：字幕序號（與原始序號行完全逐字一致）
+   - 第 2 行：時間戳行（與原始時間戳行完全逐字一致）
+   - 第 3 行：台灣繁體中文翻譯（必須為單行）
+   - 第 4 行起：原始日語字幕（若原始日文為多行，必須逐行逐字完全保留原始日文，不可改動或刪減）
+3. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」，並保留日文行。
+4. 不確定的內容請標註「（待確認）」，絕對不可自行猜測補寫。
+5. 只輸出純雙語 SRT 內容，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何前後解說文字。
+6. 不得重新編號、不得合併或拆分字幕、不得改寫日文原文；輸入幾條就輸出幾條，序號沿用原始序號（即使本批不是從 1 開始）。
+
+【待翻譯字幕清單（第 ${batchObj.batchNum} 批，#${batchObj.startSeq} ~ #${batchObj.endSeq}）】：
+${srtChunk}`;
+
+  $("field-trans-prompt").value = prompt;
+  $("btn-copy-trans-prompt").disabled = false;
+  setStatus("status-prompt-info", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`);
+}
+
+$("btn-copy-trans-prompt").addEventListener("click", () => {
+  copyTextWithFallback($("field-trans-prompt").value, "已複製翻譯 Prompt！");
+});
+
+// ==================== 步驟 3：雙語 SRT 驗證、失敗分類、拆批與暫存 ====================
+$("field-trans-result").addEventListener("input", () => {
+  if (isProgrammaticInputUpdate) return;
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    batchList[currentBatchIdx].draftSrt = $("field-trans-result").value;
+    updateBatchUI();
+  }
+  lockAndClearVerificationState("翻譯輸入框有未儲存的修改，請點擊「暫存當前批次結果」更新暫存，或點擊「還原」撤銷修改。");
+  $("status-verify").style.display = "none";
+});
+
+function splitBilingualBlocks(text) {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const seqRe = /^\s*\d+\s*$/;
+  const timeRe = /^\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*$/;
+  const starts = [];
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (seqRe.test(lines[i]) && timeRe.test(lines[i + 1])) starts.push(i);
+  }
+  const leading = [];
+  const firstStart = starts.length ? starts[0] : lines.length;
+  for (let i = 0; i < firstStart; i++) {
+    if (lines[i].trim().length > 0) leading.push(i + 1);
+  }
+  const blocks = starts.map((st, k) => {
+    let end = (k + 1 < starts.length) ? starts[k + 1] : lines.length;
+    while (end > st + 1 && lines[end - 1].trim().length === 0) end--;
+    return lines.slice(st, end).join("\n");
+  });
+  return { blocks, leadingLineNumbers: leading };
+}
+
+function parseAndValidateBilingualSrt(text, expectedRawCues) {
+  const errors = [];
+  const cues = [];
+
+  if (!text || text.trim().length === 0) {
+    errors.push("【輸入為空】雙語字幕輸入內容為空。");
+    return { cues, errors };
+  }
+
+  if (text.includes("```")) {
+    errors.push("偵測到 Markdown 程式碼框符號 (```)，請只貼入純 SRT 內容！");
+  }
+
+  const { blocks, leadingLineNumbers } = splitBilingualBlocks(text);
+
+  if (blocks.length === 0) {
+    errors.push("【區塊解析失敗】找不到任何有效字幕區塊（每條字幕需以「序號行」開頭，且下一行必須是時間戳行）。");
+    return { cues, errors };
+  }
+  if (leadingLineNumbers.length > 0) {
+    errors.push(`【區塊解析失敗】第一個有效字幕區塊之前有 ${leadingLineNumbers.length} 行無法歸屬的內容（第 ${leadingLineNumbers.slice(0, 5).join(", ")} 行起）。`);
+  }
+
+  if (blocks.length !== expectedRawCues.length) {
+    errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 條字幕，實際解析出 ${blocks.length} 個字幕區塊！`);
+  }
+
+  const seenActualSeqs = new Set();
+  const maxLen = Math.max(blocks.length, expectedRawCues.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const rawBlock = blocks[i];
+    const exp = expectedRawCues[i];
+    const labelNum = exp ? `#${exp.index}` : `區塊 #${i + 1}`;
+
+    if (rawBlock === undefined) {
+      errors.push(`遺漏字幕 ${labelNum}（原始字幕有此段，但翻譯結果缺失）。`);
+      continue;
+    }
+    if (!exp) {
+      errors.push(`多出額外字幕區塊 #${i + 1}（超出原始字幕數量）：\n"${rawBlock}"`);
+      continue;
+    }
+
+    const rawLines = rawBlock.split("\n");
+    const actualSeqLine = rawLines[0];
+    const parsedActualSeq = /^\d+$/.test(actualSeqLine) ? parseInt(actualSeqLine, 10) : null;
+    const isDupSeq = parsedActualSeq !== null && seenActualSeqs.has(parsedActualSeq);
+    if (parsedActualSeq !== null) seenActualSeqs.add(parsedActualSeq);
+
+    const expectedJaLineCount = exp.jaLines.length;
+    const expectedTotalLines = 3 + expectedJaLineCount;
+
+    if (rawLines.length < expectedTotalLines) {
+      errors.push(`字幕 ${labelNum} 缺少內容：原始日文為 ${expectedJaLineCount} 行，區塊應為 ${expectedTotalLines} 行，實際僅 ${rawLines.length} 行（可能缺少繁中翻譯或原始日文）：\n"${rawBlock}"`);
+      continue;
+    }
+    if (rawLines.length !== expectedTotalLines) {
+      errors.push(`字幕 ${labelNum} 行數不符規格：原始日文為 ${expectedJaLineCount} 行，雙語區塊應剛好為 ${expectedTotalLines} 行（1行序號 + 1行時間戳 + 1行繁中 + ${expectedJaLineCount}行日文），實際為 ${rawLines.length} 行：\n"${rawBlock}"`);
+      continue;
+    }
+
+    if (actualSeqLine !== exp.rawSeqLine) {
+      if (isDupSeq) {
+        errors.push(`字幕 ${labelNum} 發現重複序號: #${parsedActualSeq}（此位置應為 "${exp.rawSeqLine}"）`);
+      } else {
+        errors.push(`字幕 ${labelNum} 序號行未整行逐字保留：原始為 "${exp.rawSeqLine}"，輸出為 "${actualSeqLine}"`);
+      }
+      continue;
+    }
+
+    const actualTimeLine = rawLines[1];
+    if (actualTimeLine !== exp.rawTimeLine) {
+      errors.push(`字幕 ${labelNum} 時間戳行未整行逐字保留：\n  原始: "${exp.rawTimeLine}"\n  輸出: "${actualTimeLine}"`);
+      continue;
+    }
+
+    const zh = rawLines[2];
+    if (!zh || zh.trim().length === 0) {
+      errors.push(`字幕 ${labelNum} 繁體中文翻譯為空！`);
+    }
+
+    const outJaLines = rawLines.slice(3);
+    const outJaText = outJaLines.join("\n");
+    let jaMatch = true;
+    for (let k = 0; k < expectedJaLineCount; k++) {
+      if (outJaLines[k] !== exp.jaLines[k]) {
+        jaMatch = false;
+        break;
+      }
+    }
+    if (!jaMatch) {
+      errors.push(`字幕 ${labelNum} 日文原文未逐字保留！\n  原始: "${exp.ja}"\n  輸出: "${outJaText}"`);
+    }
+
+    cues.push({
+      index: exp.index,
+      start: exp.rawStart,
+      end: exp.rawEnd,
+      zh_tw: zh,
+      ja: outJaText
+    });
+  }
+
+  return { cues, errors };
+}
+
+// 檢查一段被截斷的尾端文字是否為從 expectedCues[startIdx] 開始的合法輸出前綴
+function isValidTruncatedTail(tailLines, expectedCues, startIdx) {
+  let idx = startIdx;
+  let pos = 0;
+  while (pos < tailLines.length && idx < expectedCues.length) {
+    const exp = expectedCues[idx];
+    const expJaCount = exp.jaLines.length;
+    while (pos < tailLines.length && tailLines[pos].trim() === "") pos++;
+    if (pos >= tailLines.length) return true;
+
+    const l0 = tailLines[pos++];
+    if (pos === tailLines.length) return exp.rawSeqLine.startsWith(l0);
+    if (l0 !== exp.rawSeqLine) return false;
+
+    const l1 = tailLines[pos++];
+    if (pos === tailLines.length) return exp.rawTimeLine.startsWith(l1);
+    if (l1 !== exp.rawTimeLine) return false;
+
+    const l2 = tailLines[pos++];
+    if (l2.trim() === "") return false;
+    if (pos === tailLines.length) return true;
+
+    for (let k = 0; k < expJaCount; k++) {
+      if (pos >= tailLines.length) return true;
+      const lj = tailLines[pos++];
+      if (pos === tailLines.length) return exp.jaLines[k].startsWith(lj);
+      if (lj !== exp.jaLines[k]) return false;
+    }
+    idx++;
+  }
+  return pos >= tailLines.length;
+}
+
+function classifyBatchFailure(text, expectedCues, errors) {
+  const t = String(text || "");
+  if (t.trim().length === 0) {
+    return {
+      type: "EMPTY",
+      label: "輸入為空",
+      advice: () => "輸入框是空的。請貼入 Gemini 回覆的雙語 SRT 後再暫存。"
+    };
+  }
+  if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|too many requests|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)|try again later|稍後再試/i.test(t) && !/-->/.test(t)) {
+    return {
+      type: "QUOTA",
+      label: "疑似限流／配額",
+      advice: () => "貼入內容像是限流或配額訊息，不是字幕。請勿拆批，也不要連續重試；稍候再試，或改用備援模型／隔日再繼續。已暫存的批次不受影響。"
+    };
+  }
+  if (/failed to fetch|network ?error|ERR_[A-Z_]+|timed? ?out|連線(失敗|中斷|逾時)|網路(錯誤|中斷)|503|500 internal/i.test(t) && !/-->/.test(t)) {
+    return {
+      type: "NETWORK",
+      label: "疑似網路錯誤",
+      advice: () => "貼入內容像是連線或伺服器錯誤，不是字幕。請勿拆批；確認網路後重新送出同一批。"
+    };
+  }
+
+  const { blocks, leadingLineNumbers } = splitBilingualBlocks(t);
+  if (!t.includes("```") && blocks.length <= expectedCues.length) {
+    let isTruncated = false;
+    if (blocks.length === 0) {
+      const rawLines = t.replace(/\r\n?/g, "\n").replace(/\n+$/, "").split("\n");
+      isTruncated = rawLines.length > 0 && isValidTruncatedTail(rawLines, expectedCues, 0);
+    } else if (leadingLineNumbers.length === 0) {
+      const prevCount = blocks.length - 1;
+      const prevOk = prevCount === 0 ||
+        parseAndValidateBilingualSrt(blocks.slice(0, prevCount).join("\n\n"), expectedCues.slice(0, prevCount)).errors.length === 0;
+      if (prevOk) {
+        const lastBlockLines = blocks[prevCount].split("\n");
+        const fullLastOk = parseAndValidateBilingualSrt(blocks[prevCount], [expectedCues[prevCount]]).errors.length === 0;
+        if (fullLastOk && blocks.length < expectedCues.length) {
+          isTruncated = true;
+        } else if (!fullLastOk && isValidTruncatedTail(lastBlockLines, expectedCues, prevCount)) {
+          isTruncated = true;
+        }
+      }
+    }
+    if (isTruncated) {
+      return {
+        type: "TRUNCATED",
+        label: "疑似輸出截斷",
+        advice: (b) => canSplit(b)
+          ? "回覆在中途結束，前段已輸出內容與原始一致。建議按「將此批拆成兩批」改以較小批次重新翻譯；已暫存的其他批次不會重跑。"
+          : "回覆在中途結束，但此批已達最大拆分深度或段數過少，無法再拆。請人工重試此批，或縮小「每批上限」後重新建立批次。"
+      };
+    }
+  }
+
+  const errs = (errors || []).map(String);
+  const has = re => errs.some(e => re.test(e));
+  const hasOther = re => errs.some(e => !/區塊解析失敗/.test(e) && re.test(e));
+  const cats = [];
+  if (has(/區塊解析失敗/)) cats.push(["解析失敗", "無法依「序號行＋時間戳行」切出字幕區塊，請確認貼入的是完整的雙語 SRT（不含說明文字）。"]);
+  if (hasOther(/總段數不符|遺漏字幕|多出額外/)) cats.push(["段數不符", "回覆的字幕條數與本批預期不同，請看錯誤訊息中的實際與預期段數。"]);
+  if (hasOther(/序號行|重複序號/)) cats.push(["序號", "有序號被改動、重複或缺漏，必須逐字沿用原始序號。"]);
+  if (hasOther(/時間戳行/)) cats.push(["時間戳", "有時間戳被改動，必須逐字保留。"]);
+  if (hasOther(/繁體中文翻譯為空|缺少內容/)) cats.push(["翻譯或內容缺漏", "有條目缺少繁中翻譯或原始日文。"]);
+  if (hasOther(/日文原文未逐字|行數不符/)) cats.push(["日文原文／行數", "日文原文被改動，或區塊行數與規格不符。"]);
+  const label = cats.length ? "驗證失敗：" + cats.map(c => c[0]).join("、") : "驗證失敗";
+  return {
+    type: "VALIDATION",
+    label,
+    advice: (b) => (cats.length ? cats.map(c => "・" + c[1]).join("\n") : "請參考上方錯誤訊息。") +
+      (b.failCount >= 3 ? "\n同一批已連續失敗 3 次以上，請人工檢查回覆；若回覆很長，可手動按「將此批拆成兩批」。" : "")
+  };
+}
+
+function renumberBatches() {
+  batchList.forEach((b, i) => { b.batchNum = i + 1; });
+}
+
+function splitBatchAt(idx) {
+  const cur = batchList[idx];
+  if (!canSplit(cur)) return false;
+  const mid = Math.ceil(cur.cues.length / 2);
+  const depth = cur.splitDepth + 1;
+  batchList.splice(idx, 1, makeBatch(0, cur.cues.slice(0, mid), depth), makeBatch(0, cur.cues.slice(mid), depth));
+  renumberBatches();
+  currentBatchIdx = idx;
+  return true;
+}
+
+$("btn-split-current-batch").addEventListener("click", () => {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (!canSplit(cur)) {
+    setStatus("status-verify", "err", cur.status === "SAVED"
+      ? "【拆批拒絕】：此批已驗證並暫存，不可拆分或重跑。若確需重做，請先「作廢此批暫存」。"
+      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`);
+    return;
+  }
+  const hasInput = $("field-trans-result").value.trim().length > 0;
+  const ok = confirm(`將第 ${cur.batchNum} 批（#${cur.startSeq} ~ #${cur.endSeq}，${cur.cues.length} 條）拆成兩批重新翻譯？` +
+    (hasInput ? "\n目前輸入框中的未暫存內容將被清空。" : "") + "\n其他已暫存批次不受影響。");
+  if (!ok) return;
+  const from = `#${cur.startSeq} ~ #${cur.endSeq}`;
+  splitBatchAt(currentBatchIdx);
+  setTransInputValue("");
+  lockAndClearVerificationState("批次已拆分，請完成所有批次並重新執行全量校驗。");
+  updateBatchUI();
+  if (isGlossaryVerified) generatePromptForBatch(batchList[currentBatchIdx]);
+  setStatus("status-verify", "warn", `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`);
+});
+
+$("btn-save-current-batch").addEventListener("click", () => {
+  lockAndClearVerificationState("批次暫存異動中，請完成所有批次並重新執行全量校驗。");
+
+  if (!rawParsePassed || batchList.length === 0) {
+    setStatus("status-verify", "err", "【暫存 FAIL】：請先完成步驟 1 原始字幕解析與套用批次設定！");
+    return;
+  }
+
+  const curBatch = batchList[currentBatchIdx];
+  const inputSrt = $("field-trans-result").value;
+  const { cues, errors } = parseAndValidateBilingualSrt(inputSrt, curBatch.cues);
+
+  if (errors.length > 0) {
+    const failure = classifyBatchFailure(inputSrt, curBatch.cues, errors);
+    curBatch.failCount += 1;
+    curBatch.lastFailure = failure.label;
+    updateBatchUI();
+    setStatus("status-verify", "err", `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join("\n") +
+      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`);
+    return;
+  }
+
+  curBatch.status = "SAVED";
+  curBatch.failCount = 0;
+  curBatch.lastFailure = "";
+  curBatch.savedSrt = inputSrt;
+  curBatch.savedCues = cues;
+  curBatch.draftSrt = inputSrt;
+  updateBatchUI();
+
+  setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`);
+});
+
+$("btn-revert-current-batch").addEventListener("click", () => {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (cur.status === "SAVED") {
+    setTransInputValue(cur.savedSrt);
+    cur.draftSrt = cur.savedSrt;
+    updateBatchUI();
+    $("status-verify").style.display = "none";
+  }
+});
+
+$("btn-clear-current-batch").addEventListener("click", () => {
+  if (batchList.length === 0) return;
+  const curBatch = batchList[currentBatchIdx];
+  const ok = confirm(`確定要作廢第 ${curBatch.batchNum} 批的暫存資料嗎？這將清空此批暫存與輸入框內容。`);
+  if (!ok) return;
+
+  clearBatchData(curBatch);
+  setTransInputValue("");
+  updateBatchUI();
+  lockAndClearVerificationState(`第 ${curBatch.batchNum} 批暫存已作廢且輸入框已清空，請重新暫存並執行全量校驗。`);
+  setStatus("status-verify", "warn", `已作廢第 ${curBatch.batchNum} 批暫存狀態並清空輸入框。`);
+});
+
+$("btn-clear-trans").addEventListener("click", () => {
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    const cur = batchList[currentBatchIdx];
+    if (cur.status === "SAVED") {
+      const ok = confirm(`第 ${cur.batchNum} 批已暫存。清空輸入框將會將此批退回「待翻譯」並作廢暫存！確定要清空嗎？`);
+      if (!ok) return;
+      clearBatchData(cur);
+    } else {
+      cur.draftSrt = "";
+    }
+    updateBatchUI();
+  }
+  setTransInputValue("");
+  $("status-verify").style.display = "none";
+  lockAndClearVerificationState("已清空目前輸入框，當前批次暫存已作廢。");
+});
+
+$("btn-clear-all-batches").addEventListener("click", () => {
+  if (batchList.length === 0) return;
+  const ok = confirm("確定要清空全部批次的暫存資料嗎？");
+  if (!ok) return;
+
+  batchList.forEach(clearBatchData);
+  setTransInputValue("");
+  updateBatchUI();
+  lockAndClearVerificationState("已清空所有批次暫存，所有批次重設為「待翻譯」。");
+  setStatus("status-verify", "warn", "所有批次暫存已完全清空重置。");
+});
+
+function runFullVerification() {
+  if (!isGlossaryVerified) {
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：詞庫未載入或驗證失敗（紅燈），禁止執行全量校驗、預覽與 JSON 匯出！請先於步驟 0 載入正確詞庫檔案。");
+    lockAndClearVerificationState("詞庫未驗證，禁止全量校驗。");
+    return false;
+  }
+
+  lockAndClearVerificationState("正在執行全量校驗，舊預覽與 QC 已清除...");
+
+  if (!rawParsePassed || parsedRawCues.length === 0) {
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：原始字幕未通過步驟 1 解析！");
+    return false;
+  }
+
+  if (batchList.length === 0) {
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：尚未套用批次設定！請先點擊「套用設定／建立批次」。");
+    return false;
+  }
+
+  const pendingBatches = batchList.filter(b => b.status !== "SAVED");
+  if (pendingBatches.length > 0) {
+    setStatus("status-verify", "err", `【全量校驗 FAIL】：尚有未暫存的批次（第 ${pendingBatches.map(b => b.batchNum).join(", ")} 批）。所有批次必須先點擊「暫存當前批次結果」後，方可執行全量校驗！`);
+    return false;
+  }
+
+  const cur = batchList[currentBatchIdx];
+  const currentInputText = $("field-trans-result").value;
+  if (cur && cur.status === "SAVED" && currentInputText !== cur.savedSrt) {
+    setStatus("status-verify", "err", `【全量校驗 FAIL】：第 ${cur.batchNum} 批輸入框中有尚未儲存的修改內容！請先點擊「暫存當前批次結果」更新暫存，或點擊「還原至已儲存暫存」後再執行全量校驗。`);
+    return false;
+  }
+
+  const transCues = batchList.flatMap(b => b.savedCues);
+  fullyVerifiedCues = transCues;
+  $("btn-export-json").disabled = false;
+
+  const scopedWarnings = getScopedWarnings();
+
+  setStatus("status-verify", "ok",
+    `【全量校驗 PASS】：共 ${transCues.length} 條字幕，段數、序號行、時間戳行與多行日文原文 100% 精準逐字吻合！已解鎖步驟 4 QC 檢查與 JSON 匯出。` +
+    (scopedWarnings.length > 0 ? `\n（包含 ${scopedWarnings.length} 項落在本次範圍內的時間戳警告，將保留至 JSON 匯出）` : ""));
+
+  initQcBatchManager();
+
+  verifiedPlayerCues = new Map(transCues.map(t => [t.index, t.zh_tw]));
+  renderVerifiedPlayer();
+  updatePipeline();
+  return true;
+}
+
+$("btn-verify-all").addEventListener("click", () => { runFullVerification(); });
+
+$("btn-export-json").addEventListener("click", () => {
+  if (fullyVerifiedCues.length === 0 || !isGlossaryVerified) return;
+
+  const exportPayload = {
+    subtitles: fullyVerifiedCues.map(c => ({
+      index: c.index,
+      start: c.start,
+      end: c.end,
+      ja: c.ja,
+      zh_tw: c.zh_tw
+    })),
+    warnings: getScopedWarnings()
+  };
+  const jsonStr = JSON.stringify(exportPayload, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `hololive_subtitles_${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+});
+
+// ==================== 雙語 JSON 匯入 ====================
+function fmtSeqRanges(arr, maxShown) {
+  const out = [];
+  let i = 0;
+  while (i < arr.length) {
+    let j = i;
+    while (j + 1 < arr.length && arr[j + 1] === arr[j] + 1) j++;
+    out.push(j > i ? `#${arr[i]}~#${arr[j]}` : `#${arr[i]}`);
+    i = j + 1;
+  }
+  if (maxShown && out.length > maxShown) {
+    return out.slice(0, maxShown).join(", ") + `…（另有 ${out.length - maxShown} 個範圍未列出）`;
+  }
+  return out.join(", ");
+}
+
+function importBilingualJsonText(text) {
+  const fail = lines => {
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】原有工作內容未變動：\n" + lines.slice(0, 15).join("\n") +
+      (lines.length > 15 ? `\n...另有 ${lines.length - 15} 項` : ""));
+    return false;
+  };
+  if (!isGlossaryVerified) return fail(["詞庫未通過驗證（紅燈），不得匯入。"]);
+  if (!rawParsePassed || !parsedRawCues.length) return fail(["原始字幕尚未通過解析，請先完成步驟 1。"]);
+  if (!batchList.length) return fail(["尚未建立批次，請先點擊「套用設定／建立批次」。"]);
+
+  let root;
+  try {
+    root = JSON.parse(text);
+  } catch (e) {
+    return fail(["JSON 無法解析：" + e.message]);
+  }
+  if (!root || typeof root !== "object" || Array.isArray(root) || !Array.isArray(root.subtitles)) {
+    return fail(["JSON 根物件必須含 subtitles 陣列。"]);
+  }
+  if (root.subtitles.length === 0) return fail(["subtitles 為空。"]);
+
+  const targeted = batchList.flatMap(b => b.cues);
+  const pos = new Map();
+  targeted.forEach((c, i) => pos.set(c.index, i));
+  const rawBySeq = new Map();
+  parsedRawCues.forEach(c => rawBySeq.set(c.index, c));
+  const errs = [], zhBySeq = new Map();
+  let lastPos = -1;
+
+  root.subtitles.forEach((it, i) => {
+    const lb = `第 ${i + 1} 筆`;
+    if (!it || typeof it !== "object" || Array.isArray(it)) { errs.push(`${lb}不是物件。`); return; }
+    let idx = it.index;
+    if (typeof idx === "string" && /^[1-9]\d*$/.test(idx)) idx = Number(idx);
+    if (!Number.isInteger(idx) || idx < 1) { errs.push(`${lb} index 不是正整數。`); return; }
+    if (zhBySeq.has(idx)) { errs.push(`${lb} 序號 #${idx} 重複。`); return; }
+    const raw = rawBySeq.get(idx);
+    if (!raw) { errs.push(`${lb} 序號 #${idx} 不存在於原始字幕（未知序號）。`); return; }
+    if (!pos.has(idx)) { errs.push(`${lb} 序號 #${idx} 不在目前批次範圍內。`); return; }
+    const p = pos.get(idx);
+    if (p <= lastPos) errs.push(`${lb} 序號 #${idx} 順序錯誤（必須與原始字幕順序一致）。`);
+    lastPos = Math.max(lastPos, p);
+    if (it.start !== raw.rawStart || it.end !== raw.rawEnd) errs.push(`#${idx} 時間戳與原始不符（原始 ${raw.rawStart} --> ${raw.rawEnd}）。`);
+    if (typeof it.ja !== "string" || it.ja !== raw.ja) errs.push(`#${idx} 日文原文與原始字幕不一致。`);
+    const zh = it.zh_tw;
+    if (typeof zh !== "string" || zh.trim() === "") errs.push(`#${idx} zh_tw 必須是非空字串。`);
+    else if (/[\r\n]/.test(zh)) errs.push(`#${idx} zh_tw 不可含換行（既有規格要求繁中為單行）。`);
+    else if (zh.includes("```")) errs.push(`#${idx} zh_tw 含 Markdown 程式碼框符號。`);
+    zhBySeq.set(idx, zh);
+  });
+  if (errs.length) return fail(errs);
+
+  const missing = targeted.filter(c => !zhBySeq.has(c.index)).map(c => c.index);
+  const plan = [];
+  for (const b of batchList) {
+    if (!b.cues.every(c => zhBySeq.has(c.index))) continue;
+    const srt = b.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${zhBySeq.get(c.index)}\n${c.ja}`).join("\n\n");
+    const cues = b.cues.map(c => ({
+      index: c.index,
+      start: c.rawStart,
+      end: c.rawEnd,
+      zh_tw: zhBySeq.get(c.index),
+      ja: c.ja
+    }));
+    plan.push({ b, srt, cues });
+  }
+  if (!plan.length) return fail(["沒有任何批次被 JSON 完整涵蓋，無法匯入。缺少編號：" + fmtSeqRanges(missing, 5)]);
+
+  const planned = new Set(plan.map(p => p.b));
+  const cur = batchList[currentBatchIdx];
+  const input = $("field-trans-result").value;
+  const plannedCur = planned.has(cur) ? plan.find(p => p.b === cur) : null;
+  const draftLost = !!plannedCur && input.trim() !== "" && input !== plannedCur.srt;
+  const overwritten = plan.filter(p => p.b.status === "SAVED" && p.b.savedSrt !== p.srt).map(p => p.b.batchNum);
+  const skippedCues = root.subtitles.length - plan.reduce((n, p) => n + p.cues.length, 0);
+  const notes = [];
+  if (missing.length) notes.push(`JSON 缺少 ${missing.length} 條字幕：${fmtSeqRanges(missing, 5)}。`);
+  if (skippedCues > 0) notes.push(`其中 ${skippedCues} 條屬於未被完整涵蓋的批次，不會匯入。`);
+  if (overwritten.length) notes.push(`將覆蓋已暫存且內容不同的第 ${overwritten.join(", ")} 批。`);
+  if (draftLost) notes.push("目前輸入框中未暫存的內容將被取代。");
+  if (missing.length || overwritten.length || draftLost) {
+    if (!confirm("JSON 匯入確認：\n" + notes.join("\n") + "\n\n確定要匯入嗎？按「取消」將完全保留原有內容。")) {
+      setStatus("status-import", "warn", "已取消匯入，原有工作內容未變動。");
+      return false;
+    }
+  }
+
+  lockAndClearVerificationState("JSON 匯入異動中，需重新全量校驗。");
+  plan.forEach(p => {
+    p.b.status = "SAVED";
+    p.b.failCount = 0;
+    p.b.lastFailure = "";
+    p.b.savedSrt = p.srt;
+    p.b.savedCues = p.cues;
+    p.b.draftSrt = p.srt;
+  });
+  if (plannedCur) {
+    setTransInputValue(cur.savedSrt);
+  }
+  updateBatchUI();
+  $("status-verify").style.display = "none";
+
+  const pending = batchList.filter(b => b.status !== "SAVED");
+  const curHasUnsavedDraft = cur.status === "SAVED" && $("field-trans-result").value !== cur.savedSrt;
+  if (pending.length === 0 && !curHasUnsavedDraft) {
+    const ok = runFullVerification();
+    setStatus("status-import", ok ? "ok" : "err", (ok ? "【JSON 匯入 PASS】" : "【JSON 匯入後全量校驗未通過】") +
+      `已匯入 ${plan.length} 批（${plan.reduce((n, p) => n + p.cues.length, 0)} 條），並以既有全量校驗重新驗證。\n` + $("status-verify").textContent);
+  } else {
+    setStatus("status-import", "warn", `【JSON 部分匯入】已匯入 ${plan.length} 批；` +
+      (pending.length ? `第 ${pending.map(b => b.batchNum).join(", ")} 批仍待翻譯。` : `第 ${cur.batchNum} 批仍有未儲存的修改草稿。`) + "\n" +
+      notes.join("\n") + "\n匯出與雙語播放器維持鎖定，直到所有批次完成並通過全量校驗。");
+  }
+  return true;
+}
+
+$("btn-import-json").addEventListener("click", () => $("json-import-input").click());
+$("json-import-input").addEventListener("change", async e => {
+  const input = e.target;
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (f.size > MAX_FILE_BYTES) {
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】檔案超過 20MB 上限，原有工作內容未變動。");
+    input.value = "";
+    return;
+  }
+  try {
+    const text = await f.text();
+    importBilingualJsonText(text);
+  } catch {
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】讀取檔案失敗，原有工作內容未變動。");
+  } finally {
+    input.value = "";
+  }
+});
+
+// ==================== 步驟 4：分批品質檢查 ====================
+function initQcBatchManager() {
+  currentQcBatchIdx = 0;
+  $("qc-batch-bar").style.display = "flex";
+  $("btn-copy-qc-prompt").disabled = false;
+  updateQcBatchUI();
+  generateQcPromptForBatch(batchList[0]);
+}
+
+function updateQcBatchUI() {
+  const cur = batchList[currentQcBatchIdx];
+  $("qc-batch-label").textContent =
+    `QC 批次：第 ${cur.batchNum} / ${batchList.length} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)`;
+  $("btn-prev-qc-batch").disabled = (currentQcBatchIdx === 0);
+  $("btn-next-qc-batch").disabled = (currentQcBatchIdx === batchList.length - 1);
+}
+
+$("btn-prev-qc-batch").addEventListener("click", () => {
+  if (currentQcBatchIdx > 0) {
+    currentQcBatchIdx--;
+    updateQcBatchUI();
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+$("btn-next-qc-batch").addEventListener("click", () => {
+  if (currentQcBatchIdx < batchList.length - 1) {
+    currentQcBatchIdx++;
+    updateQcBatchUI();
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+$("btn-gen-current-qc").addEventListener("click", () => {
+  if (batchList.length > 0) {
+    generateQcPromptForBatch(batchList[currentQcBatchIdx]);
+  }
+});
+
+function generateQcPromptForBatch(batchObj) {
+  if (!isGlossaryVerified) {
+    setStatus("status-qc", "err", "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生 QC Prompt！");
+    $("field-qc-prompt").value = "";
+    $("btn-copy-qc-prompt").disabled = true;
+    return;
+  }
+
+  const totalBatches = batchList.length;
+  let diffTable = "";
+  batchObj.savedCues.forEach((t, i) => {
+    const r = batchObj.cues[i];
+    diffTable += `[#${t.index}]\n- 原始: [${r.rawTimeLine}]\n${r.ja}\n- 輸出:\n${t.zh_tw}\n${t.ja}\n\n`;
+  });
+
+  const qcPrompt = `你現在是專業的字幕品質檢查助手（Gemini 3.5 Flash-Lite）。請針對以下【第 ${batchObj.batchNum} / ${totalBatches} 批字幕對照表】（編號 #${batchObj.startSeq} 至 #${batchObj.endSeq}，共 ${batchObj.cues.length} 條），以原始日文與附帶之專用詞庫為依據進行語意與術語品質稽核：
+
+【專用詞庫核對依據（原始全文）】
+${loadedGlossaryRawContent}
+
+【檢查指標】
+1. 台灣繁體中文規範：是否誤用簡體字或中國大陸用語（如：視頻、軟件、網絡、信息）？
+2. 詞庫與人名準確度：成員名稱、稱呼、口頭禪是否符合上方提供的專用詞庫？是否有把未確認之 ASR 錯字擅自當成確定事實而不加標註的問題？
+3. 漏譯或亂補：繁體中文是否有漏翻句子或憑空捏造原文沒有的語意？
+4. 非語言標記：[笑い] -> [笑聲]、[叫び声] -> [尖叫聲] 是否正確保留對應？
+
+請列出所有有疑慮的字幕序號（#${batchObj.startSeq} ~ #${batchObj.endSeq}）與具體修正建議。若本批無任何語意與詞庫問題，請回覆「第 ${batchObj.batchNum} 批品質檢查通過」。
+
+【第 ${batchObj.batchNum} 批字幕對照資料】：
+${diffTable}`;
+
+  $("field-qc-prompt").value = qcPrompt;
+  $("btn-copy-qc-prompt").disabled = false;
+  setStatus("status-qc", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】QC Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，已附帶原始全文詞庫依據）。`);
+}
+
+$("btn-copy-qc-prompt").addEventListener("click", () => {
+  copyTextWithFallback($("field-qc-prompt").value, "已複製 QC Prompt！");
+});
+
+// ==================== 整合層：SRT 序列化與播放器預覽 ====================
+function serializeCuesToSrt(cues) {
+  const blocks = [], notes = [];
+  let skipped = 0, blankDropped = 0;
+  cues.forEach(c => {
+    const raw = String(c.text);
+    const lines = raw.replace(/\r\n?/g, "\n").split("\n").filter(l => l.trim() !== "");
+    if (!lines.length) { skipped++; return; }
+    const ja = lines.join("\n");
+    if (ja !== raw) blankDropped++;
+    blocks.push(`${blocks.length + 1}\n${toSrtTime(c.start)} --> ${toSrtTime(c.end)}\n${ja}`);
+  });
+  if (skipped) notes.push(`有 ${skipped} 句內容全為空白，未送入翻譯流程（原字幕 ${cues.length} 句 → ${blocks.length} 句）。`);
+  if (blankDropped) notes.push(`有 ${blankDropped} 句含空白行／換行格式差異，已移除空白行（SRT 區塊不可含空白行）。`);
+  return { srt: blocks.join("\n\n"), notes };
+}
+
+function playerCuesFromRaw(zhBySeq) {
+  return parsedRawCues.map(c => ({
+    start: c.startMs / 1000,
+    end: c.endMs / 1000,
+    text: c.ja,
+    zh: zhBySeq ? zhBySeq.get(c.index) : undefined
+  }));
+}
+
+function ensurePlayer(vid) {
+  if (vid && vid !== loadedVideoId) createYouTubePlayer(vid);
+}
+
+function renderSourcePreview() {
+  playerShowsTranslation = false;
+  const vid = currentVideoId();
+  ensurePlayer(vid);
+  renderCues($("autopreview"), playerCuesFromRaw(null), Infinity, vid);
+  setPlayerState(`播放器：已載入 ${parsedRawCues.length} 句日文原文（尚無通過校驗的譯文）。` + (vid ? "" : "\n未設定有效 YouTube 網址，僅靜態預覽，無播放同步。"));
+}
+
+function renderVerifiedPlayer() {
+  const vid = currentVideoId();
+  ensurePlayer(vid);
+  const cues = playerCuesFromRaw(verifiedPlayerCues);
+  renderCues($("autopreview"), cues, Infinity, vid);
+  playerShowsTranslation = true;
+  setPlayerState(`播放器：已載入通過全量校驗的雙語字幕 ${verifiedPlayerCues.size} 句（全部 ${cues.length} 句，其餘僅日文）。` + (vid ? "" : "\n未設定有效 YouTube 網址，僅靜態預覽，無播放同步。"));
+}
+
+// ==================== 1. 取得 YouTube 日文字幕 ====================
+$("check").addEventListener("click", async () => {
+  const button = $("check");
+  const status = $("urlstatus");
+  const raw = $("yturl").value.trim();
+  const parsed = parseYouTubeUrl(raw);
+
+  if (!parsed.ok) {
+    status.textContent = "網址檢查失敗\n" + parsed.error;
+    return;
+  }
+
+  if (hasTranslationWork() && !confirm("取得新字幕將取代目前的翻譯來源，並清空所有批次暫存與翻譯輸入。\n確定要繼續嗎？")) return;
+  button.disabled = true;
+  button.textContent = "正在取得字幕…";
+  status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const endpoint = new URL(API);
+    endpoint.searchParams.set("url", raw);
+
+    const response = await fetch(endpoint.toString(), {
+      method: "GET",
+      signal: controller.signal
+    });
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("字幕服務回傳的資料無法解析。");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || `字幕服務回應錯誤（HTTP ${response.status}）。`);
+    }
+
+    if (data.jobId) {
+      status.textContent =
+        "字幕服務已接受請求，但仍在處理中。\n" +
+        "目前收到處理編號，尚未取得字幕內容。\n" +
+        "請將此畫面結果回報，以便確認後續查詢方式。";
+      return;
+    }
+
+    if (!Array.isArray(data.content)) {
+      throw new Error("回應中沒有字幕內容。請確認這部影片有可用的字幕。");
+    }
+
+    const cues = data.content
+      .filter(item => item && typeof item.text === "string" && item.text.trim().length > 0 &&
+        Number.isFinite(Number(item.offset || 0)) && Number.isFinite(Number(item.duration || 0)))
+      .map(item => ({
+        start: Math.max(0, Number(item.offset || 0) / 1000),
+        end: Math.max(0, (Number(item.offset || 0) + Number(item.duration || 0)) / 1000),
+        text: item.text
+      }))
+      .sort((a, b) => a.start - b.start);
+
+    if (!cues.length) {
+      throw new Error("服務有回應，但沒有可顯示的非空白字幕句子。");
+    }
+
+    status.textContent =
+      `取得成功！\n` +
+      `影片 ID：${parsed.id}\n` +
+      `字幕語言：${data.lang || "未知"}\n` +
+      `取得字幕：${cues.length} 句`;
+
+    createYouTubePlayer(parsed.id);
+    const ser = serializeCuesToSrt(cues);
+    applyRawSubtitles(ser.srt, `YouTube Worker（${parsed.id}）`, ser.notes);
+  } catch (error) {
+    const msg = error && error.name === "AbortError"
+      ? "請求逾時（超過 30 秒未回應）。"
+      : (error && error.message ? error.message : "發生未知錯誤。");
+    status.textContent =
+      "取得字幕失敗。\n" + msg +
+      "\n\n請確認網路連線、影片字幕是否可用，以及後端服務是否正常。";
+  } finally {
+    clearTimeout(timer);
+    button.disabled = false;
+    button.textContent = "取得日文字幕";
+  }
+});
+
+// ==================== 2. 匯入字幕檔（SRT / WebVTT） ====================
+function parseTimestamp(s) {
+  const m = s.trim().replace(",", ".").match(/^(?:(\d{1,2}):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!m) return null;
+
+  const h = Number(m[1] || 0);
+  const min = Number(m[2]);
+  const sec = Number(m[3]);
+  const ms = Number((m[4] || "").padEnd(3, "0") || 0);
+  if (min >= 60 || sec >= 60) return null;
+
+  return h * 3600 + min * 60 + sec + ms / 1000;
+}
+
+const HTML_ENTITY_MAP = {
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+  "&nbsp;": " ",
+  "&amp;": "&"
+};
+
+function decodeSubtitleText(raw) {
+  return raw
+    .replace(/<\s*\/?\s*(?:[biu]|font|ruby|rt|v|c|lang)\b[^>]*>/gi, "")
+    .replace(/<\d{1,2}:\d{2}:\d{2}[.,]\d{1,3}>/g, "")
+    .replace(/&(?:lt|gt|quot|#39|apos|nbsp|amp);/gi, m => HTML_ENTITY_MAP[m.toLowerCase()] || m);
+}
+
+function parseSubs(text) {
+  text = text.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n").trim();
+  const blocks = text.replace(/^WEBVTT[^\n]*\n/, "").split(/\n[ \t]*\n+/);
+  const cues = [];
+
+  for (const b of blocks) {
+    const trimmedBlock = b.trim();
+    if (!trimmedBlock || /^(?:NOTE|STYLE|REGION)(?:\s|$)/.test(trimmedBlock)) continue;
+
+    const lines = trimmedBlock.split("\n").map(x => x.trim()).filter(Boolean);
+    const ti = lines.findIndex(x => x.includes("-->"));
+    if (ti < 0) continue;
+
+    const parts = lines[ti].split("-->");
+    const start = parseTimestamp(parts[0].trim());
+    const end = parseTimestamp(parts[1].trim().split(/\s+/)[0]);
+    const body = decodeSubtitleText(lines.slice(ti + 1).join("\n")).trim();
+
+    if (start !== null && end !== null && body) {
+      cues.push({ start, end, text: body });
+    }
+  }
+
+  return cues;
+}
+
+function renderImportedSubs() {
+  const cues = parseSubs($("subtitletext").value);
+  $("substatus").textContent = cues.length
+    ? `解析成功：${cues.length} 句字幕。\n第一句開始：${fmt(cues[0].start)}\n最後一句結束：${fmt(cues[cues.length - 1].end)}`
+    : "沒有解析到字幕。請確認內容是有效的 SRT 或 WebVTT 格式，且每句都有時間戳記（小時需為 00~99）。";
+
+  renderCues($("preview"), cues, 80);
+}
+
+$("parse").addEventListener("click", renderImportedSubs);
+
+$("clear").addEventListener("click", () => {
+  $("subtitletext").value = "";
+  $("subtitlefile").value = "";
+  $("substatus").textContent = "已清除。";
+  $("preview").replaceChildren();
+});
+
+$("subtitlefile").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+
+  if (f.size > MAX_FILE_BYTES) {
+    $("substatus").textContent = "字幕檔超過 20MB 上限，請重新選擇檔案。";
+    e.target.value = "";
+    return;
+  }
+
+  try {
+    $("subtitletext").value = await f.text();
+    renderImportedSubs();
+  } catch {
+    $("substatus").textContent = "讀取字幕檔失敗，請重新選擇檔案。";
+  }
+});
+
+$("btn-import-to-translation").addEventListener("click", () => {
+  const cues = parseSubs($("subtitletext").value);
+  if (!cues.length) {
+    $("substatus").textContent = "沒有可送入翻譯流程的字幕，請先貼入有效的 SRT／VTT。";
+    return;
+  }
+  if (hasTranslationWork() && !confirm("送入新字幕將取代目前的翻譯來源，並清空所有批次暫存與翻譯輸入。\n確定要繼續嗎？")) return;
+  const ser = serializeCuesToSrt(cues);
+  const ok = applyRawSubtitles(ser.srt, "匯入字幕（SRT/VTT 解析後重新編號）", ser.notes);
+  if (ok) {
+    $("substatus").textContent = `解析成功：${cues.length} 句字幕。\n已送入翻譯流程（見「4. 原始日文字幕」的狀態）。原 SRT 的序號不保留，改為 1..N。`;
+  } else {
+    $("substatus").textContent = "送入翻譯流程失敗，請見下方「4. 原始日文字幕」的錯誤說明。";
+  }
+});
+
+updatePipeline();
+</script>
+</body>
+</html>
