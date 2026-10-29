@@ -53,8 +53,9 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-text{white-space:pre-wrap}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
-/* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，确保較近距離永遠優先 */
-#autopreview .cue{position:relative;padding:14px 12% 18px 10px;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,background-color .3s ease}
+/* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，確保較近距離永遠優先 */
+/* 整塊（底色＋文字）一起放大，靠右側 padding 預留空間，不會超出面板 */
+#autopreview .cue{position:relative;padding:14px 12% 18px 10px;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,background-color .3s ease,transform .3s ease;transform-origin:left center}
 :where(#autopreview .cue){opacity:.3}
 :where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active)){opacity:.38}
@@ -62,12 +63,9 @@ a{color:var(--accent);overflow-wrap:anywhere}
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue.active)){opacity:.5}
 :where(#autopreview .cue.active + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue.active)){opacity:.7}
-#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09)}
-/* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
-#autopreview .cue time,#autopreview .cue .cue-body{transition:transform .3s ease}
-#autopreview .cue time{transform-origin:left bottom}
-#autopreview .cue .cue-body{transform-origin:left top}
-#autopreview .cue.active time,#autopreview .cue.active .cue-body{transform:scale(1.1)}
+#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09);transform:scale(1.05)}
+#autopreview .cue.active .cue-zh{font-size:1.4em}
+#autopreview .cue.active .cue-text{font-size:1.05em}
 #autopreview .cue-text{font-weight:600}
 #autopreview .cue.has-zh .cue-text{font-weight:400}
 /* Safari 26 Liquid Glass 相容：sticky 元素本身保持 background:transparent，將背景移至 ::before 並向上延伸覆蓋安全區間隙 */
