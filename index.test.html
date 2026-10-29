@@ -5,11 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>【TEST】VT 字幕整合測試頁</title>
 <style>
-:root{color-scheme:dark;--bg:#000000;--panel:#1c1c1e;--field:#2c2c2e;--fill:#3a3a3c;--line:#38383a;--text:#f5f5f7;--muted:#98989f;--accent:#0a84ff;--ok:#30d158;--bad:#ff453a;--warn:#ffd60a}
+:root{
+  color-scheme:dark;
+  --bottom-gap:76px; /* 預留給 iOS Safari 底部懸浮網址列的緩衝高度 */
+  --bg:#000000;
+  --panel:#1c1c1e;
+  --field:#2c2c2e;
+  --fill:#3a3a3c;
+  --line:#38383a;
+  --text:#f5f5f7;
+  --muted:#98989f;
+  --accent:#0a84ff;
+  --ok:#30d158;
+  --bad:#ff453a;
+  --warn:#ffd60a;
+}
 *{box-sizing:border-box}
-html{min-height:100%;background-color:var(--bg)}
-body{min-height:100dvh;margin:0;background-color:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:760px;margin:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 76px) max(8px,env(safe-area-inset-left,0px))}
+html{background-color:var(--bg)}
+body{min-height:100dvh;margin:0;color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:760px;margin:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + var(--bottom-gap)) max(8px,env(safe-area-inset-left,0px))}
 h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
 .intro{color:var(--muted);margin:0 0 20px}
@@ -39,14 +53,15 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-text{white-space:pre-wrap}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
-/* Apple Music 歌詞式字幕：使用 :where() 消除距離選擇器權重差異，確保較近距離永遠優先 */
-#autopreview .cue{position:relative;padding:14px 12% 18px 10px;opacity:.3;border-radius:10px;border-bottom-color:transparent;background:transparent;scroll-margin-top:240px;transition:opacity .3s ease,background-color .3s ease}
-#autopreview .cue.active:where(+ .cue + .cue) + .cue:not(.active),
-#autopreview .cue:not(.active):has(:where(+ .cue + .cue) + .cue.active){opacity:.38}
-#autopreview .cue.active:where(+ .cue) + .cue:not(.active),
-#autopreview .cue:not(.active):has(:where(+ .cue) + .cue.active){opacity:.5}
-#autopreview .cue.active + .cue:not(.active),
-#autopreview .cue:not(.active):has(+ .cue.active){opacity:.7}
+/* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，确保較近距離永遠優先 */
+#autopreview .cue{position:relative;padding:14px 12% 18px 10px;border-radius:10px;border-bottom-color:transparent;background:transparent;transition:opacity .3s ease,background-color .3s ease}
+:where(#autopreview .cue){opacity:.3}
+:where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active)){opacity:.38}
+:where(#autopreview .cue.active + .cue + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue + .cue.active)){opacity:.5}
+:where(#autopreview .cue.active + .cue:not(.active)),
+:where(#autopreview .cue:not(.active):has(+ .cue.active)){opacity:.7}
 #autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09)}
 /* 只放大文字，底色方框維持原寬，不會超出區塊右側 */
 #autopreview .cue time,#autopreview .cue .cue-body{transition:transform .3s ease}
@@ -55,10 +70,9 @@ a{color:var(--accent);overflow-wrap:anywhere}
 #autopreview .cue.active time,#autopreview .cue.active .cue-body{transform:scale(1.1)}
 #autopreview .cue-text{font-weight:600}
 #autopreview .cue.has-zh .cue-text{font-weight:400}
-/* Safari 26 Liquid Glass 相容：sticky 元素本身保持 background:transparent，將背景移至 ::before 偽元素，避免觸發 Safari 頂部/底部實心黑條延伸 */
+/* Safari 26 Liquid Glass 相容：sticky 元素本身保持 background:transparent，將背景移至 ::before 並向上延伸覆蓋安全區間隙 */
 #youtube-player-container{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;background:transparent;padding:8px 0;width:100%}
-#youtube-player-container[hidden]{display:none !important}
-#youtube-player-container::before{content:"";position:absolute;inset:0;background:var(--bg);z-index:-1;pointer-events:none}
+#youtube-player-container::before{content:"";position:absolute;top:calc(-1 * env(safe-area-inset-top,0px));right:0;bottom:0;left:0;background:var(--bg);z-index:-1;pointer-events:none}
 #youtube-player{position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden}
 #youtube-player iframe{position:absolute;top:0;left:0;display:block;width:100% !important;height:100% !important;border:0}
 @media (max-width: 619px){
@@ -218,6 +232,16 @@ a{color:var(--accent);overflow-wrap:anywhere}
 <script>
 const $ = id => document.getElementById(id);
 const API = "https://vt-subtitle-api.weide1217.workers.dev/";
+const FETCH_TIMEOUT_MS = 30000;
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 本地檔案大小上限 20MB
+
+function setStatus(idOrEl, cls, msg) {
+  const el = typeof idOrEl === "string" ? $(idOrEl) : idOrEl;
+  if (!el) return;
+  el.style.display = "block";
+  el.className = "status-msg" + (cls ? " " + cls : "");
+  el.textContent = msg;
+}
 
 // ==================== YouTube 播放器管理 ====================
 let youtubePlayer = null;
@@ -323,6 +347,7 @@ function seekToTimestamp(videoId, seconds) {
 const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
 const FOLLOW_PAUSE_MS = 4000;  // 使用者手動捲動後，暫停自動跟隨的毫秒數
 const SYNC_INTERVAL_MS = 80;   // 每隔多久檢查一次播放進度
+const SCROLL_ANCHOR = 0.35;    // 0=貼近播放器下緣，0.5=可視區正中；越小越靠上
 
 let syncTrack = null;
 let lastActiveIndex = -1;
@@ -366,7 +391,11 @@ function scrollCueIntoPlace(el) {
   if (activeTag === "TEXTAREA" || activeTag === "INPUT") return;
   const previewRect = $("autopreview").getBoundingClientRect();
   if (previewRect.bottom < 0 || previewRect.top > window.innerHeight) return;
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  const player = $("youtube-player-container");
+  const playerBottom = player && !player.hidden ? Math.max(0, Math.min(player.getBoundingClientRect().bottom, player.offsetHeight + 16)) : 0;
+  const targetCenter = playerBottom + (window.innerHeight - playerBottom) * SCROLL_ANCHOR;
+  const r = el.getBoundingClientRect();
+  window.scrollBy({ top: r.top + r.height / 2 - targetCenter, behavior: "smooth" });
 }
 
 function setActiveCues(next) {
@@ -464,6 +493,9 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
   if (track) {
     buildTrackIndex(track);
     syncTrack = track;
+    lastActiveIndex = -1;
+  } else if (container.id === "autopreview") {
+    syncTrack = null;
     lastActiveIndex = -1;
   }
 
@@ -563,6 +595,22 @@ function setTransInputValue(val) {
   isProgrammaticInputUpdate = false;
 }
 
+function makeBatch(batchNum, cues, splitDepth = 0) {
+  return {
+    batchNum,
+    startSeq: cues[0].index,
+    endSeq: cues[cues.length - 1].index,
+    cues,
+    status: "PENDING",
+    savedSrt: "",
+    savedCues: [],
+    draftSrt: "",
+    splitDepth,
+    failCount: 0,
+    lastFailure: ""
+  };
+}
+
 function clearBatchData(b) {
   b.status = "PENDING";
   b.savedSrt = "";
@@ -594,8 +642,13 @@ function lockAndClearVerificationState(reasonMsg) {
   $("btn-export-json").disabled = true;
   if (playerShowsTranslation) {
     playerShowsTranslation = false;
-    if (rawParsePassed && parsedRawCues.length) renderSourcePreview();
-    else $("autopreview").replaceChildren();
+    if (rawParsePassed && parsedRawCues.length) {
+      renderSourcePreview();
+    } else {
+      $("autopreview").replaceChildren();
+      syncTrack = null;
+      lastActiveIndex = -1;
+    }
   }
   setPlayerState("播放器：僅顯示日文原文。" + (reasonMsg ? "\n" + reasonMsg : ""));
   updatePipeline();
@@ -719,7 +772,8 @@ async function validateGlossaryFileContent(content, token) {
     return false;
   }
 
-  const sha256 = await computeSHA256(content);
+  let sha256 = "（此環境無法計算）";
+  try { sha256 = await computeSHA256(content); } catch {}
   if (token !== glossaryLoadToken) return false;
 
   loadedGlossaryRawContent = content;
@@ -735,6 +789,12 @@ async function validateGlossaryFileContent(content, token) {
 $("glossary-file-input").addEventListener("change", async (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
+
+  if (file.size > MAX_FILE_BYTES) {
+    alert("選取的詞庫檔案過大（超過 20MB），請確認是否選到正確的 .txt 檔案。");
+    e.target.value = "";
+    return;
+  }
 
   if (batchList.some(b => b.status === "SAVED") || fullyVerifiedCues.length > 0) {
     const ok = confirm("選取新詞庫將使現有的全量校驗結果與 QC Prompt 失效。\n所有批次必須依新詞庫重新進行校驗與 QC。\n確定要更換詞庫嗎？");
@@ -858,20 +918,19 @@ function parseRawSubtitlesStrict(text) {
   return { cues, errors, warnings };
 }
 
-// 共用的原始字幕解析與套用流程：僅在解析成功後才清空既有批次並更新狀態
+// 共用的原始字幕解析與套用流程：僅在解析成功後才清空既有批次、同步更新 textarea 與狀態
 function applyRawSubtitles(text, newSourceLabel, extraNotes = []) {
-  const statusEl = $("status-raw");
-  statusEl.style.display = "block";
-
   const { cues, errors, warnings } = parseRawSubtitlesStrict(text);
   if (errors.length > 0) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = `【原始字幕解析 FAIL】：發現 ${errors.length} 項嚴重錯誤，保留現有解析資料與批次：\n` + errors.slice(0, 10).join("\n");
+    setStatus("status-raw", "err", `【原始字幕解析 FAIL】：發現 ${errors.length} 項嚴重錯誤，保留現有解析資料與批次：\n` + errors.slice(0, 10).join("\n"));
     return false;
   }
 
   sourceLabel = newSourceLabel;
   lastParsedRawJa = text;
+  if ($("field-raw-ja").value !== text) {
+    $("field-raw-ja").value = text;
+  }
   rawParsePassed = true;
   parsedRawCues = cues;
   globalRawWarnings = warnings.slice();
@@ -881,11 +940,11 @@ function applyRawSubtitles(text, newSourceLabel, extraNotes = []) {
   lockAndClearVerificationState("原始字幕已重新解析，請重新完成翻譯與全量校驗。");
   $("status-verify").style.display = "none";
 
-  statusEl.className = "status-msg ok";
-  statusEl.textContent = `【原始字幕解析 PASS】：共 ${cues.length} 條合法字幕。` +
+  setStatus("status-raw", "ok",
+    `【原始字幕解析 PASS】：共 ${cues.length} 條合法字幕。` +
     (warnings.length > 0 ? `\n【時間戳警告（${warnings.length} 項，已保存）】：\n` + warnings.slice(0, 6).map(w => w.message).join("\n") + (warnings.length > 6 ? `\n...其餘 ${warnings.length - 6} 項警告已完整記錄` : "") : "") +
     (extraNotes.length > 0 ? "\n" + extraNotes.join("\n") : "") +
-    `\n\n提示：請在步驟 2 設定起始序號、處理段數後，點擊「套用設定／建立批次」開始分批作業。`;
+    `\n\n提示：請在步驟 2 設定起始序號、處理段數後，點擊「套用設定／建立批次」開始分批作業。`);
   renderSourcePreview();
   updatePipeline();
   return true;
@@ -930,27 +989,21 @@ $("btn-clear-raw").addEventListener("click", () => {
 
 // ==================== 步驟 2：批次設定與翻譯 Prompt ====================
 $("btn-apply-batch-config").addEventListener("click", () => {
-  const statusPrompt = $("status-prompt-info");
-  statusPrompt.style.display = "block";
-
   if (!rawParsePassed || parsedRawCues.length === 0) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = "【操作順序錯誤】：請先完成步驟 1 原始字幕解析，方可套用批次設定！";
+    setStatus("status-prompt-info", "err", "【操作順序錯誤】：請先完成步驟 1 原始字幕解析，方可套用批次設定！");
     return;
   }
 
   const rawStartSeqStr = $("cfg-start-seq").value.trim();
   if (!/^[1-9]\d*$/.test(rawStartSeqStr)) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = `【設定錯誤】：起始序號必須是正整數（輸入為 "${rawStartSeqStr}"）。已停止，保留現有設定、批次與輸入。`;
+    setStatus("status-prompt-info", "err", `【設定錯誤】：起始序號必須是正整數（輸入為 "${rawStartSeqStr}"）。已停止，保留現有設定、批次與輸入。`);
     return;
   }
   const cfgStartSeq = parseInt(rawStartSeqStr, 10);
   const startIdx = parsedRawCues.findIndex(c => c.index === cfgStartSeq);
   if (startIdx === -1) {
     const availableSample = parsedRawCues.slice(0, 5).map(c => "#" + c.index).join(", ");
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = `【設定錯誤】：找不到指定的起始序號 #${cfgStartSeq}！請輸入實際存在的字幕序號（現有可用序號範例：${availableSample}${parsedRawCues.length > 5 ? " ... 共 " + parsedRawCues.length + " 個序號" : ""}）。已停止，絕不自動退回第一條。`;
+    setStatus("status-prompt-info", "err", `【設定錯誤】：找不到指定的起始序號 #${cfgStartSeq}！請輸入實際存在的字幕序號（現有可用序號範例：${availableSample}${parsedRawCues.length > 5 ? " ... 共 " + parsedRawCues.length + " 個序號" : ""}）。已停止，絕不自動退回第一條。`);
     return;
   }
 
@@ -961,8 +1014,7 @@ $("btn-apply-batch-config").addEventListener("click", () => {
 
   if (rawLimitStr !== "") {
     if (!/^[1-9]\d*$/.test(rawLimitStr)) {
-      statusPrompt.className = "status-msg err";
-      statusPrompt.textContent = `【設定錯誤】：處理段數必須是正整數（輸入為 "${rawLimitStr}"，只有留空才代表處理全部）。已停止，保留現有設定、批次與輸入。`;
+      setStatus("status-prompt-info", "err", `【設定錯誤】：處理段數必須是正整數（輸入為 "${rawLimitStr}"，只有留空才代表處理全部）。已停止，保留現有設定、批次與輸入。`);
       return;
     }
     const parsedLimit = parseInt(rawLimitStr, 10);
@@ -976,14 +1028,12 @@ $("btn-apply-batch-config").addEventListener("click", () => {
 
   const rawBatchSizeStr = $("cfg-batch-size").value.trim();
   if (!/^[1-9]\d*$/.test(rawBatchSizeStr)) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`;
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`);
     return;
   }
   const cfgBatchSize = parseInt(rawBatchSizeStr, 10);
   if (cfgBatchSize > MAX_BATCH_SIZE) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`;
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`);
     return;
   }
 
@@ -1003,19 +1053,7 @@ $("btn-apply-batch-config").addEventListener("click", () => {
   for (let b = 0; b < totalBatches; b++) {
     const bStart = b * cfgBatchSize;
     const bEnd = Math.min(bStart + cfgBatchSize, total);
-    batchList.push({
-      batchNum: b + 1,
-      startSeq: targetedCues[bStart].index,
-      endSeq: targetedCues[bEnd - 1].index,
-      cues: targetedCues.slice(bStart, bEnd),
-      status: "PENDING",
-      savedSrt: "",
-      savedCues: [],
-      draftSrt: "",
-      splitDepth: 0,
-      failCount: 0,
-      lastFailure: ""
-    });
+    batchList.push(makeBatch(b + 1, targetedCues.slice(bStart, bEnd), 0));
   }
 
   currentBatchIdx = 0;
@@ -1027,8 +1065,7 @@ $("btn-apply-batch-config").addEventListener("click", () => {
   updateBatchUI();
 
   if (!isGlossaryVerified) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = "【安全阻擋】：詞庫未載入或驗證失敗（紅燈），禁止產生翻譯與 QC Prompt！請先於步驟 0 載入正確詞庫檔案。";
+    setStatus("status-prompt-info", "err", "【安全阻擋】：詞庫未載入或驗證失敗（紅燈），禁止產生翻譯與 QC Prompt！請先於步驟 0 載入正確詞庫檔案。");
     $("field-trans-prompt").value = "";
     $("btn-copy-trans-prompt").disabled = true;
     return;
@@ -1036,7 +1073,7 @@ $("btn-apply-batch-config").addEventListener("click", () => {
 
   generatePromptForBatch(batchList[0]);
   if (isTruncatedNotice) {
-    statusPrompt.textContent += isTruncatedNotice;
+    $("status-prompt-info").textContent += isTruncatedNotice;
   }
 });
 
@@ -1119,12 +1156,8 @@ $("btn-gen-batch-prompt").addEventListener("click", () => {
 });
 
 function generatePromptForBatch(batchObj) {
-  const statusPrompt = $("status-prompt-info");
-  statusPrompt.style.display = "block";
-
   if (!isGlossaryVerified) {
-    statusPrompt.className = "status-msg err";
-    statusPrompt.textContent = "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生翻譯 Prompt！";
+    setStatus("status-prompt-info", "err", "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生翻譯 Prompt！");
     $("field-trans-prompt").value = "";
     $("btn-copy-trans-prompt").disabled = true;
     return;
@@ -1159,8 +1192,7 @@ ${srtChunk}`;
 
   $("field-trans-prompt").value = prompt;
   $("btn-copy-trans-prompt").disabled = false;
-  statusPrompt.className = "status-msg ok";
-  statusPrompt.textContent = `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`;
+  setStatus("status-prompt-info", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`);
 }
 
 $("btn-copy-trans-prompt").addEventListener("click", () => {
@@ -1313,26 +1345,21 @@ function isValidTruncatedTail(tailLines, expectedCues, startIdx) {
   while (pos < tailLines.length && idx < expectedCues.length) {
     const exp = expectedCues[idx];
     const expJaCount = exp.jaLines.length;
-    // 跳過區塊間分隔空白行
     while (pos < tailLines.length && tailLines[pos].trim() === "") pos++;
     if (pos >= tailLines.length) return true;
 
-    // 1. 序號行（若為最後一行允許是序號前綴，否則必須相等）
     const l0 = tailLines[pos++];
     if (pos === tailLines.length) return exp.rawSeqLine.startsWith(l0);
     if (l0 !== exp.rawSeqLine) return false;
 
-    // 2. 時間戳行
     const l1 = tailLines[pos++];
     if (pos === tailLines.length) return exp.rawTimeLine.startsWith(l1);
     if (l1 !== exp.rawTimeLine) return false;
 
-    // 3. 繁中翻譯行（非空）
     const l2 = tailLines[pos++];
     if (l2.trim() === "") return false;
     if (pos === tailLines.length) return true;
 
-    // 4. 日文行（逐行比對，最後一行允許是日文前綴）
     for (let k = 0; k < expJaCount; k++) {
       if (pos >= tailLines.length) return true;
       const lj = tailLines[pos++];
@@ -1368,7 +1395,6 @@ function classifyBatchFailure(text, expectedCues, errors) {
     };
   }
 
-  // 精準截斷檢測：前 N-1 個完整區塊必須完全通過驗證，且尾端殘留行符合第 N 句（及第 N+1 句開頭）的前綴
   const { blocks, leadingLineNumbers } = splitBilingualBlocks(t);
   if (!t.includes("```") && blocks.length <= expectedCues.length) {
     let isTruncated = false;
@@ -1427,35 +1453,20 @@ function splitBatchAt(idx) {
   const cur = batchList[idx];
   if (!canSplit(cur)) return false;
   const mid = Math.ceil(cur.cues.length / 2);
-  const mk = (cues) => ({
-    batchNum: 0,
-    startSeq: cues[0].index,
-    endSeq: cues[cues.length - 1].index,
-    cues,
-    status: "PENDING",
-    savedSrt: "",
-    savedCues: [],
-    draftSrt: "",
-    splitDepth: cur.splitDepth + 1,
-    failCount: 0,
-    lastFailure: ""
-  });
-  batchList.splice(idx, 1, mk(cur.cues.slice(0, mid)), mk(cur.cues.slice(mid)));
+  const depth = cur.splitDepth + 1;
+  batchList.splice(idx, 1, makeBatch(0, cur.cues.slice(0, mid), depth), makeBatch(0, cur.cues.slice(mid), depth));
   renumberBatches();
   currentBatchIdx = idx;
   return true;
 }
 
 $("btn-split-current-batch").addEventListener("click", () => {
-  const statusEl = $("status-verify");
-  statusEl.style.display = "block";
   if (batchList.length === 0) return;
   const cur = batchList[currentBatchIdx];
   if (!canSplit(cur)) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = cur.status === "SAVED"
+    setStatus("status-verify", "err", cur.status === "SAVED"
       ? "【拆批拒絕】：此批已驗證並暫存，不可拆分或重跑。若確需重做，請先「作廢此批暫存」。"
-      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`;
+      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`);
     return;
   }
   const hasInput = $("field-trans-result").value.trim().length > 0;
@@ -1468,19 +1479,14 @@ $("btn-split-current-batch").addEventListener("click", () => {
   lockAndClearVerificationState("批次已拆分，請完成所有批次並重新執行全量校驗。");
   updateBatchUI();
   if (isGlossaryVerified) generatePromptForBatch(batchList[currentBatchIdx]);
-  statusEl.className = "status-msg warn";
-  statusEl.textContent = `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`;
+  setStatus("status-verify", "warn", `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`);
 });
 
 $("btn-save-current-batch").addEventListener("click", () => {
-  const statusEl = $("status-verify");
-  statusEl.style.display = "block";
-
   lockAndClearVerificationState("批次暫存異動中，請完成所有批次並重新執行全量校驗。");
 
   if (!rawParsePassed || batchList.length === 0) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = "【暫存 FAIL】：請先完成步驟 1 原始字幕解析與套用批次設定！";
+    setStatus("status-verify", "err", "【暫存 FAIL】：請先完成步驟 1 原始字幕解析與套用批次設定！");
     return;
   }
 
@@ -1489,13 +1495,12 @@ $("btn-save-current-batch").addEventListener("click", () => {
   const { cues, errors } = parseAndValidateBilingualSrt(inputSrt, curBatch.cues);
 
   if (errors.length > 0) {
-    statusEl.className = "status-msg err";
     const failure = classifyBatchFailure(inputSrt, curBatch.cues, errors);
     curBatch.failCount += 1;
     curBatch.lastFailure = failure.label;
     updateBatchUI();
-    statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join("\n") +
-      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`;
+    setStatus("status-verify", "err", `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join("\n") +
+      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`);
     return;
   }
 
@@ -1507,8 +1512,7 @@ $("btn-save-current-batch").addEventListener("click", () => {
   curBatch.draftSrt = inputSrt;
   updateBatchUI();
 
-  statusEl.className = "status-msg ok";
-  statusEl.textContent = `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`;
+  setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`);
 });
 
 $("btn-revert-current-batch").addEventListener("click", () => {
@@ -1532,10 +1536,7 @@ $("btn-clear-current-batch").addEventListener("click", () => {
   setTransInputValue("");
   updateBatchUI();
   lockAndClearVerificationState(`第 ${curBatch.batchNum} 批暫存已作廢且輸入框已清空，請重新暫存並執行全量校驗。`);
-  const statusEl = $("status-verify");
-  statusEl.style.display = "block";
-  statusEl.className = "status-msg warn";
-  statusEl.textContent = `已作廢第 ${curBatch.batchNum} 批暫存狀態並清空輸入框。`;
+  setStatus("status-verify", "warn", `已作廢第 ${curBatch.batchNum} 批暫存狀態並清空輸入框。`);
 });
 
 $("btn-clear-trans").addEventListener("click", () => {
@@ -1564,19 +1565,12 @@ $("btn-clear-all-batches").addEventListener("click", () => {
   setTransInputValue("");
   updateBatchUI();
   lockAndClearVerificationState("已清空所有批次暫存，所有批次重設為「待翻譯」。");
-  const statusEl = $("status-verify");
-  statusEl.style.display = "block";
-  statusEl.className = "status-msg warn";
-  statusEl.textContent = "所有批次暫存已完全清空重置。";
+  setStatus("status-verify", "warn", "所有批次暫存已完全清空重置。");
 });
 
 function runFullVerification() {
-  const statusEl = $("status-verify");
-  statusEl.style.display = "block";
-
   if (!isGlossaryVerified) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = "【全量校驗 FAIL】：詞庫未載入或驗證失敗（紅燈），禁止執行全量校驗、預覽與 JSON 匯出！請先於步驟 0 載入正確詞庫檔案。";
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：詞庫未載入或驗證失敗（紅燈），禁止執行全量校驗、預覽與 JSON 匯出！請先於步驟 0 載入正確詞庫檔案。");
     lockAndClearVerificationState("詞庫未驗證，禁止全量校驗。");
     return false;
   }
@@ -1584,42 +1578,37 @@ function runFullVerification() {
   lockAndClearVerificationState("正在執行全量校驗，舊預覽與 QC 已清除...");
 
   if (!rawParsePassed || parsedRawCues.length === 0) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = "【全量校驗 FAIL】：原始字幕未通過步驟 1 解析！";
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：原始字幕未通過步驟 1 解析！");
     return false;
   }
 
   if (batchList.length === 0) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = "【全量校驗 FAIL】：尚未套用批次設定！請先點擊「套用設定／建立批次」。";
+    setStatus("status-verify", "err", "【全量校驗 FAIL】：尚未套用批次設定！請先點擊「套用設定／建立批次」。");
     return false;
   }
 
   const pendingBatches = batchList.filter(b => b.status !== "SAVED");
   if (pendingBatches.length > 0) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = `【全量校驗 FAIL】：尚有未暫存的批次（第 ${pendingBatches.map(b => b.batchNum).join(", ")} 批）。所有批次必須先點擊「暫存當前批次結果」後，方可執行全量校驗！`;
+    setStatus("status-verify", "err", `【全量校驗 FAIL】：尚有未暫存的批次（第 ${pendingBatches.map(b => b.batchNum).join(", ")} 批）。所有批次必須先點擊「暫存當前批次結果」後，方可執行全量校驗！`);
     return false;
   }
 
   const cur = batchList[currentBatchIdx];
   const currentInputText = $("field-trans-result").value;
   if (cur && cur.status === "SAVED" && currentInputText !== cur.savedSrt) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = `【全量校驗 FAIL】：第 ${cur.batchNum} 批輸入框中有尚未儲存的修改內容！請先點擊「暫存當前批次結果」更新暫存，或點擊「還原至已儲存暫存」後再執行全量校驗。`;
+    setStatus("status-verify", "err", `【全量校驗 FAIL】：第 ${cur.batchNum} 批輸入框中有尚未儲存的修改內容！請先點擊「暫存當前批次結果」更新暫存，或點擊「還原至已儲存暫存」後再執行全量校驗。`);
     return false;
   }
 
-  // 直接合併各批次已驗證並鎖定的 savedCues
   const transCues = batchList.flatMap(b => b.savedCues);
   fullyVerifiedCues = transCues;
   $("btn-export-json").disabled = false;
 
   const scopedWarnings = getScopedWarnings();
 
-  statusEl.className = "status-msg ok";
-  statusEl.textContent = `【全量校驗 PASS】：共 ${transCues.length} 條字幕，段數、序號行、時間戳行與多行日文原文 100% 精準逐字吻合！已解鎖步驟 4 QC 檢查與 JSON 匯出。` +
-    (scopedWarnings.length > 0 ? `\n（包含 ${scopedWarnings.length} 項落在本次範圍內的時間戳警告，將保留至 JSON 匯出）` : "");
+  setStatus("status-verify", "ok",
+    `【全量校驗 PASS】：共 ${transCues.length} 條字幕，段數、序號行、時間戳行與多行日文原文 100% 精準逐字吻合！已解鎖步驟 4 QC 檢查與 JSON 匯出。` +
+    (scopedWarnings.length > 0 ? `\n（包含 ${scopedWarnings.length} 項落在本次範圍內的時間戳警告，將保留至 JSON 匯出）` : ""));
 
   initQcBatchManager();
 
@@ -1657,13 +1646,6 @@ $("btn-export-json").addEventListener("click", () => {
 });
 
 // ==================== 雙語 JSON 匯入 ====================
-function setImportStatus(cls, msg) {
-  const el = $("status-import");
-  el.style.display = "block";
-  el.className = "status-msg " + cls;
-  el.textContent = msg;
-}
-
 function fmtSeqRanges(arr, maxShown) {
   const out = [];
   let i = 0;
@@ -1681,7 +1663,7 @@ function fmtSeqRanges(arr, maxShown) {
 
 function importBilingualJsonText(text) {
   const fail = lines => {
-    setImportStatus("err", "【JSON 匯入 FAIL】原有工作內容未變動：\n" + lines.slice(0, 15).join("\n") +
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】原有工作內容未變動：\n" + lines.slice(0, 15).join("\n") +
       (lines.length > 15 ? `\n...另有 ${lines.length - 15} 項` : ""));
     return false;
   };
@@ -1750,7 +1732,6 @@ function importBilingualJsonText(text) {
   const planned = new Set(plan.map(p => p.b));
   const cur = batchList[currentBatchIdx];
   const input = $("field-trans-result").value;
-  // 僅當目前所在批次 cur 也在匯入範圍內時，才檢查其輸入框草稿是否會被覆蓋
   const plannedCur = planned.has(cur) ? plan.find(p => p.b === cur) : null;
   const draftLost = !!plannedCur && input.trim() !== "" && input !== plannedCur.srt;
   const overwritten = plan.filter(p => p.b.status === "SAVED" && p.b.savedSrt !== p.srt).map(p => p.b.batchNum);
@@ -1762,7 +1743,7 @@ function importBilingualJsonText(text) {
   if (draftLost) notes.push("目前輸入框中未暫存的內容將被取代。");
   if (missing.length || overwritten.length || draftLost) {
     if (!confirm("JSON 匯入確認：\n" + notes.join("\n") + "\n\n確定要匯入嗎？按「取消」將完全保留原有內容。")) {
-      setImportStatus("warn", "已取消匯入，原有工作內容未變動。");
+      setStatus("status-import", "warn", "已取消匯入，原有工作內容未變動。");
       return false;
     }
   }
@@ -1786,10 +1767,10 @@ function importBilingualJsonText(text) {
   const curHasUnsavedDraft = cur.status === "SAVED" && $("field-trans-result").value !== cur.savedSrt;
   if (pending.length === 0 && !curHasUnsavedDraft) {
     const ok = runFullVerification();
-    setImportStatus(ok ? "ok" : "err", (ok ? "【JSON 匯入 PASS】" : "【JSON 匯入後全量校驗未通過】") +
+    setStatus("status-import", ok ? "ok" : "err", (ok ? "【JSON 匯入 PASS】" : "【JSON 匯入後全量校驗未通過】") +
       `已匯入 ${plan.length} 批（${plan.reduce((n, p) => n + p.cues.length, 0)} 條），並以既有全量校驗重新驗證。\n` + $("status-verify").textContent);
   } else {
-    setImportStatus("warn", `【JSON 部分匯入】已匯入 ${plan.length} 批；` +
+    setStatus("status-import", "warn", `【JSON 部分匯入】已匯入 ${plan.length} 批；` +
       (pending.length ? `第 ${pending.map(b => b.batchNum).join(", ")} 批仍待翻譯。` : `第 ${cur.batchNum} 批仍有未儲存的修改草稿。`) + "\n" +
       notes.join("\n") + "\n匯出與雙語播放器維持鎖定，直到所有批次完成並通過全量校驗。");
   }
@@ -1801,11 +1782,16 @@ $("json-import-input").addEventListener("change", async e => {
   const input = e.target;
   const f = input.files && input.files[0];
   if (!f) return;
+  if (f.size > MAX_FILE_BYTES) {
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】檔案超過 20MB 上限，原有工作內容未變動。");
+    input.value = "";
+    return;
+  }
   try {
     const text = await f.text();
     importBilingualJsonText(text);
   } catch {
-    setImportStatus("err", "【JSON 匯入 FAIL】讀取檔案失敗，原有工作內容未變動。");
+    setStatus("status-import", "err", "【JSON 匯入 FAIL】讀取檔案失敗，原有工作內容未變動。");
   } finally {
     input.value = "";
   }
@@ -1851,12 +1837,8 @@ $("btn-gen-current-qc").addEventListener("click", () => {
 });
 
 function generateQcPromptForBatch(batchObj) {
-  const statusEl = $("status-qc");
-  statusEl.style.display = "block";
-
   if (!isGlossaryVerified) {
-    statusEl.className = "status-msg err";
-    statusEl.textContent = "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生 QC Prompt！";
+    setStatus("status-qc", "err", "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生 QC Prompt！");
     $("field-qc-prompt").value = "";
     $("btn-copy-qc-prompt").disabled = true;
     return;
@@ -1887,8 +1869,7 @@ ${diffTable}`;
 
   $("field-qc-prompt").value = qcPrompt;
   $("btn-copy-qc-prompt").disabled = false;
-  statusEl.className = "status-msg ok";
-  statusEl.textContent = `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】QC Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，已附帶原始全文詞庫依據）。`;
+  setStatus("status-qc", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】QC Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，已附帶原始全文詞庫依據）。`);
 }
 
 $("btn-copy-qc-prompt").addEventListener("click", () => {
@@ -1914,7 +1895,6 @@ function serializeCuesToSrt(cues) {
 }
 
 function loadRawIntoTranslation(text, newSourceLabel, notes) {
-  $("field-raw-ja").value = text;
   return applyRawSubtitles(text, newSourceLabel, notes);
 }
 
@@ -1965,11 +1945,17 @@ $("check").addEventListener("click", async () => {
   button.textContent = "正在取得字幕…";
   status.textContent = "網址格式正確。\n正在向字幕服務請求日文字幕，請稍候。";
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
     const endpoint = new URL(API);
     endpoint.searchParams.set("url", raw);
 
-    const response = await fetch(endpoint.toString(), { method: "GET" });
+    const response = await fetch(endpoint.toString(), {
+      method: "GET",
+      signal: controller.signal
+    });
 
     let data;
     try {
@@ -1995,7 +1981,8 @@ $("check").addEventListener("click", async () => {
     }
 
     const cues = data.content
-      .filter(item => item && typeof item.text === "string" && item.text.trim().length > 0)
+      .filter(item => item && typeof item.text === "string" && item.text.trim().length > 0 &&
+        Number.isFinite(Number(item.offset || 0)) && Number.isFinite(Number(item.duration || 0)))
       .map(item => ({
         start: Math.max(0, Number(item.offset || 0) / 1000),
         end: Math.max(0, (Number(item.offset || 0) + Number(item.duration || 0)) / 1000),
@@ -2017,11 +2004,14 @@ $("check").addEventListener("click", async () => {
     const ser = serializeCuesToSrt(cues);
     loadRawIntoTranslation(ser.srt, `YouTube Worker（${parsed.id}）`, ser.notes);
   } catch (error) {
+    const msg = error && error.name === "AbortError"
+      ? "請求逾時（超過 30 秒未回應）。"
+      : (error && error.message ? error.message : "發生未知錯誤。");
     status.textContent =
-      "取得字幕失敗。\n" +
-      (error && error.message ? error.message : "發生未知錯誤。") +
+      "取得字幕失敗。\n" + msg +
       "\n\n請確認網路連線、影片字幕是否可用，以及後端服務是否正常。";
   } finally {
+    clearTimeout(timer);
     button.disabled = false;
     button.textContent = "取得日文字幕";
   }
@@ -2053,10 +2043,8 @@ const HTML_ENTITY_MAP = {
 
 function decodeSubtitleText(raw) {
   return raw
-    // 僅移除標準 SRT / WebVTT 標籤與時間標籤，避免誤刪日文顏文字或跨行內容
     .replace(/<\s*\/?\s*(?:[biu]|font|ruby|rt|v|c|lang)\b[^>]*>/gi, "")
     .replace(/<\d{1,2}:\d{2}:\d{2}[.,]\d{1,3}>/g, "")
-    // 單次正則替換實體，徹底避免 &amp;lt; 二次解碼問題
     .replace(/&(?:lt|gt|quot|#39|apos|nbsp|amp);/gi, m => HTML_ENTITY_MAP[m.toLowerCase()] || m);
 }
 
@@ -2110,6 +2098,12 @@ $("clear").addEventListener("click", () => {
 $("subtitlefile").addEventListener("change", async e => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
+
+  if (f.size > MAX_FILE_BYTES) {
+    $("substatus").textContent = "字幕檔超過 20MB 上限，請重新選擇檔案。";
+    e.target.value = "";
+    return;
+  }
 
   try {
     $("subtitletext").value = await f.text();
