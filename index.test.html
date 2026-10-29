@@ -344,13 +344,16 @@ function seekToTimestamp(videoId, seconds) {
 
 // ==================== 字幕跟隨播放進度 ====================
 const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
-const FOLLOW_PAUSE_MS = 4000;  // 使用者手動捲動後，暫停自動跟隨的毫秒數
+const FOLLOW_PAUSE_MS = 4000;  // 手指放開且慣性捲動停止後，等待多少毫秒才跳回高亮處
 const SYNC_INTERVAL_MS = 80;   // 每隔多久檢查一次播放進度
 const SCROLL_ANCHOR = 0.35;    // 0=貼近播放器下緣，0.5=可視區正中；越小越靠上
 
 let syncTrack = null;
 let lastActiveIndex = -1;
-let followPausedUntil = 0;
+let isTouching = false;        // 手指是否正接觸螢幕（接觸期間完全鎖定自動捲動）
+let followPausedUntil = 0;     // 暫停自動跟隨的截止時間戳
+let autoScrollUntil = 0;       // 程式自身觸發平滑捲動的保護時間窗，避免誤判為手動捲動
+let resumeFollowTimer = null;  // 手放開 3~4 秒後自動跳回目前高亮字幕的計時器
 
 function buildTrackIndex(track) {
   const cues = track.cues;
@@ -385,6 +388,7 @@ function findActiveIndices(track, t) {
 }
 
 function scrollCueIntoPlace(el) {
+  if (isTouching || Date.now() < followPausedUntil) return;
   // 若使用者正在下方輸入框/文字區編輯，或預覽區已捲出畫面外，不強制拉回視窗
   const activeTag = document.activeElement ? document.activeElement.tagName : "";
   if (activeTag === "TEXTAREA" || activeTag === "INPUT") return;
@@ -394,7 +398,23 @@ function scrollCueIntoPlace(el) {
   const playerBottom = player && !player.hidden ? Math.max(0, Math.min(player.getBoundingClientRect().bottom, player.offsetHeight + 16)) : 0;
   const targetCenter = playerBottom + (window.innerHeight - playerBottom) * SCROLL_ANCHOR;
   const r = el.getBoundingClientRect();
-  window.scrollBy({ top: r.top + r.height / 2 - targetCenter, behavior: "smooth" });
+  const delta = r.top + r.height / 2 - targetCenter;
+  if (Math.abs(delta) < 6) return;
+  autoScrollUntil = Date.now() + 900;
+  window.scrollBy({ top: delta, behavior: "smooth" });
+}
+
+function scheduleResumeFollow(ms = FOLLOW_PAUSE_MS) {
+  followPausedUntil = Date.now() + ms;
+  if (resumeFollowTimer) clearTimeout(resumeFollowTimer);
+  resumeFollowTimer = setTimeout(() => {
+    resumeFollowTimer = null;
+    if (isTouching || Date.now() < followPausedUntil) return;
+    if (!syncTrack || lastActiveIndex < 0) return;
+    if (youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getPlayerState === "function" && youtubePlayer.getPlayerState() !== 1) return;
+    const el = syncTrack.els[lastActiveIndex];
+    if (el) scrollCueIntoPlace(el);
+  }, ms + 20);
 }
 
 function setActiveCues(next) {
@@ -410,15 +430,49 @@ function setActiveCues(next) {
   if (anchor === lastActiveIndex) return;
   lastActiveIndex = anchor;
   const el = syncTrack.els[anchor];
-  if (!el || Date.now() < followPausedUntil) return;
+  if (!el || isTouching || Date.now() < followPausedUntil) return;
   scrollCueIntoPlace(el);
 }
 
-["touchstart", "touchmove", "wheel", "keydown", "mousedown"].forEach(name => {
+// 手指接觸與滑動期間：完全鎖定自動捲動，並立即中斷進行中的平滑捲動
+["touchstart", "touchmove"].forEach(name => {
   window.addEventListener(name, () => {
-    followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+    isTouching = true;
+    autoScrollUntil = 0;
+    followPausedUntil = Infinity;
+    if (resumeFollowTimer) {
+      clearTimeout(resumeFollowTimer);
+      resumeFollowTimer = null;
+    }
   }, { passive: true });
 });
+
+// 手指完全放開後：才開始起算 4 秒倒數
+["touchend", "touchcancel"].forEach(name => {
+  window.addEventListener(name, (e) => {
+    if (e.touches && e.touches.length > 0) return;
+    isTouching = false;
+    scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  }, { passive: true });
+});
+
+// 滑鼠滾輪與鍵盤捲動：重置 4 秒倒數
+["wheel", "keydown"].forEach(name => {
+  window.addEventListener(name, () => {
+    autoScrollUntil = 0;
+    scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  }, { passive: true });
+});
+
+// 視窗捲動監聽：若為手指放開後的 iOS 慣性滑動（非程式自動捲動），持續順延 4 秒倒數直到滑動停止
+window.addEventListener("scroll", () => {
+  if (isTouching) {
+    followPausedUntil = Infinity;
+    return;
+  }
+  if (Date.now() < autoScrollUntil) return;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
 
 setInterval(() => {
   if (!syncTrack || !youtubePlayer || !youtubePlayerReady || typeof youtubePlayer.getCurrentTime !== "function") return;
@@ -510,7 +564,12 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
       link.textContent = fmt(c.start) + " → " + fmt(c.end);
       link.addEventListener("click", event => {
         event.preventDefault();
+        isTouching = false;
         followPausedUntil = 0;
+        if (resumeFollowTimer) {
+          clearTimeout(resumeFollowTimer);
+          resumeFollowTimer = null;
+        }
         seekToTimestamp(videoId, c.start);
       });
       time.append(link);
