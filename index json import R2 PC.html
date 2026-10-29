@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>【TEST】VT 字幕整合測試頁</title>
+<title>【TEST】VT 字幕整合測試頁（第一版：左影置中放大＋右文版）</title>
 <style>
 :root{
   color-scheme:dark;
@@ -92,12 +92,12 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
 #pipeline{font-size:.92rem;margin-top:0}
 .url-bar,.status-grid,.player-lyrics-layout{display:contents}
-/* 電腦版寬螢幕適配（>= 900px）：拓寬容器、輸入列與狀態列並排、播放器與歌詞左右分欄避免播放器過大佔滿垂直畫面 */
+/* 電腦版寬螢幕適配（第一版：邊緣圖塊向左右放大、左側影片放大並垂直置中、右側字幕右移） */
 @media (min-width: 900px){
-  main{max-width:1120px;padding:32px 24px 64px}
+  main{max-width:96vw;padding:24px 16px 64px}
   h1{font-size:1.72rem}
   h2{font-size:1.12rem}
-  .panel,.card{padding:20px 24px;margin:16px 0}
+  .panel,.card{padding:22px 28px;margin:16px 0}
   input[type=url],input[type=text],textarea{padding:10px 12px;font-size:.95rem}
   button{padding:9px 16px;font-size:.95rem}
   .card textarea{min-height:180px}
@@ -108,17 +108,19 @@ a{color:var(--accent);overflow-wrap:anywhere}
   .status-grid .status{margin-top:12px}
   .player-lyrics-layout:has(#youtube-player-container:not([hidden])){
     display:grid;
-    grid-template-columns:minmax(360px,45%) minmax(0,1fr);
-    gap:22px;
+    grid-template-columns:minmax(480px,58%) minmax(0,1fr);
+    gap:52px;
     align-items:start;
-    margin-top:14px;
+    margin-top:18px;
   }
   .player-lyrics-layout:has(#youtube-player-container:not([hidden])) #youtube-player-container{
-    top:20px;
+    /* 將 16:9 影片播放器垂直置中於電腦螢幕正中間（50vh 減去影片高度的一半） */
+    top:max(16px,calc(50vh - 15.5vw));
     padding:0;
   }
-  #youtube-player{border-radius:12px}
-  #autopreview .cue{padding:12px 16px 14px}
+  #youtube-player{border-radius:14px;max-height:78vh}
+  #autopreview{padding-left:12px}
+  #autopreview .cue{padding:12px 18px 14px}
   #autopreview .cue.active{transform:scale(1.02)}
   #autopreview .cue.active .cue-zh{font-size:1.26em}
   #autopreview .cue.active .cue-text{font-size:1em}
@@ -443,7 +445,8 @@ function scrollCueIntoPlace(el) {
     playerRect.right > previewRect.left + 20 &&
     playerRect.left < previewRect.right - 20;
   const playerBottom = isStackedAbove ? Math.max(0, Math.min(playerRect.bottom, player.offsetHeight + 16)) : 0;
-  const targetCenter = playerBottom + (window.innerHeight - playerBottom) * SCROLL_ANCHOR;
+  const anchorRatio = isStackedAbove ? SCROLL_ANCHOR : 0.5; // 電腦版左右並排時，字幕對齊螢幕垂直正中央 (50vh) 與左側置中影片平視
+  const targetCenter = playerBottom + (window.innerHeight - playerBottom) * anchorRatio;
   const r = el.getBoundingClientRect();
   const delta = r.top + r.height / 2 - targetCenter;
   if (Math.abs(delta) < 6) return;
