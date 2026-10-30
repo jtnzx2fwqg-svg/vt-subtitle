@@ -53,21 +53,9 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-text{white-space:pre-wrap}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
-/* Apple Music 歌詞式字幕：
-   1. 高亮字體大小設定為中文 1.4em、日文 1.05em（與目標圖完全一致）。
-   2. 針對 font-size 切換瞬間造成的突兀跳變，以 @keyframes cuePopOut 在切換瞬間從 scale(0.86) 補償起算（1.4em × 0.86 ≈ 1.2em，銜接非高亮的 1.15em），再透過 cubic-bezier(.22,1,.36,1) 彈性曲線平滑突起至 scale(1.03)，全程無斷行重排抖動。 */
-@keyframes cuePopOut{
-  0%{
-    transform:scale(.86);
-    background-color:rgba(255,255,255,0);
-    box-shadow:0 0 0 rgba(0,0,0,0);
-  }
-  100%{
-    transform:scale(1.03);
-    background-color:rgba(255,255,255,.09);
-    box-shadow:0 8px 24px rgba(0,0,0,.38);
-  }
-}
+/* Apple Music 歌詞式字幕 ＋ FLIP (First-Last-Invert-Play) 零斷層合成動畫：
+   1. 高亮字體大小維持與參考圖完全一致（繁中 1.4em、日文 1.05em、整塊放大 scale(1.03)）。
+   2. 切換高亮與捲動時，由 JS 執行 FLIP 技術：先瞬時完成捲動與排版，再為可視區每塊字幕掛上精確補償的 translate3d(0, dy, 0) scale(s)，使第 0 毫秒畫面位置與大小 0.00px 無縫銜接，最後統一由 GPU 以 cubic-bezier(0.22, 1, 0.36, 1) 彈簧曲線同時完成滑動與突起。 */
 #autopreview{display:flex;flex-direction:column;gap:12px;padding-top:8px}
 #autopreview .cue{
   position:relative;
@@ -76,14 +64,16 @@ a{color:var(--accent);overflow-wrap:anywhere}
   border-radius:12px;
   border-bottom:0;
   background:transparent;
-  transform:scale(1);
+  transform:translate3d(0,0,0) scale(1);
   transform-origin:center center;
+  backface-visibility:hidden;
+  -webkit-font-smoothing:antialiased;
   will-change:transform,opacity,background-color;
   transition:
-    opacity .34s ease,
-    background-color .34s ease,
-    transform .38s cubic-bezier(.22,1,.36,1),
-    box-shadow .38s cubic-bezier(.22,1,.36,1);
+    transform .52s cubic-bezier(.22,1,.36,1),
+    opacity .42s cubic-bezier(.22,1,.36,1),
+    background-color .42s cubic-bezier(.22,1,.36,1),
+    box-shadow .52s cubic-bezier(.22,1,.36,1);
 }
 :where(#autopreview .cue){opacity:.3}
 :where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
@@ -97,8 +87,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
   opacity:1;
   background:rgba(255,255,255,.09);
   box-shadow:0 8px 24px rgba(0,0,0,.38);
-  transform:scale(1.03);
-  animation:cuePopOut .38s cubic-bezier(.22,1,.36,1) both;
+  transform:translate3d(0,0,0) scale(1.03);
 }
 #autopreview .cue.active .cue-zh{font-size:1.4em}
 #autopreview .cue.active .cue-text{font-size:1.05em}
@@ -377,18 +366,18 @@ function seekToTimestamp(videoId, seconds) {
   pendingSeekTime = null;
 }
 
-// ==================== 字幕跟隨播放進度 ====================
+// ==================== 字幕跟隨播放進度（FLIP 零斷層 GPU 動畫引擎） ====================
 const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
 const FOLLOW_PAUSE_MS = 4000;  // 手指放開且慣性捲動停止後，等待多少毫秒才跳回高亮處
 const SYNC_INTERVAL_MS = 80;   // 每隔多久檢查一次播放進度
-const ACTIVE_SCALE = 1.03;     // 高亮字塊最終放大倍率（與 CSS #autopreview .cue.active 一致）
-const ACTIVE_TOP_GAP = 8;      // 高亮字塊最上緣距離嵌入器下緣保留的空間（px），不露出一句
+const ACTIVE_SCALE = 1.03;     // 高亮字塊放大倍率（與 CSS #autopreview .cue.active 一致）
+const ACTIVE_TOP_GAP = 8;      // 高亮字塊最上緣距離嵌入器下緣保留的空間（px），不露出上一句
 
 let syncTrack = null;
 let lastActiveIndex = -1;
 let isTouching = false;        // 手指是否正接觸螢幕（接觸期間完全鎖定自動捲動）
 let followPausedUntil = 0;     // 暫停自動跟隨的截止時間戳
-let autoScrollUntil = 0;       // 程式自身觸發平滑捲動的保護時間窗，避免誤判為手動捲動
+let autoScrollUntil = 0;       // 程式自身觸發捲動的保護時間窗，避免誤判為手動捲動
 let resumeFollowTimer = null;  // 手放開 3~4 秒後自動跳回目前高亮字幕的計時器
 
 function buildTrackIndex(track) {
@@ -423,26 +412,31 @@ function findActiveIndices(track, t) {
   return out.sort((a, b) => a - b);
 }
 
-function scrollCueIntoPlace(el) {
-  if (isTouching || Date.now() < followPausedUntil) return;
-  // 若使用者正在下方輸入框/文字區編輯，或預覽區已捲出畫面外，不強制拉回視窗
-  const activeTag = document.activeElement ? document.activeElement.tagName : "";
-  if (activeTag === "TEXTAREA" || activeTag === "INPUT") return;
-  const previewRect = $("autopreview").getBoundingClientRect();
-  if (previewRect.bottom < 0 || previewRect.top > window.innerHeight) return;
+function getPlayerBottomY() {
   const player = $("youtube-player-container");
-  let playerBottom = 0;
-  if (player && !player.hidden) {
-    const stickyTop = typeof window.getComputedStyle === "function" ? (parseFloat(window.getComputedStyle(player).top) || 0) : 0;
-    playerBottom = Math.max(0, Math.min(player.getBoundingClientRect().bottom, stickyTop + player.offsetHeight));
-  }
+  if (!player || player.hidden) return 0;
+  const stickyTop = typeof window.getComputedStyle === "function" ? (parseFloat(window.getComputedStyle(player).top) || 0) : 0;
+  return Math.max(0, Math.min(player.getBoundingClientRect().bottom, stickyTop + player.offsetHeight));
+}
+
+function canAutoScrollNow() {
+  if (isTouching || Date.now() < followPausedUntil) return false;
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  if (activeTag === "TEXTAREA" || activeTag === "INPUT") return false;
+  const preview = $("autopreview");
+  if (!preview) return false;
+  const previewRect = preview.getBoundingClientRect();
+  return !(previewRect.bottom < 0 || previewRect.top > window.innerHeight);
+}
+
+function scrollCueIntoPlace(el) {
+  if (!el || !canAutoScrollNow()) return;
+  const targetTop = getPlayerBottomY() + ACTIVE_TOP_GAP;
   const r = el.getBoundingClientRect();
-  // 以 transform-origin:center center 不變的中心點搭配 offsetHeight 推算放大至 ACTIVE_SCALE 後的最終上緣
   const centerY = r.top + r.height / 2;
   const activeVisualTop = centerY - (el.offsetHeight * ACTIVE_SCALE) / 2;
-  const targetTop = playerBottom + ACTIVE_TOP_GAP;
   const delta = activeVisualTop - targetTop;
-  if (Math.abs(delta) < 4) return;
+  if (Math.abs(delta) < 3) return;
   autoScrollUntil = Date.now() + 900;
   window.scrollBy({ top: delta, behavior: "smooth" });
 }
@@ -460,24 +454,111 @@ function scheduleResumeFollow(ms = FOLLOW_PAUSE_MS) {
   }, ms + 20);
 }
 
+// FLIP (First, Last, Invert, Play) 轉場：將「上一句縮小、這一句放大突起、整列往上捲動」合成為單一 GPU 彈簧動畫
 function setActiveCues(next) {
   if (!syncTrack) return;
   const prev = syncTrack.active;
   if (prev.length === next.length && prev.every((v, k) => v === next[k])) return;
   const nextSet = new Set(next), prevSet = new Set(prev);
-  prev.forEach(i => { if (!nextSet.has(i)) syncTrack.els[i].classList.remove("active"); });
-  next.forEach(i => { if (!prevSet.has(i)) syncTrack.els[i].classList.add("active"); });
-  syncTrack.active = next;
+
   let anchor = -1;
   next.forEach(i => { if (anchor < 0 || syncTrack.cues[i].start < syncTrack.cues[anchor].start) anchor = i; });
-  if (anchor === lastActiveIndex) return;
+  const anchorChanged = anchor !== lastActiveIndex;
   lastActiveIndex = anchor;
-  const el = syncTrack.els[anchor];
-  if (!el || isTouching || Date.now() < followPausedUntil) return;
-  scrollCueIntoPlace(el);
+
+  const els = syncTrack.els;
+  const vh = window.innerHeight || 800;
+  const shouldScroll = anchorChanged && anchor >= 0 && els[anchor] && canAutoScrollNow();
+
+  // 1. FIRST：在變更 .active 與捲動前，記錄畫面附近所有字幕塊目前的精確視覺位置與視覺高度
+  const firstRects = new Map();
+  const marginY = vh * 1.5;
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i];
+    const r = el.getBoundingClientRect();
+    if (r.bottom >= -marginY && r.top <= vh + marginY) {
+      firstRects.set(i, {
+        centerY: r.top + r.height / 2,
+        height: r.height,
+        wasActive: prevSet.has(i)
+      });
+    }
+  }
+
+  // 清除前一次殘留的 inline transform，讓瀏覽器計算真實目標排版
+  firstRects.forEach((_, i) => {
+    els[i].style.transition = "none";
+    els[i].style.transform = "";
+  });
+
+  // 2. LAST (Part 1)：切換 .active class（此時目標句字體變為 1.4em、上一句變回 1.15em）
+  prev.forEach(i => { if (!nextSet.has(i)) els[i].classList.remove("active"); });
+  next.forEach(i => { if (!prevSet.has(i)) els[i].classList.add("active"); });
+  syncTrack.active = next;
+
+  // 2. LAST (Part 2)：計算目標句最上緣貼齊播放器下方 8px 所需的捲動量，並瞬時完成底層 window 捲動
+  if (shouldScroll) {
+    const player = $("youtube-player-container");
+    const playerRectBefore = player && !player.hidden ? player.getBoundingClientRect() : null;
+    const stickyTop = (player && typeof window.getComputedStyle === "function") ? (parseFloat(window.getComputedStyle(player).top) || 0) : 0;
+    const isPlayerAlreadyStuck = !playerRectBefore || playerRectBefore.top <= stickyTop + 28;
+
+    const anchorEl = els[anchor];
+    const rAnchor = anchorEl.getBoundingClientRect();
+    const targetTop = getPlayerBottomY() + ACTIVE_TOP_GAP;
+    const delta = rAnchor.top - targetTop;
+
+    if (Math.abs(delta) >= 2) {
+      autoScrollUntil = Date.now() + 700;
+      if (isPlayerAlreadyStuck) {
+        // 播放器已固定於頂端：瞬時將捲動軸移至終點，由下方 FLIP translate3d 接手視覺滑動（避免 iOS sticky 抖動）
+        window.scrollBy(0, delta);
+      } else {
+        window.scrollBy({ top: delta, behavior: "smooth" });
+        return;
+      }
+    }
+  }
+
+  // 3. INVERT：測量變更後的終點位置，掛上反向補償 translate3d(0, dy, 0) scale(startScale)，使第 0 毫秒畫面 0.00px 零跳動
+  const animatedEls = [];
+  firstRects.forEach((first, i) => {
+    const el = els[i];
+    const last = el.getBoundingClientRect();
+    const lastCenterY = last.top + last.height / 2;
+    const dy = first.centerY - lastCenterY;
+
+    const isNowActive = nextSet.has(i);
+    const targetScale = isNowActive ? ACTIVE_SCALE : 1;
+    const layoutHeight = el.offsetHeight || last.height / targetScale || 1;
+    let startScale = targetScale;
+
+    if (first.wasActive !== isNowActive) {
+      // 以變更前的真實視覺高度除以變更後的排版高度，精確算出無縫銜接的起始縮放比
+      startScale = Math.max(0.65, Math.min(1.4, first.height / layoutHeight));
+    }
+
+    if (Math.abs(dy) >= 0.5 || Math.abs(startScale - targetScale) >= 0.01) {
+      el.style.transition = "none";
+      el.style.transform = `translate3d(0, ${dy.toFixed(2)}px, 0) scale(${startScale.toFixed(4)})`;
+      animatedEls.push(el);
+    }
+  });
+
+  if (!animatedEls.length) return;
+
+  // 4. PLAY：強制單次批次重排後，移除 inline transform，讓所有字幕塊在 GPU 上沿同一條彈簧曲線滑動並流暢突起
+  void $("autopreview").offsetHeight;
+  requestAnimationFrame(() => {
+    for (let k = 0; k < animatedEls.length; k++) {
+      const el = animatedEls[k];
+      el.style.transition = "";
+      el.style.transform = "";
+    }
+  });
 }
 
-// 手指接觸與滑動期間：完全鎖定自動捲動，並立即中斷進行中的平滑捲動
+// 手指接觸與滑動期間：完全鎖定自動捲動
 ["touchstart", "touchmove"].forEach(name => {
   window.addEventListener(name, () => {
     isTouching = true;
@@ -507,14 +588,16 @@ function setActiveCues(next) {
   }, { passive: true });
 });
 
-// 視窗捲動監聽：若為手指放開後的 iOS 慣性滑動（非程式自動捲動），持續順延 4 秒倒數直到滑動停止
+// 視窗捲動監聽：僅在處於手動捲動暫停期間（例如手指放開後的 iOS 慣性滑動）才順延 4 秒倒數，避免非觸控捲動誤鎖定自動跟隨
 window.addEventListener("scroll", () => {
   if (isTouching) {
     followPausedUntil = Infinity;
     return;
   }
   if (Date.now() < autoScrollUntil) return;
-  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  if (Date.now() < followPausedUntil) {
+    scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  }
 }, { passive: true });
 
 setInterval(() => {
