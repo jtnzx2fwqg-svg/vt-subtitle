@@ -30,7 +30,7 @@ h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
 .panel,.card{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px;margin:14px 0;min-width:0}
 label{display:block;font-weight:650;margin:12px 0 6px}
 input,textarea,button{font:inherit}
-input[type=url],input[type=text],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
+input[type=url],input[type=text],input[type=password],textarea{width:100%;padding:12px;border-radius:12px;border:1px solid transparent;background:var(--field);color:var(--text)}
 input[type=url]:focus,input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent)}
 input[type=file]{width:100%;max-width:100%}
 .card textarea{display:block;min-height:140px;resize:vertical;line-height:1.45;overflow-wrap:anywhere;word-break:break-word}
@@ -121,7 +121,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .batch-bar{display:flex;align-items:center;gap:10px;background:var(--field);padding:12px;border-radius:12px;margin:10px 0;flex-wrap:wrap}
 .batch-info{flex:1 1 100%;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
 .batch-tag{font-size:.8rem;padding:2px 8px;border-radius:99px;font-weight:700}
-.batch-tag.saved{background:var(--ok);color:#000}.batch-tag.pending{background:var(--warn);color:#000}
+.batch-tag.saved{background:var(--ok);color:#000}.batch-tag.pending{background:var(--warn);color:#000}.batch-tag.translating{background:var(--accent);color:#fff}.batch-tag.failed{background:var(--bad);color:#fff}
 .status-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:99px;font-size:.88rem;font-weight:700;overflow-wrap:anywhere}
 .status-badge.ok{background:rgba(48,209,88,.15);color:var(--ok)}
 .status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
@@ -134,6 +134,20 @@ a{color:var(--accent);overflow-wrap:anywhere}
   <p class="intro">取得／匯入日文字幕 → 詞庫驗證 → 分批翻譯與暫存 → 全量校驗 → 雙語字幕載入播放器。僅供測試，未連動正式版。</p>
 
   <section class="panel"><h2>整合流程狀態</h2><div id="pipeline" class="status">…</div></section>
+
+  <section class="panel">
+    <h2>0. 測試 Worker 連線與登入驗證（Session Auth）</h2>
+    <label for="worker-api-url">測試 Worker API 網址</label>
+    <input id="worker-api-url" type="url" inputmode="url" value="https://vt-subtitle-api.weide1217.workers.dev/">
+    <label for="auth-passphrase">通行碼（Passphrase，僅傳送至 Worker /auth/login 換取 64 字元 Session Token）</label>
+    <input id="auth-passphrase" type="password" placeholder="請輸入測試 Worker 通行碼">
+    <div class="btn-group">
+      <button id="btn-auth-login" class="btn-accent">登入</button>
+      <button id="btn-auth-check" class="btn-secondary">檢查 Session</button>
+      <button id="btn-auth-logout" class="btn-danger">登出</button>
+    </div>
+    <div id="status-auth" class="status" aria-live="polite">尚未登入（呼叫字幕或自動翻譯 API 前請先登入）。</div>
+  </section>
 
   <section class="panel">
     <h2>1. 取得 YouTube 日文字幕</h2>
@@ -213,8 +227,13 @@ a{color:var(--accent);overflow-wrap:anywhere}
         <span id="batch-status-tag" class="batch-tag pending">待翻譯</span>
         <button id="btn-prev-batch" class="btn-secondary" disabled>上一批</button>
         <button id="btn-next-batch" class="btn-secondary" disabled>下一批</button>
-        <button id="btn-gen-batch-prompt" class="btn-accent">產生此批 Prompt</button>
+        <button id="btn-start-auto-translate" class="btn-save">開始自動翻譯（全部待處理批次）</button>
+        <button id="btn-translate-current-batch" class="btn-accent">僅自動翻譯此批</button>
+        <button id="btn-stop-auto-translate" class="btn-danger" disabled>停止自動翻譯</button>
+        <button id="btn-gen-batch-prompt" class="btn-secondary">產生此批 Prompt</button>
       </div>
+
+      <div id="status-auto-translate" class="status-msg" style="display:none;"></div>
 
       <div class="btn-group">
         <button id="btn-copy-trans-prompt" disabled>複製 Prompt</button>
@@ -225,7 +244,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
 
     <div class="card">
       <h2>6. 雙語結果暫存、全量校驗與匯出（翻譯步驟 3）</h2>
-      <label for="field-trans-result">貼入雙語 SRT（單批與多批均強制要求先暫存；修改將標記未存並鎖定全量校驗）：</label>
+      <label for="field-trans-result">AI 翻譯結果 JSON（自動翻譯通過後會自動填入並暫存；亦可手動貼入 {"translations":[{"index":1,"zh_tw":"..."}]} 驗證暫存）：</label>
       <div class="btn-group">
         <button id="btn-save-current-batch" class="btn-save" style="display:none;">暫存當前批次結果</button>
         <button id="btn-revert-current-batch" class="btn-secondary" style="display:none;">還原至已儲存暫存</button>
@@ -240,7 +259,7 @@ a{color:var(--accent);overflow-wrap:anywhere}
         <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
         <button class="btn-secondary" id="btn-clear-all-batches">清空所有批次暫存</button>
       </div>
-      <textarea id="field-trans-result" placeholder="貼入 Gemini 產出之雙語 SRT..."></textarea>
+      <textarea id="field-trans-result" placeholder='自動翻譯完成後將顯示於此，或手動貼入 OpenAI 產出之純 JSON：{"translations":[{"index":1,"zh_tw":"..."}]}'></textarea>
       <div id="status-verify" class="status-msg" style="display:none;"></div>
       <div id="status-import" class="status-msg" style="display:none;"></div>
     </div>
@@ -265,9 +284,20 @@ a{color:var(--accent);overflow-wrap:anywhere}
 
 <script>
 const $ = id => document.getElementById(id);
-const API = "https://vt-subtitle-api.weide1217.workers.dev/";
+const DEFAULT_API = "https://vt-subtitle-api.weide1217.workers.dev/";
 const FETCH_TIMEOUT_MS = 30000;
+const TRANSLATE_TIMEOUT_MS = 90000; // 單批 OpenAI 翻譯請求逾時上限 90 秒
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 本地檔案大小上限 20MB
+const EXPECTED_GLOSSARY_SHA256 = "a67e8fdc479d7aa895f3852cf1911d5de0658196cc66db77bed766381ad0ad82";
+const CONTEXT_WINDOW_SIZE = 3; // 前後文參考句數上限（各最多 3 句）
+const SESSION_TOKEN_KEY = "vt_session_token";
+const LIGHTWEIGHT_CACHE_KEY = "vt_sub_zh_progress_v1"; // sessionStorage 輕量進度鍵名（僅存 index->zh_tw，不存完整字幕於 localStorage）
+
+function getApiBase() {
+  const el = $("worker-api-url");
+  const raw = el && el.value ? el.value.trim() : "";
+  return raw || DEFAULT_API;
+}
 
 function setStatus(idOrEl, cls, msg) {
   const el = typeof idOrEl === "string" ? $(idOrEl) : idOrEl;
@@ -658,8 +688,14 @@ let currentQcBatchIdx = 0;
 let sourceLabel = "";
 
 let loadedGlossaryRawContent = "";
+let loadedGlossarySha256 = "";
 let isGlossaryVerified = false;
 let glossaryLoadToken = 0;
+let currentSessionToken = "";
+let isAutoTranslating = false;
+let autoTranslateAbortController = null;
+let currentTranslationJobId = "";
+let cumulativeTokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
 let parsedRawCues = [];
 let rawParsePassed = false;
@@ -817,11 +853,16 @@ async function copyTextWithFallback(text, successMsg) {
 }
 
 // ==================== 步驟 0：詞庫讀取、SHA-256 計算與結構驗證 ====================
+function normalizeGlossaryText(text) {
+  return String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+}
+
 function invalidateGlossaryState(reason, token) {
   if (token !== undefined && token !== glossaryLoadToken) return;
 
   isGlossaryVerified = false;
   loadedGlossaryRawContent = "";
+  loadedGlossarySha256 = "";
   const badge = $("glossary-status-badge");
   badge.className = "status-badge err";
   badge.textContent = "● 詞庫未載入或驗證失敗";
@@ -837,8 +878,9 @@ function invalidateGlossaryState(reason, token) {
 }
 
 async function computeSHA256(text) {
+  const normalized = normalizeGlossaryText(text);
   const enc = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(text));
+  const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(normalized));
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
@@ -851,7 +893,8 @@ async function validateGlossaryFileContent(content, token) {
     return false;
   }
 
-  const lines = content.replace(/\r\n?/g, "\n").split("\n");
+  const normalizedContent = normalizeGlossaryText(content);
+  const lines = normalizedContent.split("\n");
   if (lines.length < 500) {
     invalidateGlossaryState(`檔案僅 ${lines.length} 行，原始詞庫應約 931 行。行數不足，判定結構不完整。`, token);
     return false;
@@ -867,22 +910,37 @@ async function validateGlossaryFileContent(content, token) {
     "6. 未確認／需人工複核清單"
   ];
 
-  const missing = requiredSections.filter(sec => !content.includes(sec));
+  const missing = requiredSections.filter(sec => !normalizedContent.includes(sec));
   if (missing.length > 0) {
     invalidateGlossaryState(`缺少關鍵章節標記：${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " 等" : ""}。`, token);
     return false;
   }
 
-  let sha256 = "（此環境無法計算）";
-  try { sha256 = await computeSHA256(content); } catch {}
+  let sha256 = "";
+  try {
+    sha256 = await computeSHA256(normalizedContent);
+  } catch {
+    invalidateGlossaryState("此瀏覽器環境無法計算 SHA-256（需於 HTTPS 或 localhost 安全環境執行），無法驗證詞庫版本一致性。", token);
+    return false;
+  }
   if (token !== glossaryLoadToken) return false;
 
-  loadedGlossaryRawContent = content;
+  if (sha256 !== EXPECTED_GLOSSARY_SHA256) {
+    invalidateGlossaryState(
+      `詞庫版本 SHA-256 與 Worker 內建標準版本不一致！\n預期雜湊：${EXPECTED_GLOSSARY_SHA256}\n實際雜湊：${sha256}\n請選取正確版本的 hololive_glossary.txt。`,
+      token
+    );
+    return false;
+  }
+
+  loadedGlossaryRawContent = normalizedContent;
+  loadedGlossarySha256 = sha256;
   isGlossaryVerified = true;
   const badge = $("glossary-status-badge");
   badge.className = "status-badge ok";
-  badge.textContent = "● 詞庫基本結構檢查通過（27 個必要章節）";
-  $("glossary-status-desc").textContent = `行數：${lines.length} 行 | 檔案雜湊 (SHA-256)：${sha256} | 提示：雜湊值供使用者與已知版本手動核對，本系統僅驗證基本結構。`;
+  badge.textContent = "● 詞庫結構與 SHA-256 版本驗證通過（27 個必要章節）";
+  $("glossary-status-desc").textContent = `行數：${lines.length} 行 | SHA-256（LF 正規化）：${sha256}（與 Worker 測試環境內建版本一致）`;
+  updateBatchUI();
   updatePipeline();
   return true;
 }
@@ -1182,6 +1240,44 @@ function canSplit(b) {
   return !!b && b.status !== "SAVED" && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
 }
 
+function getBatchContextWindow(batchObj) {
+  if (!parsedRawCues.length || !batchObj || !batchObj.cues.length) {
+    return { contextBefore: [], contextAfter: [] };
+  }
+  const firstSeq = batchObj.cues[0].index;
+  const lastSeq = batchObj.cues[batchObj.cues.length - 1].index;
+  const firstPos = parsedRawCues.findIndex(c => c.index === firstSeq);
+  const lastPos = parsedRawCues.findIndex(c => c.index === lastSeq);
+  const contextBefore = firstPos > 0
+    ? parsedRawCues.slice(Math.max(0, firstPos - CONTEXT_WINDOW_SIZE), firstPos).map(c => ({ index: c.index, ja: c.ja }))
+    : [];
+  const contextAfter = (lastPos >= 0 && lastPos + 1 < parsedRawCues.length)
+    ? parsedRawCues.slice(lastPos + 1, lastPos + 1 + CONTEXT_WINDOW_SIZE).map(c => ({ index: c.index, ja: c.ja }))
+    : [];
+  return { contextBefore, contextAfter };
+}
+
+function saveLightweightProgressToSession() {
+  try {
+    if (!rawParsePassed || !batchList.length) return;
+    const savedPairs = [];
+    batchList.forEach(b => {
+      if (b.status === "SAVED" && Array.isArray(b.savedCues)) {
+        b.savedCues.forEach(c => savedPairs.push([c.index, c.zh_tw]));
+      }
+    });
+    const payload = {
+      sourceLabel,
+      startSeq: $("cfg-start-seq").value.trim(),
+      limitCount: $("cfg-limit-count").value.trim(),
+      batchSize: $("cfg-batch-size").value.trim(),
+      updatedAt: Date.now(),
+      zhPairs: savedPairs
+    };
+    sessionStorage.setItem(LIGHTWEIGHT_CACHE_KEY, JSON.stringify(payload));
+  } catch {}
+}
+
 function updateBatchUI() {
   if (batchList.length === 0) return;
   const cur = batchList[currentBatchIdx];
@@ -1189,41 +1285,53 @@ function updateBatchUI() {
     `目前批次：第 ${cur.batchNum} / ${batchList.length} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)` +
     (cur.splitDepth > 0 ? `｜已拆分 ${cur.splitDepth} 層` : "");
 
-  $("btn-split-current-batch").disabled = !canSplit(cur);
+  $("btn-split-current-batch").disabled = isAutoTranslating || !canSplit(cur);
 
   const tag = $("batch-status-tag");
   const currentInput = $("field-trans-result").value;
   const hasDraftDiff = cur.status === "SAVED" && cur.savedSrt !== currentInput;
 
-  if (cur.status === "SAVED") {
+  if (cur.status === "TRANSLATING") {
+    tag.className = "batch-tag translating";
+    tag.textContent = "自動翻譯中…";
+    $("btn-save-current-batch").disabled = true;
+    $("btn-clear-current-batch").disabled = true;
+    $("btn-revert-current-batch").style.display = "none";
+  } else if (cur.status === "SAVED") {
     if (hasDraftDiff) {
       tag.className = "batch-tag pending";
       tag.textContent = "已暫存 (有未儲存修改)";
-      $("btn-save-current-batch").disabled = false;
-      $("btn-clear-current-batch").disabled = false;
+      $("btn-save-current-batch").disabled = isAutoTranslating;
+      $("btn-clear-current-batch").disabled = isAutoTranslating;
       $("btn-revert-current-batch").style.display = "inline-block";
     } else {
       tag.className = "batch-tag saved";
       tag.textContent = "已暫存 (鎖定)";
       $("btn-save-current-batch").disabled = true;
-      $("btn-clear-current-batch").disabled = false;
+      $("btn-clear-current-batch").disabled = isAutoTranslating;
       $("btn-revert-current-batch").style.display = "none";
     }
   } else {
-    tag.className = "batch-tag pending";
-    tag.textContent = cur.failCount > 0 ? `待翻譯（已失敗 ${cur.failCount} 次：${cur.lastFailure}）` : "待翻譯";
-    $("btn-save-current-batch").disabled = false;
+    tag.className = cur.failCount > 0 ? "batch-tag failed" : "batch-tag pending";
+    tag.textContent = cur.failCount > 0 ? `待翻譯（失敗 ${cur.failCount} 次：${cur.lastFailure}）` : "待翻譯";
+    $("btn-save-current-batch").disabled = isAutoTranslating;
     $("btn-clear-current-batch").disabled = true;
     $("btn-revert-current-batch").style.display = "none";
   }
 
-  $("btn-prev-batch").disabled = (currentBatchIdx === 0);
-  $("btn-next-batch").disabled = (currentBatchIdx === batchList.length - 1);
+  $("btn-prev-batch").disabled = isAutoTranslating || (currentBatchIdx === 0);
+  $("btn-next-batch").disabled = isAutoTranslating || (currentBatchIdx === batchList.length - 1);
+  if ($("btn-start-auto-translate")) {
+    const allSaved = batchList.length > 0 && batchList.every(b => b.status === "SAVED");
+    $("btn-start-auto-translate").disabled = isAutoTranslating || !isGlossaryVerified || allSaved;
+    $("btn-translate-current-batch").disabled = isAutoTranslating || !isGlossaryVerified || cur.status === "SAVED";
+    $("btn-stop-auto-translate").disabled = !isAutoTranslating;
+  }
   updatePipeline();
 }
 
 function handleBatchSwitch(newIdx) {
-  if (currentBatchIdx === newIdx) return;
+  if (isAutoTranslating || currentBatchIdx === newIdx) return;
   const cur = batchList[currentBatchIdx];
   const inputVal = $("field-trans-result").value;
 
@@ -1265,42 +1373,47 @@ function generatePromptForBatch(batchObj) {
   }
 
   const totalBatches = batchList.length;
-  const srtChunk = batchObj.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${c.ja}`).join("\n\n");
+  const { contextBefore, contextAfter } = getBatchContextWindow(batchObj);
+  const inputPayload = {
+    contextBefore,
+    cues: batchObj.cues.map(c => ({ index: c.index, ja: c.ja })),
+    contextAfter
+  };
 
-  const prompt = `你現在是專業的 Hololive 日文轉台灣繁體中文雙語字幕翻譯專家。請將以下直播日文字幕翻譯成繁體中文（台灣用語）。
+  const prompt = `你現在是專業的 Hololive 日文轉台灣繁體中文雙語字幕翻譯專家。請將以下直播日文字幕翻譯成自然、準確的台灣繁體中文。
 
 【重要分批指示】
-本任務共 ${totalBatches} 批，此為【第 ${batchObj.batchNum} 批】，字幕序號範圍為 #${batchObj.startSeq} 至 #${batchObj.endSeq}（共 ${batchObj.cues.length} 條）。
-請務必精確輸出此區間的所有字幕，不得跳號、漏段或輸出超出此範圍的字幕。
+本任務共 ${totalBatches} 批，此為【第 ${batchObj.batchNum} 批】，待翻譯字幕序號範圍為 #${batchObj.startSeq} 至 #${batchObj.endSeq}（共 ${batchObj.cues.length} 條）。
+contextBefore 與 contextAfter 僅供理解前後語境，嚴禁輸出至 translations 中。
 
-【參考詞庫與規範（原始全文）】
+【參考詞庫與規範（hololive_glossary.txt）】
 ${loadedGlossaryRawContent}
 
-【嚴格輸出格式規則】
-1. 每一條字幕的編號行與時間戳行必須整行完全逐字保留（不得修改分隔符號、空格或任何數字），不得修改、合併、刪除或重新排序。
-2. 每條字幕區塊結構固定為：
-   - 第 1 行：字幕序號（與原始序號行完全逐字一致）
-   - 第 2 行：時間戳行（與原始時間戳行完全逐字一致）
-   - 第 3 行：台灣繁體中文翻譯（必須為單行）
-   - 第 4 行起：原始日語字幕（若原始日文為多行，必須逐行逐字完全保留原始日文，不可改動或刪減）
-3. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」，並保留日文行。
-4. 不確定的內容請標註「（待確認）」，絕對不可自行猜測補寫。
-5. 只輸出純雙語 SRT 內容，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何前後解說文字。
-6. 不得重新編號、不得合併或拆分字幕、不得改寫日文原文；輸入幾條就輸出幾條，序號沿用原始序號（即使本批不是從 1 開始）。
+【嚴格輸出格式與翻譯規則】
+1. 只輸出合法的純 JSON 物件，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何解釋文字。
+2. 輸出 JSON 格式固定為：
+{
+  "translations": [
+    { "index": ${batchObj.startSeq}, "zh_tw": "繁體中文譯文" }
+  ]
+}
+3. 嚴禁輸出 start、end、ja、warnings、subtitles 或任何額外欄位。
+4. 必須針對 cues 中的每一筆 index 輸出唯一對應的單行繁體中文譯文（zh_tw 不可為空字串，不可含換行符號），不得漏翻、重複、合併、拆分或改變順序。
+5. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」；不確定的內容請標註「（待確認）」，不得自行猜測編造。
 
-【待翻譯字幕清單（第 ${batchObj.batchNum} 批，#${batchObj.startSeq} ~ #${batchObj.endSeq}）】：
-${srtChunk}`;
+【待翻譯資料 JSON】：
+${JSON.stringify(inputPayload, null, 2)}`;
 
   $("field-trans-prompt").value = prompt;
   $("btn-copy-trans-prompt").disabled = false;
-  setStatus("status-prompt-info", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`);
+  setStatus("status-prompt-info", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】OpenAI JSON 翻譯 Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`);
 }
 
 $("btn-copy-trans-prompt").addEventListener("click", () => {
   copyTextWithFallback($("field-trans-prompt").value, "已複製翻譯 Prompt！");
 });
 
-// ==================== 步驟 3：雙語 SRT 驗證、失敗分類、拆批與暫存 ====================
+// ==================== 步驟 3：OpenAI JSON 翻譯結果雙重驗證、組裝、自動佇列與暫存 ====================
 $("field-trans-result").addEventListener("input", () => {
   if (isProgrammaticInputUpdate) return;
   if (batchList.length > 0 && batchList[currentBatchIdx]) {
@@ -1311,238 +1424,246 @@ $("field-trans-result").addEventListener("input", () => {
   $("status-verify").style.display = "none";
 });
 
-function splitBilingualBlocks(text) {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n");
-  const seqRe = /^\s*\d+\s*$/;
-  const timeRe = /^\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*$/;
-  const starts = [];
-  for (let i = 0; i < lines.length - 1; i++) {
-    if (seqRe.test(lines[i]) && timeRe.test(lines[i + 1])) starts.push(i);
-  }
-  const leading = [];
-  const firstStart = starts.length ? starts[0] : lines.length;
-  for (let i = 0; i < firstStart; i++) {
-    if (lines[i].trim().length > 0) leading.push(i + 1);
-  }
-  const blocks = starts.map((st, k) => {
-    let end = (k + 1 < starts.length) ? starts[k + 1] : lines.length;
-    while (end > st + 1 && lines[end - 1].trim().length === 0) end--;
-    return lines.slice(st, end).join("\n");
-  });
-  return { blocks, leadingLineNumbers: leading };
-}
-
-function parseAndValidateBilingualSrt(text, expectedRawCues) {
+function parseAndValidateTranslationsJson(inputTextOrObj, expectedRawCues) {
   const errors = [];
   const cues = [];
+  let errorCode = null;
+  const setCode = code => { if (!errorCode) errorCode = code; };
 
-  if (!text || text.trim().length === 0) {
-    errors.push("【輸入為空】雙語字幕輸入內容為空。");
-    return { cues, errors };
+  let root = null;
+  if (typeof inputTextOrObj === "string") {
+    const trimmed = inputTextOrObj.trim();
+    if (!trimmed) {
+      errors.push("【輸入為空】翻譯結果內容為空。");
+      return { cues, errors, errorCode: "EMPTY", normalizedJson: "" };
+    }
+    if (trimmed.includes("```")) {
+      errors.push("【格式錯誤】偵測到 Markdown 程式碼框符號 (```)，只允許純 JSON！");
+      setCode("FORMAT_ERROR");
+    }
+    try {
+      root = JSON.parse(trimmed);
+    } catch (e) {
+      errors.push(`【JSON 解析失敗】無法解析為合法 JSON：${e.message}`);
+      return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
+    }
+  } else if (inputTextOrObj && typeof inputTextOrObj === "object") {
+    root = inputTextOrObj;
+  } else {
+    errors.push("【輸入為空】未提供有效的翻譯資料。");
+    return { cues, errors, errorCode: "EMPTY", normalizedJson: "" };
   }
 
-  if (text.includes("```")) {
-    errors.push("偵測到 Markdown 程式碼框符號 (```)，請只貼入純 SRT 內容！");
+  if (!root || typeof root !== "object" || Array.isArray(root)) {
+    errors.push("【格式錯誤】JSON 根節點必須是物件。");
+    return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
   }
 
-  const { blocks, leadingLineNumbers } = splitBilingualBlocks(text);
-
-  if (blocks.length === 0) {
-    errors.push("【區塊解析失敗】找不到任何有效字幕區塊（每條字幕需以「序號行」開頭，且下一行必須是時間戳行）。");
-    return { cues, errors };
-  }
-  if (leadingLineNumbers.length > 0) {
-    errors.push(`【區塊解析失敗】第一個有效字幕區塊之前有 ${leadingLineNumbers.length} 行無法歸屬的內容（第 ${leadingLineNumbers.slice(0, 5).join(", ")} 行起）。`);
+  const rootKeys = Object.keys(root);
+  const forbiddenRootKeys = rootKeys.filter(k => !["translations", "ok", "jobId", "batchIndex", "model", "usage", "cached"].includes(k));
+  if (forbiddenRootKeys.length > 0) {
+    errors.push(`【格式錯誤】JSON 根物件包含不允許的多餘欄位：${forbiddenRootKeys.join(", ")}`);
+    setCode("FORMAT_ERROR");
   }
 
-  if (blocks.length !== expectedRawCues.length) {
-    errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 條字幕，實際解析出 ${blocks.length} 個字幕區塊！`);
+  if (!Array.isArray(root.translations)) {
+    errors.push("【格式錯誤】JSON 根物件必須包含 translations 陣列。");
+    return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
   }
 
-  const seenActualSeqs = new Set();
-  const maxLen = Math.max(blocks.length, expectedRawCues.length);
+  const arr = root.translations;
+  const expectedMap = new Map();
+  expectedRawCues.forEach((c, idx) => expectedMap.set(c.index, { rawCue: c, pos: idx }));
 
-  for (let i = 0; i < maxLen; i++) {
-    const rawBlock = blocks[i];
-    const exp = expectedRawCues[i];
-    const labelNum = exp ? `#${exp.index}` : `區塊 #${i + 1}`;
+  const seenIndices = new Set();
+  const validByIndex = new Map();
+  let lastPos = -1;
 
-    if (rawBlock === undefined) {
-      errors.push(`遺漏字幕 ${labelNum}（原始字幕有此段，但翻譯結果缺失）。`);
-      continue;
-    }
-    if (!exp) {
-      errors.push(`多出額外字幕區塊 #${i + 1}（超出原始字幕數量）：\n"${rawBlock}"`);
-      continue;
-    }
-
-    const rawLines = rawBlock.split("\n");
-    const actualSeqLine = rawLines[0];
-    const parsedActualSeq = /^\d+$/.test(actualSeqLine) ? parseInt(actualSeqLine, 10) : null;
-    const isDupSeq = parsedActualSeq !== null && seenActualSeqs.has(parsedActualSeq);
-    if (parsedActualSeq !== null) seenActualSeqs.add(parsedActualSeq);
-
-    const expectedJaLineCount = exp.jaLines.length;
-    const expectedTotalLines = 3 + expectedJaLineCount;
-
-    if (rawLines.length < expectedTotalLines) {
-      errors.push(`字幕 ${labelNum} 缺少內容：原始日文為 ${expectedJaLineCount} 行，區塊應為 ${expectedTotalLines} 行，實際僅 ${rawLines.length} 行（可能缺少繁中翻譯或原始日文）：\n"${rawBlock}"`);
-      continue;
-    }
-    if (rawLines.length !== expectedTotalLines) {
-      errors.push(`字幕 ${labelNum} 行數不符規格：原始日文為 ${expectedJaLineCount} 行，雙語區塊應剛好為 ${expectedTotalLines} 行（1行序號 + 1行時間戳 + 1行繁中 + ${expectedJaLineCount}行日文），實際為 ${rawLines.length} 行：\n"${rawBlock}"`);
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    const label = `第 ${i + 1} 筆`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      errors.push(`【格式錯誤】translations ${label} 不是有效物件。`);
+      setCode("FORMAT_ERROR");
       continue;
     }
 
-    if (actualSeqLine !== exp.rawSeqLine) {
-      if (isDupSeq) {
-        errors.push(`字幕 ${labelNum} 發現重複序號: #${parsedActualSeq}（此位置應為 "${exp.rawSeqLine}"）`);
-      } else {
-        errors.push(`字幕 ${labelNum} 序號行未整行逐字保留：原始為 "${exp.rawSeqLine}"，輸出為 "${actualSeqLine}"`);
-      }
+    const itemKeys = Object.keys(item);
+    const extraItemKeys = itemKeys.filter(k => k !== "index" && k !== "zh_tw");
+    if (extraItemKeys.length > 0) {
+      errors.push(`【格式錯誤】translations ${label} 包含禁止由 AI 輸出的欄位（${extraItemKeys.join(", ")}），AI 不得提供或覆寫時間戳與日文原文！`);
+      setCode("FORMAT_ERROR");
+    }
+
+    const idx = item.index;
+    if (typeof idx !== "number" || !Number.isInteger(idx) || idx < 1) {
+      errors.push(`【序號錯誤】translations ${label} 的 index (${JSON.stringify(idx)}) 必須為正整數。`);
+      setCode("FORMAT_ERROR");
       continue;
     }
 
-    const actualTimeLine = rawLines[1];
-    if (actualTimeLine !== exp.rawTimeLine) {
-      errors.push(`字幕 ${labelNum} 時間戳行未整行逐字保留：\n  原始: "${exp.rawTimeLine}"\n  輸出: "${actualTimeLine}"`);
+    if (seenIndices.has(idx)) {
+      errors.push(`【重複序號】發現重複的 index: #${idx}。`);
+      setCode("DUPLICATE_INDEX");
+      continue;
+    }
+    seenIndices.add(idx);
+
+    const expEntry = expectedMap.get(idx);
+    if (!expEntry) {
+      errors.push(`【未知／多餘序號】AI 回傳了不屬於本批範圍的未知 index: #${idx}（嚴禁輸出前後文或範圍外序號）。`);
+      setCode("UNKNOWN_INDEX");
       continue;
     }
 
-    const zh = rawLines[2];
-    if (!zh || zh.trim().length === 0) {
-      errors.push(`字幕 ${labelNum} 繁體中文翻譯為空！`);
+    if (expEntry.pos < lastPos) {
+      errors.push(`【順序錯亂】序號 #${idx} 的排列順序與原始字幕順序不一致。`);
+      setCode("ORDER_MISMATCH");
+    }
+    lastPos = Math.max(lastPos, expEntry.pos);
+
+    const zh = item.zh_tw;
+    if (typeof zh !== "string" || zh.trim().length === 0) {
+      errors.push(`【譯文無效】字幕 #${idx} 的 zh_tw 必須為非空白字串！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
+    }
+    if (/[\r\n]/.test(zh)) {
+      errors.push(`【非單行譯文】字幕 #${idx} 的 zh_tw 包含換行符號，譯文必須為單行！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
+    }
+    if (zh.includes("```")) {
+      errors.push(`【譯文無效】字幕 #${idx} 的 zh_tw 包含 Markdown 程式碼框符號 (\`\`\`)！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
     }
 
-    const outJaLines = rawLines.slice(3);
-    const outJaText = outJaLines.join("\n");
-    let jaMatch = true;
-    for (let k = 0; k < expectedJaLineCount; k++) {
-      if (outJaLines[k] !== exp.jaLines[k]) {
-        jaMatch = false;
-        break;
-      }
-    }
-    if (!jaMatch) {
-      errors.push(`字幕 ${labelNum} 日文原文未逐字保留！\n  原始: "${exp.ja}"\n  輸出: "${outJaText}"`);
-    }
+    validByIndex.set(idx, zh);
+  }
 
+  const missingIndices = [];
+  for (const exp of expectedRawCues) {
+    if (!seenIndices.has(exp.index)) {
+      missingIndices.push(exp.index);
+    }
+  }
+  if (missingIndices.length > 0) {
+    errors.push(`【遺漏字幕】AI 回傳缺少 ${missingIndices.length} 筆應有字幕序號：${missingIndices.slice(0, 10).map(n => "#" + n).join(", ")}${missingIndices.length > 10 ? " 等" : ""}。`);
+    setCode("MISSING_INDEX");
+  }
+
+  if (arr.length !== expectedRawCues.length && !errorCode) {
+    errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 筆，實際回傳 ${arr.length} 筆。`);
+    setCode(arr.length < expectedRawCues.length ? "MISSING_INDEX" : "UNKNOWN_INDEX");
+  }
+
+  if (errors.length > 0) {
+    return { cues: [], errors, errorCode: errorCode || "FORMAT_ERROR", normalizedJson: "" };
+  }
+
+  // 安全組裝：index、start、end、ja 100% 取自前端原始 expectedRawCues，絕不信任 AI 回傳內容
+  for (const exp of expectedRawCues) {
     cues.push({
       index: exp.index,
       start: exp.rawStart,
       end: exp.rawEnd,
-      zh_tw: zh,
-      ja: outJaText
+      ja: exp.ja,
+      zh_tw: validByIndex.get(exp.index)
     });
   }
 
-  return { cues, errors };
+  const normalizedJson = JSON.stringify({
+    translations: cues.map(c => ({ index: c.index, zh_tw: c.zh_tw }))
+  }, null, 2);
+
+  return { cues, errors: [], errorCode: null, normalizedJson };
 }
 
-// 檢查一段被截斷的尾端文字是否為從 expectedCues[startIdx] 開始的合法輸出前綴
-function isValidTruncatedTail(tailLines, expectedCues, startIdx) {
-  let idx = startIdx;
-  let pos = 0;
-  while (pos < tailLines.length && idx < expectedCues.length) {
-    const exp = expectedCues[idx];
-    const expJaCount = exp.jaLines.length;
-    while (pos < tailLines.length && tailLines[pos].trim() === "") pos++;
-    if (pos >= tailLines.length) return true;
-
-    const l0 = tailLines[pos++];
-    if (pos === tailLines.length) return exp.rawSeqLine.startsWith(l0);
-    if (l0 !== exp.rawSeqLine) return false;
-
-    const l1 = tailLines[pos++];
-    if (pos === tailLines.length) return exp.rawTimeLine.startsWith(l1);
-    if (l1 !== exp.rawTimeLine) return false;
-
-    const l2 = tailLines[pos++];
-    if (l2.trim() === "") return false;
-    if (pos === tailLines.length) return true;
-
-    for (let k = 0; k < expJaCount; k++) {
-      if (pos >= tailLines.length) return true;
-      const lj = tailLines[pos++];
-      if (pos === tailLines.length) return exp.jaLines[k].startsWith(lj);
-      if (lj !== exp.jaLines[k]) return false;
-    }
-    idx++;
-  }
-  return pos >= tailLines.length;
+function parseAndValidateBilingualSrt(text, expectedRawCues) {
+  return parseAndValidateTranslationsJson(text, expectedRawCues);
 }
 
-function classifyBatchFailure(text, expectedCues, errors) {
+function classifyBatchFailure(text, expectedCues, errors, explicitErrorCode) {
   const t = String(text || "");
-  if (t.trim().length === 0) {
+  const code = explicitErrorCode || "";
+
+  if (code === "EMPTY" || t.trim().length === 0) {
     return {
       type: "EMPTY",
       label: "輸入為空",
-      advice: () => "輸入框是空的。請貼入 Gemini 回覆的雙語 SRT 後再暫存。"
+      advice: () => "輸入內容為空。請執行自動翻譯或貼入 OpenAI 回傳的 translations JSON 後再暫存。"
     };
   }
-  if (/RESOURCE_EXHAUSTED|\b429\b|quota|rate.?limit|too many requests|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)|try again later|稍後再試/i.test(t) && !/-->/.test(t)) {
+  if (code === "AUTH_ERROR") {
     return {
-      type: "QUOTA",
-      label: "疑似限流／配額",
-      advice: () => "貼入內容像是限流或配額訊息，不是字幕。請勿拆批，也不要連續重試；稍候再試，或改用備援模型／隔日再繼續。已暫存的批次不受影響。"
+      type: "AUTH_ERROR",
+      label: "未登入或 Session 過期",
+      advice: () => "登入驗證未通過或 Session 已過期（401），已立即停止翻譯佇列。請於上方步驟 0 重新登入後再繼續，已暫存批次均已保留。"
     };
   }
-  if (/failed to fetch|network ?error|ERR_[A-Z_]+|timed? ?out|連線(失敗|中斷|逾時)|網路(錯誤|中斷)|503|500 internal/i.test(t) && !/-->/.test(t)) {
+  if (code === "GLOSSARY_MISMATCH") {
     return {
-      type: "NETWORK",
-      label: "疑似網路錯誤",
-      advice: () => "貼入內容像是連線或伺服器錯誤，不是字幕。請勿拆批；確認網路後重新送出同一批。"
+      type: "GLOSSARY_MISMATCH",
+      label: "詞庫 SHA-256 不一致",
+      advice: () => "前端詞庫與 Worker 測試環境內建詞庫 SHA-256 不一致，已停止佇列。請重新載入正確版本的 hololive_glossary.txt。"
+    };
+  }
+  if (code === "QUOTA_EXCEEDED" || (/RESOURCE_EXHAUSTED|insufficient_quota|quota|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)/i.test(t) && !t.trim().startsWith("{"))) {
+    return {
+      type: "QUOTA_EXCEEDED",
+      label: "OpenAI 額度不足",
+      advice: () => "OpenAI API 額度不足（QUOTA_EXCEEDED），系統已立即停止佇列且禁止自動重試，請檢查 OpenAI 帳戶額度。已暫存批次不受影響。"
+    };
+  }
+  if (code === "RATE_LIMITED" || (/\b429\b|rate.?limit|too many requests|稍後再試/i.test(t) && !t.trim().startsWith("{"))) {
+    return {
+      type: "RATE_LIMITED",
+      label: "速率限制／併發衝突",
+      advice: () => "請求達到速率限制或同一批次正在處理中（RATE_LIMITED / 409）。已暫停佇列，請稍候片刻再單獨重試此批。"
+    };
+  }
+  if (code === "TIMEOUT") {
+    return {
+      type: "TIMEOUT",
+      label: "OpenAI 回應逾時",
+      advice: (b) => canSplit(b)
+        ? "等待 OpenAI 回應逾時（TIMEOUT）。建議按「將此批拆成兩批」縮小單批句數後再試，或直接重試此批。"
+        : "等待 OpenAI 回應逾時（TIMEOUT）。請確認網路與服務狀態後重試此批。"
+    };
+  }
+  if (code === "NETWORK_ERROR" || code === "SERVER_ERROR") {
+    return {
+      type: code,
+      label: code === "NETWORK_ERROR" ? "網路連線錯誤" : "Worker／上游伺服器錯誤",
+      advice: () => "發生網路或伺服器錯誤，已暫停佇列。已完成批次均已保留，請確認連線後重試此批。"
     };
   }
 
-  const { blocks, leadingLineNumbers } = splitBilingualBlocks(t);
-  if (!t.includes("```") && blocks.length <= expectedCues.length) {
-    let isTruncated = false;
-    if (blocks.length === 0) {
-      const rawLines = t.replace(/\r\n?/g, "\n").replace(/\n+$/, "").split("\n");
-      isTruncated = rawLines.length > 0 && isValidTruncatedTail(rawLines, expectedCues, 0);
-    } else if (leadingLineNumbers.length === 0) {
-      const prevCount = blocks.length - 1;
-      const prevOk = prevCount === 0 ||
-        parseAndValidateBilingualSrt(blocks.slice(0, prevCount).join("\n\n"), expectedCues.slice(0, prevCount)).errors.length === 0;
-      if (prevOk) {
-        const lastBlockLines = blocks[prevCount].split("\n");
-        const fullLastOk = parseAndValidateBilingualSrt(blocks[prevCount], [expectedCues[prevCount]]).errors.length === 0;
-        if (fullLastOk && blocks.length < expectedCues.length) {
-          isTruncated = true;
-        } else if (!fullLastOk && isValidTruncatedTail(lastBlockLines, expectedCues, prevCount)) {
-          isTruncated = true;
-        }
-      }
-    }
-    if (isTruncated) {
-      return {
-        type: "TRUNCATED",
-        label: "疑似輸出截斷",
-        advice: (b) => canSplit(b)
-          ? "回覆在中途結束，前段已輸出內容與原始一致。建議按「將此批拆成兩批」改以較小批次重新翻譯；已暫存的其他批次不會重跑。"
-          : "回覆在中途結束，但此批已達最大拆分深度或段數過少，無法再拆。請人工重試此批，或縮小「每批上限」後重新建立批次。"
-      };
-    }
+  const trimmed = t.trim();
+  if (code === "TRUNCATED" || (trimmed.startsWith("{") && !trimmed.endsWith("}") && /"translations"\s*:\s*\[/.test(trimmed))) {
+    return {
+      type: "TRUNCATED",
+      label: "輸出截斷 (TRUNCATED)",
+      advice: (b) => canSplit(b)
+        ? "AI 回應因長度上限在中途截斷。建議點擊「將此批拆成兩批」改以較小批次翻譯；已暫存的其他批次不會重跑。"
+        : "AI 回應在中途截斷，但此批已達最大拆分深度或段數過少。請重試此批或調小每批上限。"
+    };
   }
 
-  const errs = (errors || []).map(String);
-  const has = re => errs.some(e => re.test(e));
-  const hasOther = re => errs.some(e => !/區塊解析失敗/.test(e) && re.test(e));
-  const cats = [];
-  if (has(/區塊解析失敗/)) cats.push(["解析失敗", "無法依「序號行＋時間戳行」切出字幕區塊，請確認貼入的是完整的雙語 SRT（不含說明文字）。"]);
-  if (hasOther(/總段數不符|遺漏字幕|多出額外/)) cats.push(["段數不符", "回覆的字幕條數與本批預期不同，請看錯誤訊息中的實際與預期段數。"]);
-  if (hasOther(/序號行|重複序號/)) cats.push(["序號", "有序號被改動、重複或缺漏，必須逐字沿用原始序號。"]);
-  if (hasOther(/時間戳行/)) cats.push(["時間戳", "有時間戳被改動，必須逐字保留。"]);
-  if (hasOther(/繁體中文翻譯為空|缺少內容/)) cats.push(["翻譯或內容缺漏", "有條目缺少繁中翻譯或原始日文。"]);
-  if (hasOther(/日文原文未逐字|行數不符/)) cats.push(["日文原文／行數", "日文原文被改動，或區塊行數與規格不符。"]);
-  const label = cats.length ? "驗證失敗：" + cats.map(c => c[0]).join("、") : "驗證失敗";
+  const labelMap = {
+    MISSING_INDEX: "驗證失敗：遺漏序號 (MISSING_INDEX)",
+    DUPLICATE_INDEX: "驗證失敗：重複序號 (DUPLICATE_INDEX)",
+    UNKNOWN_INDEX: "驗證失敗：多餘／未知序號 (UNKNOWN_INDEX)",
+    ORDER_MISMATCH: "驗證失敗：順序錯亂 (ORDER_MISMATCH)",
+    INVALID_TRANSLATION: "驗證失敗：譯文無效或非單行 (INVALID_TRANSLATION)",
+    FORMAT_ERROR: "驗證失敗：JSON 格式或欄位錯誤 (FORMAT_ERROR)"
+  };
   return {
-    type: "VALIDATION",
-    label,
-    advice: (b) => (cats.length ? cats.map(c => "・" + c[1]).join("\n") : "請參考上方錯誤訊息。") +
-      (b.failCount >= 3 ? "\n同一批已連續失敗 3 次以上，請人工檢查回覆；若回覆很長，可手動按「將此批拆成兩批」。" : "")
+    type: code || "VALIDATION",
+    label: labelMap[code] || "驗證失敗",
+    advice: (b) => "請檢查上方錯誤明細。只有同時通過 Worker 與前端雙重驗證的批次才會儲存；已暫存批次均完整保留。" +
+      (b && b.failCount >= 3 ? "\n同一批已連續失敗 3 次以上，建議點擊「將此批拆成兩批」縮小範圍後再試。" : "")
   };
 }
 
@@ -1584,6 +1705,7 @@ $("btn-split-current-batch").addEventListener("click", () => {
 });
 
 $("btn-save-current-batch").addEventListener("click", () => {
+  if (isAutoTranslating) return;
   lockAndClearVerificationState("批次暫存異動中，請完成所有批次並重新執行全量校驗。");
 
   if (!rawParsePassed || batchList.length === 0) {
@@ -1592,11 +1714,11 @@ $("btn-save-current-batch").addEventListener("click", () => {
   }
 
   const curBatch = batchList[currentBatchIdx];
-  const inputSrt = $("field-trans-result").value;
-  const { cues, errors } = parseAndValidateBilingualSrt(inputSrt, curBatch.cues);
+  const inputText = $("field-trans-result").value;
+  const { cues, errors, errorCode, normalizedJson } = parseAndValidateTranslationsJson(inputText, curBatch.cues);
 
   if (errors.length > 0) {
-    const failure = classifyBatchFailure(inputSrt, curBatch.cues, errors);
+    const failure = classifyBatchFailure(inputText, curBatch.cues, errors, errorCode);
     curBatch.failCount += 1;
     curBatch.lastFailure = failure.label;
     updateBatchUI();
@@ -1608,12 +1730,348 @@ $("btn-save-current-batch").addEventListener("click", () => {
   curBatch.status = "SAVED";
   curBatch.failCount = 0;
   curBatch.lastFailure = "";
-  curBatch.savedSrt = inputSrt;
+  curBatch.savedSrt = normalizedJson;
   curBatch.savedCues = cues;
-  curBatch.draftSrt = inputSrt;
+  curBatch.draftSrt = normalizedJson;
+  setTransInputValue(normalizedJson);
+  saveLightweightProgressToSession();
   updateBatchUI();
 
-  setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`);
+  setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）已以原始時間戳與日文安全組裝並鎖定暫存！`);
+});
+
+// ==================== 測試 Worker 登入驗證（沿用 /auth/login、/auth/session、/auth/logout 與 64 字元 hex Bearer Token） ====================
+function getExistingAuthToken() {
+  if (currentSessionToken && /^[a-f0-9]{64}$/.test(currentSessionToken)) {
+    return currentSessionToken;
+  }
+  if (typeof window.VT_AUTH_TOKEN === "string" && window.VT_AUTH_TOKEN.trim()) {
+    return window.VT_AUTH_TOKEN.trim();
+  }
+  const candidateKeys = [SESSION_TOKEN_KEY, "session_token", "auth_token", "token"];
+  for (const store of [window.sessionStorage, window.localStorage]) {
+    try {
+      if (!store) continue;
+      for (const k of candidateKeys) {
+        const val = store.getItem(k);
+        if (val && val.trim()) return val.trim();
+      }
+    } catch {}
+  }
+  return "";
+}
+
+function setSessionToken(token) {
+  currentSessionToken = token || "";
+  try {
+    if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch {}
+}
+
+$("btn-auth-login").addEventListener("click", async () => {
+  const passEl = $("auth-passphrase");
+  const statusEl = $("status-auth");
+  const passphrase = passEl ? passEl.value : "";
+  if (!passphrase) {
+    statusEl.textContent = "請輸入通行碼後再點擊登入。";
+    return;
+  }
+  const fetchFn = typeof window.__VT_TEST_FETCH__ === "function" ? window.__VT_TEST_FETCH__ : window.fetch.bind(window);
+  try {
+    const endpoint = new URL("auth/login", getApiBase()).toString();
+    const res = await fetchFn(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passphrase })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.token) {
+      statusEl.textContent = `登入失敗（HTTP ${res.status}）：${data.error || "請確認通行碼或稍後再試"}`;
+      return;
+    }
+    setSessionToken(data.token);
+    if (passEl) passEl.value = "";
+    statusEl.textContent = `登入成功！Session 有效期限至：${data.expiresAt ? new Date(data.expiresAt).toLocaleString() : "已核發"}`;
+  } catch (err) {
+    statusEl.textContent = `登入請求失敗：${err && err.message ? err.message : "網路錯誤"}`;
+  }
+});
+
+$("btn-auth-check").addEventListener("click", async () => {
+  const statusEl = $("status-auth");
+  const token = getExistingAuthToken();
+  if (!token) {
+    statusEl.textContent = "目前未持有 Session Token，請先登入。";
+    return;
+  }
+  const fetchFn = typeof window.__VT_TEST_FETCH__ === "function" ? window.__VT_TEST_FETCH__ : window.fetch.bind(window);
+  try {
+    const endpoint = new URL("auth/session", getApiBase()).toString();
+    const res = await fetchFn(endpoint, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401) setSessionToken("");
+      statusEl.textContent = `Session 無效或已過期（HTTP ${res.status}）：${data.error || "請重新登入"}`;
+      return;
+    }
+    statusEl.textContent = `Session 有效！到期時間：${data.expiresAt ? new Date(data.expiresAt).toLocaleString() : "有效"}`;
+  } catch (err) {
+    statusEl.textContent = `檢查 Session 失敗：${err && err.message ? err.message : "網路錯誤"}`;
+  }
+});
+
+$("btn-auth-logout").addEventListener("click", async () => {
+  const statusEl = $("status-auth");
+  const token = getExistingAuthToken();
+  const fetchFn = typeof window.__VT_TEST_FETCH__ === "function" ? window.__VT_TEST_FETCH__ : window.fetch.bind(window);
+  if (token) {
+    try {
+      const endpoint = new URL("auth/logout", getApiBase()).toString();
+      await fetchFn(endpoint, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch {}
+  }
+  setSessionToken("");
+  statusEl.textContent = "已登出並清除本機 Session Token。";
+});
+
+// ==================== 自動分批呼叫 Cloudflare Worker POST /translate ====================
+async function requestWorkerTranslateBatch(batchObj, batchIdx, signal, confirmRetryAfterInterrupt = false) {
+  const { contextBefore, contextAfter } = getBatchContextWindow(batchObj);
+  if (!currentTranslationJobId) {
+    const vid = currentVideoId() || "local";
+    currentTranslationJobId = `job-${vid}-${batchList[0].startSeq}-${batchList[batchList.length - 1].endSeq}`;
+  }
+
+  const requestBody = {
+    jobId: currentTranslationJobId,
+    batchIndex: batchIdx,
+    totalBatches: batchList.length,
+    glossarySha256: loadedGlossarySha256,
+    contextBefore,
+    contextAfter,
+    cues: batchObj.cues.map(c => ({ index: c.index, ja: c.ja }))
+  };
+  if (confirmRetryAfterInterrupt) {
+    requestBody.confirmRetryAfterInterrupt = true;
+  }
+
+  const headers = { "Content-Type": "application/json" };
+  const token = getExistingAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const translateUrl = new URL("translate", getApiBase()).toString();
+  const fetchFn = typeof window.__VT_TEST_FETCH__ === "function" ? window.__VT_TEST_FETCH__ : window.fetch.bind(window);
+
+  const timerController = new AbortController();
+  const onExternalAbort = () => timerController.abort(new Error("USER_ABORTED"));
+  if (signal) {
+    if (signal.aborted) onExternalAbort();
+    else signal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+  const timer = setTimeout(() => timerController.abort(new Error("TIMEOUT")), TRANSLATE_TIMEOUT_MS);
+
+  try {
+    const response = await fetchFn(translateUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+      signal: timerController.signal
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      return {
+        ok: false,
+        errorCode: "FORMAT_ERROR",
+        message: `Worker 回傳非合法 JSON（HTTP ${response.status}）。`
+      };
+    }
+
+    if (!response.ok || (data && data.ok === false)) {
+      const fallbackCode = response.status === 401 || response.status === 403
+        ? "AUTH_ERROR"
+        : (response.status === 429 || response.status === 409 ? "RATE_LIMITED" : (response.status === 504 ? "TIMEOUT" : "SERVER_ERROR"));
+      return {
+        ok: false,
+        errorCode: (data && data.errorCode) ? data.errorCode : fallbackCode,
+        subCode: (data && data.subCode) ? data.subCode : "",
+        message: (data && (data.message || data.error)) ? (data.message || data.error) : `Worker 回應錯誤（HTTP ${response.status}）`,
+        details: data && data.details ? data.details : null
+      };
+    }
+
+    return { ok: true, data };
+  } catch (err) {
+    if (signal && signal.aborted) {
+      return { ok: false, errorCode: "USER_ABORTED", message: "使用者已手動停止自動翻譯。" };
+    }
+    const isTimeout = (err && err.message === "TIMEOUT") || (err && err.name === "AbortError");
+    return {
+      ok: false,
+      errorCode: isTimeout ? "TIMEOUT" : "NETWORK_ERROR",
+      message: isTimeout ? `等待 Worker / OpenAI 回應逾時（超過 ${TRANSLATE_TIMEOUT_MS / 1000} 秒）。` : `網路連線失敗：${err && err.message ? err.message : "無法連線至 Worker"}`
+    };
+  } finally {
+    clearTimeout(timer);
+    if (signal) signal.removeEventListener("abort", onExternalAbort);
+  }
+}
+
+async function runAutoTranslationQueue(onlyCurrentBatch = false) {
+  if (isAutoTranslating) return false;
+  if (!isGlossaryVerified || loadedGlossarySha256 !== EXPECTED_GLOSSARY_SHA256) {
+    setStatus("status-auto-translate", "err", "【安全阻擋】：請先於步驟 0 載入通過 SHA-256 驗證的 hololive_glossary.txt！");
+    return false;
+  }
+  if (!rawParsePassed || batchList.length === 0) {
+    setStatus("status-auto-translate", "err", "【安全阻擋】：請先完成步驟 1 解析原始字幕並於步驟 2 建立批次！");
+    return false;
+  }
+
+  const targetIndices = onlyCurrentBatch
+    ? (batchList[currentBatchIdx].status === "SAVED" ? [] : [currentBatchIdx])
+    : batchList.map((b, idx) => b.status === "SAVED" ? -1 : idx).filter(idx => idx >= 0);
+
+  if (targetIndices.length === 0) {
+    setStatus("status-auto-translate", "ok", "所有目標批次皆已完成驗證並暫存（SAVED），無需重複呼叫 API。");
+    return true;
+  }
+
+  isAutoTranslating = true;
+  autoTranslateAbortController = new AbortController();
+  lockAndClearVerificationState("自動翻譯進行中，待全部批次完成後將自動執行全量校驗。");
+  updateBatchUI();
+
+  for (let step = 0; step < targetIndices.length; step++) {
+    const bIdx = targetIndices[step];
+    const batchObj = batchList[bIdx];
+    if (batchObj.status === "SAVED") continue;
+
+    currentBatchIdx = bIdx;
+    batchObj.status = "TRANSLATING";
+    updateBatchUI();
+
+    const savedCountBefore = batchList.filter(b => b.status === "SAVED").length;
+    setStatus("status-auto-translate", "warn",
+      `【自動翻譯進行中】：正在翻譯第 ${batchObj.batchNum} / ${batchList.length} 批（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）…\n` +
+      `目前進度：已完成 ${savedCountBefore} / ${batchList.length} 批`);
+
+    const workerRes = await requestWorkerTranslateBatch(batchObj, bIdx, autoTranslateAbortController.signal, Boolean(batchObj.confirmRetryAfterInterrupt));
+    batchObj.confirmRetryAfterInterrupt = false;
+
+    if (!workerRes.ok) {
+      batchObj.status = "PENDING";
+      if (workerRes.errorCode === "USER_ABORTED") {
+        isAutoTranslating = false;
+        autoTranslateAbortController = null;
+        updateBatchUI();
+        setStatus("status-auto-translate", "warn",
+          `【已手動停止自動翻譯】：停在第 ${batchObj.batchNum} 批。先前已完成的 ${batchList.filter(b => b.status === "SAVED").length} 批已完整保留。`);
+        return false;
+      }
+
+      if (workerRes.subCode === "UNCERTAIN_PRIOR_BILLING") {
+        batchObj.confirmRetryAfterInterrupt = true;
+      }
+
+      const failure = classifyBatchFailure("", batchObj.cues, [workerRes.message], workerRes.errorCode);
+      batchObj.failCount += 1;
+      batchObj.lastFailure = failure.label;
+      isAutoTranslating = false;
+      autoTranslateAbortController = null;
+      updateBatchUI();
+
+      const msg = `【第 ${batchObj.batchNum} 批自動翻譯失敗，佇列已立即暫停】\n` +
+        `錯誤代碼：${workerRes.errorCode}${workerRes.subCode ? " (" + workerRes.subCode + ")" : ""}\n` +
+        `錯誤說明：${workerRes.message}\n` +
+        `已保留批次：${batchList.filter(b => b.status === "SAVED").length} / ${batchList.length} 批\n\n` +
+        `【處置建議】${failure.advice(batchObj)}`;
+      setStatus("status-auto-translate", "err", msg);
+      setStatus("status-verify", "err", msg);
+      return false;
+    }
+
+    const { cues, errors, errorCode, normalizedJson } = parseAndValidateTranslationsJson(workerRes.data, batchObj.cues);
+    if (errors.length > 0) {
+      batchObj.status = "PENDING";
+      const failure = classifyBatchFailure(JSON.stringify(workerRes.data), batchObj.cues, errors, errorCode);
+      batchObj.failCount += 1;
+      batchObj.lastFailure = failure.label;
+      isAutoTranslating = false;
+      autoTranslateAbortController = null;
+      updateBatchUI();
+
+      const msg = `【第 ${batchObj.batchNum} 批前端第二重驗證 FAIL，佇列已立即暫停】\n` +
+        errors.slice(0, 8).join("\n") +
+        `\n\n【失敗類型】${failure.label}\n${failure.advice(batchObj)}`;
+      setStatus("status-auto-translate", "err", msg);
+      setStatus("status-verify", "err", msg);
+      return false;
+    }
+
+    batchObj.status = "SAVED";
+    batchObj.failCount = 0;
+    batchObj.lastFailure = "";
+    batchObj.savedSrt = normalizedJson;
+    batchObj.savedCues = cues;
+    batchObj.draftSrt = normalizedJson;
+
+    if (workerRes.data && workerRes.data.usage) {
+      cumulativeTokenUsage.promptTokens += Number(workerRes.data.usage.promptTokens || 0);
+      cumulativeTokenUsage.completionTokens += Number(workerRes.data.usage.completionTokens || 0);
+      cumulativeTokenUsage.totalTokens += Number(workerRes.data.usage.totalTokens || 0);
+    }
+
+    setTransInputValue(normalizedJson);
+    saveLightweightProgressToSession();
+    updateBatchUI();
+
+    const savedNow = batchList.filter(b => b.status === "SAVED").length;
+    const cacheTag = workerRes.data && workerRes.data.cached ? "（命中 Worker SQLite 冪等快取，未重複扣費）" : "";
+    setStatus("status-verify", "ok",
+      `【第 ${batchObj.batchNum} 批自動翻譯＆雙重驗證 PASS】${cacheTag}：編號 #${batchObj.startSeq} ~ #${batchObj.endSeq}（共 ${cues.length} 條）已安全組裝並暫存！`);
+    setStatus("status-auto-translate", "ok",
+      `已完成 ${savedNow} / ${batchList.length} 批${cacheTag}｜累計 Token：${cumulativeTokenUsage.totalTokens}`);
+  }
+
+  isAutoTranslating = false;
+  autoTranslateAbortController = null;
+  updateBatchUI();
+
+  if (batchList.every(b => b.status === "SAVED")) {
+    const allOk = runFullVerification();
+    if (allOk) {
+      setStatus("status-auto-translate", "ok",
+        `【全部批次自動翻譯與全量校驗完成】：共 ${batchList.length} 批（${fullyVerifiedCues.length} 句字幕）100% 通過雙重驗證！已載入雙語播放器並解鎖 JSON 匯出。`);
+    }
+    return allOk;
+  }
+  return true;
+}
+
+$("btn-start-auto-translate").addEventListener("click", () => {
+  runAutoTranslationQueue(false);
+});
+
+$("btn-translate-current-batch").addEventListener("click", () => {
+  runAutoTranslationQueue(true);
+});
+
+$("btn-stop-auto-translate").addEventListener("click", () => {
+  if (isAutoTranslating && autoTranslateAbortController) {
+    autoTranslateAbortController.abort();
+  }
 });
 
 $("btn-revert-current-batch").addEventListener("click", () => {
@@ -1778,10 +2236,13 @@ function importBilingualJsonText(text) {
   } catch (e) {
     return fail(["JSON 無法解析：" + e.message]);
   }
-  if (!root || typeof root !== "object" || Array.isArray(root) || !Array.isArray(root.subtitles)) {
-    return fail(["JSON 根物件必須含 subtitles 陣列。"]);
+  const isSubtitlesArray = root && typeof root === "object" && !Array.isArray(root) && Array.isArray(root.subtitles);
+  const isTranslationsArray = root && typeof root === "object" && !Array.isArray(root) && Array.isArray(root.translations);
+  if (!isSubtitlesArray && !isTranslationsArray) {
+    return fail(["JSON 根物件必須含 subtitles 或 translations 陣列。"]);
   }
-  if (root.subtitles.length === 0) return fail(["subtitles 為空。"]);
+  const sourceItems = isSubtitlesArray ? root.subtitles : root.translations;
+  if (sourceItems.length === 0) return fail(["匯入陣列為空。"]);
 
   const targeted = batchList.flatMap(b => b.cues);
   const pos = new Map();
@@ -1791,7 +2252,7 @@ function importBilingualJsonText(text) {
   const errs = [], zhBySeq = new Map();
   let lastPos = -1;
 
-  root.subtitles.forEach((it, i) => {
+  sourceItems.forEach((it, i) => {
     const lb = `第 ${i + 1} 筆`;
     if (!it || typeof it !== "object" || Array.isArray(it)) { errs.push(`${lb}不是物件。`); return; }
     let idx = it.index;
@@ -1804,8 +2265,10 @@ function importBilingualJsonText(text) {
     const p = pos.get(idx);
     if (p <= lastPos) errs.push(`${lb} 序號 #${idx} 順序錯誤（必須與原始字幕順序一致）。`);
     lastPos = Math.max(lastPos, p);
-    if (it.start !== raw.rawStart || it.end !== raw.rawEnd) errs.push(`#${idx} 時間戳與原始不符（原始 ${raw.rawStart} --> ${raw.rawEnd}）。`);
-    if (typeof it.ja !== "string" || it.ja !== raw.ja) errs.push(`#${idx} 日文原文與原始字幕不一致。`);
+    if (isSubtitlesArray) {
+      if (it.start !== raw.rawStart || it.end !== raw.rawEnd) errs.push(`#${idx} 時間戳與原始不符（原始 ${raw.rawStart} --> ${raw.rawEnd}）。`);
+      if (typeof it.ja !== "string" || it.ja !== raw.ja) errs.push(`#${idx} 日文原文與原始字幕不一致。`);
+    }
     const zh = it.zh_tw;
     if (typeof zh !== "string" || zh.trim() === "") errs.push(`#${idx} zh_tw 必須是非空字串。`);
     else if (/[\r\n]/.test(zh)) errs.push(`#${idx} zh_tw 不可含換行（既有規格要求繁中為單行）。`);
@@ -1818,7 +2281,6 @@ function importBilingualJsonText(text) {
   const plan = [];
   for (const b of batchList) {
     if (!b.cues.every(c => zhBySeq.has(c.index))) continue;
-    const srt = b.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${zhBySeq.get(c.index)}\n${c.ja}`).join("\n\n");
     const cues = b.cues.map(c => ({
       index: c.index,
       start: c.rawStart,
@@ -1826,6 +2288,9 @@ function importBilingualJsonText(text) {
       zh_tw: zhBySeq.get(c.index),
       ja: c.ja
     }));
+    const srt = JSON.stringify({
+      translations: cues.map(c => ({ index: c.index, zh_tw: c.zh_tw }))
+    }, null, 2);
     plan.push({ b, srt, cues });
   }
   if (!plan.length) return fail(["沒有任何批次被 JSON 完整涵蓋，無法匯入。缺少編號：" + fmtSeqRanges(missing, 5)]);
@@ -1836,7 +2301,7 @@ function importBilingualJsonText(text) {
   const plannedCur = planned.has(cur) ? plan.find(p => p.b === cur) : null;
   const draftLost = !!plannedCur && input.trim() !== "" && input !== plannedCur.srt;
   const overwritten = plan.filter(p => p.b.status === "SAVED" && p.b.savedSrt !== p.srt).map(p => p.b.batchNum);
-  const skippedCues = root.subtitles.length - plan.reduce((n, p) => n + p.cues.length, 0);
+  const skippedCues = sourceItems.length - plan.reduce((n, p) => n + p.cues.length, 0);
   const notes = [];
   if (missing.length) notes.push(`JSON 缺少 ${missing.length} 條字幕：${fmtSeqRanges(missing, 5)}。`);
   if (skippedCues > 0) notes.push(`其中 ${skippedCues} 條屬於未被完整涵蓋的批次，不會匯入。`);
@@ -1952,7 +2417,7 @@ function generateQcPromptForBatch(batchObj) {
     diffTable += `[#${t.index}]\n- 原始: [${r.rawTimeLine}]\n${r.ja}\n- 輸出:\n${t.zh_tw}\n${t.ja}\n\n`;
   });
 
-  const qcPrompt = `你現在是專業的字幕品質檢查助手（Gemini 3.5 Flash-Lite）。請針對以下【第 ${batchObj.batchNum} / ${totalBatches} 批字幕對照表】（編號 #${batchObj.startSeq} 至 #${batchObj.endSeq}，共 ${batchObj.cues.length} 條），以原始日文與附帶之專用詞庫為依據進行語意與術語品質稽核：
+  const qcPrompt = `你現在是專業的 OpenAI 字幕品質檢查助手。請針對以下【第 ${batchObj.batchNum} / ${totalBatches} 批字幕對照表】（編號 #${batchObj.startSeq} 至 #${batchObj.endSeq}，共 ${batchObj.cues.length} 條），以原始日文與附帶之專用詞庫為依據進行語意與術語品質稽核：
 
 【專用詞庫核對依據（原始全文）】
 ${loadedGlossaryRawContent}
@@ -2050,11 +2515,16 @@ $("check").addEventListener("click", async () => {
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const endpoint = new URL(API);
+    const endpoint = new URL(getApiBase());
     endpoint.searchParams.set("url", raw);
+    const reqHeaders = {};
+    const authToken = getExistingAuthToken();
+    if (authToken) reqHeaders["Authorization"] = `Bearer ${authToken}`;
+    const fetchFn = typeof window.__VT_TEST_FETCH__ === "function" ? window.__VT_TEST_FETCH__ : window.fetch.bind(window);
 
-    const response = await fetch(endpoint.toString(), {
+    const response = await fetchFn(endpoint.toString(), {
       method: "GET",
+      headers: reqHeaders,
       signal: controller.signal
     });
 
