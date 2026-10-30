@@ -21,8 +21,8 @@
   --warn:#ffd60a;
 }
 *{box-sizing:border-box}
-html{background-color:var(--bg)}
-body{min-height:100dvh;margin:0;color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+html{background-color:var(--bg);overflow-x:clip}
+body{min-height:100dvh;margin:0;overflow-x:clip;color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 main{max-width:760px;margin:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + var(--bottom-gap)) max(8px,env(safe-area-inset-left,0px))}
 h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
@@ -53,10 +53,38 @@ a{color:var(--accent);overflow-wrap:anywhere}
 .cue-text{white-space:pre-wrap}
 .cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
 .cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
-/* Apple Music 歌詞式字幕：以 :where() 將各距離選擇器權重歸零，依順序由遠至近覆蓋，確保較近距離永遠優先 */
-/* 置中對稱放大（transform-origin:center center）搭配 flex gap 間距，解決字塊往右偏與多塊同時亮起時的重疊問題 */
-#autopreview{display:flex;flex-direction:column;gap:10px}
-#autopreview .cue{position:relative;margin:0 6px;padding:14px 16px 18px;border-radius:12px;border-bottom:0;background:transparent;transition:opacity .3s ease,background-color .3s ease,transform .3s ease;transform-origin:center center}
+/* Apple Music 歌詞式字幕：
+   1. 高亮字體大小設定為中文 1.4em、日文 1.05em（與目標圖完全一致）。
+   2. 針對 font-size 切換瞬間造成的突兀跳變，以 @keyframes cuePopOut 在切換瞬間從 scale(0.86) 補償起算（1.4em × 0.86 ≈ 1.2em，銜接非高亮的 1.15em），再透過 cubic-bezier(.22,1,.36,1) 彈性曲線平滑突起至 scale(1.03)，全程無斷行重排抖動。 */
+@keyframes cuePopOut{
+  0%{
+    transform:scale(.86);
+    background-color:rgba(255,255,255,0);
+    box-shadow:0 0 0 rgba(0,0,0,0);
+  }
+  100%{
+    transform:scale(1.03);
+    background-color:rgba(255,255,255,.09);
+    box-shadow:0 8px 24px rgba(0,0,0,.38);
+  }
+}
+#autopreview{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+#autopreview .cue{
+  position:relative;
+  margin:0 6px;
+  padding:14px 16px 18px;
+  border-radius:12px;
+  border-bottom:0;
+  background:transparent;
+  transform:scale(1);
+  transform-origin:center center;
+  will-change:transform,opacity,background-color;
+  transition:
+    opacity .34s ease,
+    background-color .34s ease,
+    transform .38s cubic-bezier(.22,1,.36,1),
+    box-shadow .38s cubic-bezier(.22,1,.36,1);
+}
 :where(#autopreview .cue){opacity:.3}
 :where(#autopreview .cue.active + .cue + .cue + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue + .cue.active)){opacity:.38}
@@ -64,7 +92,14 @@ a{color:var(--accent);overflow-wrap:anywhere}
 :where(#autopreview .cue:not(.active):has(+ .cue + .cue.active)){opacity:.5}
 :where(#autopreview .cue.active + .cue:not(.active)),
 :where(#autopreview .cue:not(.active):has(+ .cue.active)){opacity:.7}
-#autopreview .cue.active{z-index:1;opacity:1;background:rgba(255,255,255,.09);transform:scale(1.03)}
+#autopreview .cue.active{
+  z-index:1;
+  opacity:1;
+  background:rgba(255,255,255,.09);
+  box-shadow:0 8px 24px rgba(0,0,0,.38);
+  transform:scale(1.03);
+  animation:cuePopOut .38s cubic-bezier(.22,1,.36,1) both;
+}
 #autopreview .cue.active .cue-zh{font-size:1.4em}
 #autopreview .cue.active .cue-text{font-size:1.05em}
 #autopreview .cue-text{font-weight:600}
@@ -346,7 +381,8 @@ function seekToTimestamp(videoId, seconds) {
 const ACTIVE_GRACE = 2;        // 字幕結束後，多少秒內仍維持亮起
 const FOLLOW_PAUSE_MS = 4000;  // 手指放開且慣性捲動停止後，等待多少毫秒才跳回高亮處
 const SYNC_INTERVAL_MS = 80;   // 每隔多久檢查一次播放進度
-const SCROLL_ANCHOR = 0.35;    // 0=貼近播放器下緣，0.5=可視區正中；越小越靠上
+const ACTIVE_SCALE = 1.03;     // 高亮字塊最終放大倍率（與 CSS #autopreview .cue.active 一致）
+const ACTIVE_TOP_GAP = 8;      // 高亮字塊最上緣距離嵌入器下緣保留的空間（px），不露出一句
 
 let syncTrack = null;
 let lastActiveIndex = -1;
@@ -395,11 +431,18 @@ function scrollCueIntoPlace(el) {
   const previewRect = $("autopreview").getBoundingClientRect();
   if (previewRect.bottom < 0 || previewRect.top > window.innerHeight) return;
   const player = $("youtube-player-container");
-  const playerBottom = player && !player.hidden ? Math.max(0, Math.min(player.getBoundingClientRect().bottom, player.offsetHeight + 16)) : 0;
-  const targetCenter = playerBottom + (window.innerHeight - playerBottom) * SCROLL_ANCHOR;
+  let playerBottom = 0;
+  if (player && !player.hidden) {
+    const stickyTop = typeof window.getComputedStyle === "function" ? (parseFloat(window.getComputedStyle(player).top) || 0) : 0;
+    playerBottom = Math.max(0, Math.min(player.getBoundingClientRect().bottom, stickyTop + player.offsetHeight));
+  }
   const r = el.getBoundingClientRect();
-  const delta = r.top + r.height / 2 - targetCenter;
-  if (Math.abs(delta) < 6) return;
+  // 以 transform-origin:center center 不變的中心點搭配 offsetHeight 推算放大至 ACTIVE_SCALE 後的最終上緣
+  const centerY = r.top + r.height / 2;
+  const activeVisualTop = centerY - (el.offsetHeight * ACTIVE_SCALE) / 2;
+  const targetTop = playerBottom + ACTIVE_TOP_GAP;
+  const delta = activeVisualTop - targetTop;
+  if (Math.abs(delta) < 4) return;
   autoScrollUntil = Date.now() + 900;
   window.scrollBy({ top: delta, behavior: "smooth" });
 }
