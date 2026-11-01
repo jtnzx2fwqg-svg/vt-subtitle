@@ -127,6 +127,7 @@ small,.muted,.hint{color:var(--muted)}
 .status-msg.ok{color:var(--ok)}
 .status-msg.warn{color:var(--warn)}
 a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
+.sr-copy-temp{position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none}
 .cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .cue time{display:block;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
 .cue time a{text-decoration:none}
@@ -271,9 +272,9 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
 .status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
 #pipeline{font-size:.92rem;margin-top:0}
 .url-bar,.status-grid,.player-lyrics-layout{display:contents}
-
 /* ============================================================================
    【電腦版雙模式整合配置（>= 900px 顯示切換按鈕，支援一鍵切換 v1 視線平移版 ／ v2 劇院模式版）】
+   - 手機端（< 900px）：.desktop-layout-bar 自動隱藏（display: none），維持純淨手機版配置。
    ============================================================================ */
 @media (min-width: 900px){
   .desktop-layout-bar{display:flex}
@@ -289,11 +290,8 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
   .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .status-grid .status{margin-top:12px}
 
-  /* --------------------------------------------------------------------------
-     模式一：視線平移優化版（v1_side_by_side，預設模式）
-     - 左欄 62% 巨型播放器垂直置中於視窗正中央（top: 50vh; transform: translateY(-50%)）
-     - 右欄 38% 字幕並排，當前高亮字幕自動捲動對齊視窗垂直正中央（50vh），雙眼水平移動距離最短
-     -------------------------------------------------------------------------- */
+  /* 模式一：視線平移優化版（v1_side_by_side，預設模式）
+     左欄 62% 巨型播放器垂直置中於視窗正中央（top: 50vh），右欄 38% 字幕並排對齊 50vh */
   body[data-desktop-layout="v1_side_by_side"] main,
   body:not([data-desktop-layout]) main{
     max-width:1760px;
@@ -340,11 +338,8 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
     transform:scale(1.02) translateZ(0);
   }
 
-  /* --------------------------------------------------------------------------
-     模式二：劇院模式版（v2_theater_top）
-     - 上方 74vh 超大劇院螢幕置頂貼齊視窗最上緣（top: 0; max-height: 74vh）
-     - 下方保留約 26vh 字幕對照區，高亮字幕精準停駐於播放器下緣 8px 處
-     -------------------------------------------------------------------------- */
+  /* 模式二：劇院模式版（v2_theater_top）
+     上方 74vh 超大劇院螢幕置頂貼齊視窗最上緣（top: 0），下方保留 26vh 字幕對照區 */
   body[data-desktop-layout="v2_theater_top"] main{
     max-width:1800px;
     padding:20px 24px 64px;
@@ -396,7 +391,6 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
     transform:scale(1.02) translateZ(0);
   }
 }
-
 /* 系統無障礙減弱動態效果支援（iOS 減少動態效果 / Windows 11 關閉動畫效果） */
 @media (prefers-reduced-motion: reduce){
   #autopreview .cue,#autopreview .cue::before{transition-duration:.01ms !important}
@@ -554,10 +548,20 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
 
 <script>
 // ============================================================================
-// 【基礎設定與 DOM 查詢輔助】
-// - API：指向字幕擷取服務端點。
-// - FETCH_TIMEOUT_MS：30 秒網路請求逾時保護。
-// - MAX_FILE_BYTES：本地檔案讀取上限 20MB，防止超大檔案造成記憶體溢位。
+// 【VT Subtitle 程式碼架構總覽索引（Architecture & Module Index）】
+// - 模組一：電腦版雙模式切換器（v1 視線平移版 ／ v2 劇院模式版）與 YouTube IFrame API 管理
+// - 模組二：字幕跟隨播放進度與單一 VSync 迴圈平滑捲動引擎（iPhone 15 Pro 120Hz 次像素 ＋ Win11 Intel 優化）
+// - 模組三：時間戳轉換、YouTube 網址驗證與字幕 DOM 安全建構（單一容器事件委派）
+// - 模組四：全域狀態管理與嚴格驗證鎖定機制（Fail-Closed）
+// - 模組五（步驟 0）：詞庫讀取、FIPS 180-4 SHA-256 計算與 27 章節結構檢查
+// - 模組六（步驟 1）：原始日文字幕嚴格 SRT 解析與非破壞性異常警告記錄
+// - 模組七（步驟 2）：分批設定與翻譯 Prompt 產生器
+// - 模組八（步驟 3）：雙語翻譯結果逐行校驗、批次暫存與全量驗證
+// - 模組九：雙語 JSON 匯入與全量相容性驗證（支援 subtitles 與 translations 雙格式）
+// - 模組十（步驟 4）：分批品質檢查（QC Prompt）產生器
+// - 模組十一：SRT 序列化與雙語／原文播放器預覽切換
+// - 模組十二：向 Cloudflare Worker 請求 YouTube 日文字幕（含 30 秒逾時保護）
+// - 模組十三：本地 SRT / WebVTT 字幕檔解析與標籤清理
 // ============================================================================
 const $ = id => document.getElementById(id);
 const API = "https://vt-subtitle-api.weide1217.workers.dev/";
@@ -565,7 +569,6 @@ const FETCH_TIMEOUT_MS = 30000;
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 本地檔案大小上限 20MB
 
 // 【安全防護：API 端點協定與主機白名單檢查】
-// 確保對外發送請求前，目標網址必定為合法的 HTTPS/HTTP 協定，防止異常協定注入。
 function validateApiEndpoint(rawUrl) {
   try {
     const u = new URL(rawUrl);
@@ -587,15 +590,9 @@ function setStatus(idOrEl, cls, msg) {
 }
 
 // ============================================================================
-// 【模組一：YouTube IFrame 播放器生命週期與時間跳轉管理】
-// - 動態載入官方 https://www.youtube.com/iframe_api（唯一允許之外部腳本）。
-// - 顯隱播放器容器時同步切換父層 #player-lyrics-layout 的 .has-player class，
-//   完全取代高成本的 CSS :has() 選擇器，提升 iOS 27.2 與 Windows 11 排版效能。
-// ============================================================================
-// ============================================================================
 // 【模組一：電腦版雙模式切換器（視線平移優化版 v1 ／ 劇院模式版 v2）與 YouTube IFrame API】
 // - 手機端（視窗寬度 < 900px）：自動鎖定為手機版最新配置（上影黏性置頂＋下文），切換列自動隱藏。
-// - 電腦端（視窗寬度 >= 900px）：可透過切換按鈕即時在「視線平移優化版（左影置中＋右文並排）」與
+// - 電腦端（視窗寬度 >= 900px）：可透過切換按鈕或左右方向鍵即時在「視線平移優化版（左影置中＋右文並排）」與
 //   「劇院模式版（上方 74vh 置頂巨幕＋下方字幕）」之間無縫切換，並自動重算當前高亮字幕捲動位置。
 // ============================================================================
 const DESKTOP_LAYOUT_STORAGE_KEY = "vt_desktop_layout_mode_v1";
@@ -625,6 +622,8 @@ function applyDesktopLayoutMode(mode, triggerRescroll = true) {
     }
   } catch {}
   if (triggerRescroll && syncTrack && lastActiveIndex >= 0 && syncTrack.els[lastActiveIndex]) {
+    isTouching = false;
+    followPausedUntil = 0;
     stopSmoothScroll();
     scrollCueIntoPlace(syncTrack.els[lastActiveIndex]);
   }
@@ -642,10 +641,19 @@ function initDesktopLayoutSwitcher() {
 
   const btnV1 = $("btn-layout-v1");
   const btnV2 = $("btn-layout-v2");
-  if (btnV1) btnV1.addEventListener("click", () => applyDesktopLayoutMode("v1_side_by_side", true));
-  if (btnV2) btnV2.addEventListener("click", () => applyDesktopLayoutMode("v2_theater_top", true));
+  if (btnV1) {
+    btnV1.addEventListener("click", () => applyDesktopLayoutMode("v1_side_by_side", true));
+    btnV1.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") { e.preventDefault(); applyDesktopLayoutMode("v2_theater_top", true); if (btnV2 && btnV2.focus) btnV2.focus(); }
+    });
+  }
+  if (btnV2) {
+    btnV2.addEventListener("click", () => applyDesktopLayoutMode("v2_theater_top", true));
+    btnV2.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") { e.preventDefault(); applyDesktopLayoutMode("v1_side_by_side", true); if (btnV1 && btnV1.focus) btnV1.focus(); }
+    });
+  }
 }
-
 let youtubePlayer = null;
 let youtubeApiReady = false;
 let youtubePlayerReady = false;
@@ -783,6 +791,7 @@ let followPausedUntil = 0;       // 手動捲動後暫停自動跟隨的截止�
 let autoScrollUntil = 0;         // 程式自身執行 window.scrollTo 的保護時間窗，避免誤判為使用者手動捲動
 let resumeFollowTimer = null;    // 手放開 4 秒後自動平滑歸位至當前高亮字幕的計時器
 let warmIdleTimer = null;        // 僅在捲動與縮放動畫結束後的靜止期才切換 GPU 預熱合成層
+let resizeDebounceTimer = null;  // 視窗縮放或旋轉後的防抖重對齊計時器
 
 // 單一 VSync 迴圈捲動狀態變數（動畫進行期間不在每幀讀取 DOM offsetTop/getBoundingClientRect）
 let scrollActive = false;
@@ -899,6 +908,7 @@ function buildTrackIndex(track) {
   track.active = [];
   track.styled = [];
   track.warmed = new Set();
+  track.lastTime = -1;
 }
 
 function findActiveIndices(track, t) {
@@ -922,7 +932,7 @@ function findActiveIndices(track, t) {
   return out.sort((a, b) => a - b);
 }
 
-// 唯讀計算目標捲動座標（同時支援手機版、電腦視線平移版 v1 與電腦劇院置頂版 v2）
+// 唯讀計算目標捲動座標（必須在修改任何 DOM class 之前執行，確保 0 Forced Synchronous Layout）
 function computeDesiredScrollPlan(el) {
   if (!el || isTouching || Date.now() < followPausedUntil) return null;
   const activeTag = document.activeElement ? document.activeElement.tagName : "";
@@ -940,8 +950,8 @@ function computeDesiredScrollPlan(el) {
     playerRect.right > previewRect.left + 20 &&
     playerRect.left < previewRect.right - 20
   );
-  const isDesktop = (Number(window.innerWidth) || 0) >= 900;
 
+  const isDesktop = (Number(window.innerWidth) || 0) >= 900;
   const currentScrollY = window.scrollY;
   const maxScrollY = Math.max(0, document.documentElement.scrollHeight - winH);
   const r = el.getBoundingClientRect();
@@ -1123,6 +1133,18 @@ window.addEventListener("scroll", () => {
   scheduleResumeFollow(FOLLOW_PAUSE_MS);
 }, { passive: true });
 
+// 視窗縮放或手機螢幕旋轉時（resize 120ms 防抖）：自動依新版面幾何重新對齊目前高亮字幕
+window.addEventListener("resize", () => {
+  if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+  resizeDebounceTimer = setTimeout(() => {
+    resizeDebounceTimer = null;
+    if (isTouching || Date.now() < followPausedUntil) return;
+    if (syncTrack && lastActiveIndex >= 0 && syncTrack.els[lastActiveIndex]) {
+      scrollCueIntoPlace(syncTrack.els[lastActiveIndex]);
+    }
+  }, 120);
+}, { passive: true });
+
 // 背景分頁返回前景時（iOS 切換 App 或 Windows 切換分頁）：重置幀時間差，防止跳幀
 if (typeof document !== "undefined" && document && typeof document.addEventListener === "function") {
   document.addEventListener("visibilitychange", () => {
@@ -1132,13 +1154,17 @@ if (typeof document !== "undefined" && document && typeof document.addEventListe
 }
 
 // 單一整合式 VSync 主迴圈：先讀取播放時間與排版（Read Phase），再更新樣式並於同一幀立即推進捲動（Write Phase）
+// 效能保護：當影片暫停且時間未變動（|t - track.lastTime| < 0.015s）時跳過二分搜尋與陣列配置，達成 0 閒置 CPU 消耗。
 function masterFrameLoop(now) {
   if (syncTrack && youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getCurrentTime === "function") {
     if (now - lastSyncCheckTs >= SYNC_INTERVAL_MS) {
       lastSyncCheckTs = now;
       const t = youtubePlayer.getCurrentTime();
       if (typeof t === "number" && Number.isFinite(t)) {
-        setActiveCues(findActiveIndices(syncTrack, t));
+        if (Math.abs(t - syncTrack.lastTime) >= 0.015) {
+          syncTrack.lastTime = t;
+          setActiveCues(findActiveIndices(syncTrack, t));
+        }
       }
     }
   }
@@ -1151,17 +1177,26 @@ if (typeof requestAnimationFrame === "function") requestAnimationFrame(masterFra
 initDesktopLayoutSwitcher();
 
 // ============================================================================
-// 【模組三：時間戳轉換、YouTube 網址嚴格驗證與字幕 DOM 安全建構】
-// - parseYouTubeUrl：僅接受合法 YouTube 主機名稱與 11 字元影片 ID（/^[\w-]{11}$/）。
-// - renderCues：全程使用 document.createElement 與 textContent 建構字幕卡片，
-//   100% 免疫跨站腳本攻擊（DOM XSS），並於首幀預熱前幾句的 GPU 合成層。
+// 【模組三：時間戳轉換、YouTube 網址嚴格驗證與字幕 DOM 安全建構（事件委派優化）】
+// - parseYouTubeUrl：限制網址長度 <= 2048 字元，僅接受合法 YouTube 主機名稱與 11 字元影片 ID（/^[\w-]{11}$/）。
+// - renderCues：全程使用 document.createElement 與 textContent 建構字幕卡片（100% 免疫 DOM XSS），
+//   並採用「單一容器事件委派（Event Delegation）」處理 2,000 句時間戳點擊，消除 2,000 個獨立閉包監聽器之記憶體開銷。
 // ============================================================================
+const MAX_YOUTUBE_URL_LENGTH = 2048;
+
 function parseYouTubeUrl(raw) {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed || trimmed.length > MAX_YOUTUBE_URL_LENGTH) {
+    return { ok: false, error: "網址為空或長度超過 2048 字元上限，請重新確認。" };
+  }
   let u;
   try {
-    u = new URL(raw.trim());
+    u = new URL(trimmed);
   } catch {
     return { ok: false, error: "網址格式不正確，請重新確認。" };
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") {
+    return { ok: false, error: "網址必須為 https 或 http 協定。" };
   }
 
   const host = u.hostname.toLowerCase().replace(/^www\./, "").replace(/^m\./, "");
@@ -1169,7 +1204,7 @@ function parseYouTubeUrl(raw) {
 
   if (host === "youtu.be") {
     id = u.pathname.split("/").filter(Boolean)[0] || "";
-  } else if (["youtube.com", "music.youtube.com"].includes(host)) {
+  } else if (["youtube.com", "music.youtube.com", "youtube-nocookie.com"].includes(host)) {
     if (u.pathname === "/watch") {
       id = u.searchParams.get("v") || "";
     } else {
@@ -1212,7 +1247,35 @@ function parseStrictTimestampValues(tsStr) {
   return { raw: tsStr, totalMs };
 }
 
+// 單一容器事件委派綁定（每個預覽容器僅註冊一次 click 監聽器，不再為 2,000 句字幕建立 2,000 個閉包）
+const delegatedContainers = new WeakSet();
+function ensureContainerSeekDelegation(container) {
+  if (!container || typeof container.addEventListener !== "function" || delegatedContainers.has(container)) return;
+  delegatedContainers.add(container);
+  container.addEventListener("click", event => {
+    const t = event && event.target && typeof event.target.closest === "function"
+      ? event.target.closest("a[data-seek-sec]")
+      : null;
+    if (!t) return;
+    event.preventDefault();
+    const vid = container.dataset ? container.dataset.videoId : "";
+    const sec = Number(t.getAttribute("data-seek-sec"));
+    if (!vid || !Number.isFinite(sec)) return;
+    isTouching = false;
+    followPausedUntil = 0;
+    stopSmoothScroll();
+    if (resumeFollowTimer) {
+      clearTimeout(resumeFollowTimer);
+      resumeFollowTimer = null;
+    }
+    seekToTimestamp(vid, sec);
+  });
+}
+
 function renderCues(container, cues, limit = Infinity, videoId = "") {
+  if (!container) return;
+  ensureContainerSeekDelegation(container);
+  if (container.dataset) container.dataset.videoId = videoId || "";
   container.replaceChildren();
   const sliced = cues.slice(0, limit);
   const fragment = document.createDocumentFragment();
@@ -1235,18 +1298,10 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
     if (videoId) {
       const link = document.createElement("a");
       link.href = "#";
+      if (typeof link.setAttribute === "function") {
+        link.setAttribute("data-seek-sec", String(c.start));
+      }
       link.textContent = fmt(c.start) + " → " + fmt(c.end);
-      link.addEventListener("click", event => {
-        event.preventDefault();
-        isTouching = false;
-        followPausedUntil = 0;
-        stopSmoothScroll();
-        if (resumeFollowTimer) {
-          clearTimeout(resumeFollowTimer);
-          resumeFollowTimer = null;
-        }
-        seekToTimestamp(videoId, c.start);
-      });
       time.append(link);
     } else {
       time.textContent = fmt(c.start) + " → " + fmt(c.end);
@@ -1442,8 +1497,7 @@ async function copyTextWithFallback(text, successMsg) {
   } catch {
     const ta = document.createElement("textarea");
     ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
+    ta.className = "sr-copy-temp";
     document.body.appendChild(ta);
     ta.select();
     try {
@@ -1458,7 +1512,7 @@ async function copyTextWithFallback(text, successMsg) {
 }
 
 // ============================================================================
-// 【模組五（步驟 0）：詞庫讀取與 27 章節結構檢查】
+// 【模組五（步驟 0）：詞庫讀取、SHA-256 計算與 27 章節結構檢查】
 // - 強制驗證檔案大小（<=20MB）、行數（>=500 行）與 27 個必備章節標記，通過後方可解鎖翻譯與校驗。
 // ============================================================================
 function invalidateGlossaryState(reason, token) {
@@ -1867,6 +1921,8 @@ $("btn-apply-batch-config").addEventListener("click", () => {
   }
 
   currentBatchIdx = 0;
+  const restoredCount = restoreLightweightProgressFromSession();
+  if (batchList[0] && batchList[0].status === "SAVED") setTransInputValue(batchList[0].savedSrt);
   $("batch-control-bar").style.display = "flex";
   $("btn-save-current-batch").style.display = "inline-block";
   $("btn-revert-current-batch").style.display = "none";
@@ -1879,6 +1935,88 @@ $("btn-apply-batch-config").addEventListener("click", () => {
     $("status-prompt-info").textContent += isTruncatedNotice;
   }
 });
+
+
+// 【頁面重整防呆保護：sessionStorage 輕量進度快取】
+// 僅於 sessionStorage 保存輕量級 [index, zh_tw] 配對與原始字幕指紋（不寫入 localStorage），
+// 若使用者不小心重新整理分頁，重新解析同一份字幕並建立批次時可自動恢復所有已暫存批次！
+const LIGHTWEIGHT_CACHE_KEY = "vt_sub_zh_progress_standalone_v1";
+
+function computeRawCuesFingerprint(cues, videoId) {
+  let h1 = 0x811c9dc5 >>> 0;
+  let h2 = 0x01000193 >>> 0;
+  const str = String(videoId || "") + "#" + cues.length + "#" +
+    cues.map(c => `${c.index}|${c.rawStart}|${c.rawEnd}|${c.ja}`).join("\n");
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ (ch + (i & 0xff)), 0x85ebca6b) >>> 0;
+  }
+  return `${cues.length}:${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}`;
+}
+
+function saveLightweightProgressToSession() {
+  try {
+    if (!window.sessionStorage || !rawParsePassed || !batchList.length) return;
+    const vid = currentVideoId();
+    const rawFingerprint = computeRawCuesFingerprint(parsedRawCues, vid);
+    const savedPairs = [];
+    batchList.forEach(b => {
+      if (b.status === "SAVED" && Array.isArray(b.savedCues)) {
+        b.savedCues.forEach(c => savedPairs.push([c.index, c.zh_tw]));
+      }
+    });
+    window.sessionStorage.setItem(LIGHTWEIGHT_CACHE_KEY, JSON.stringify({
+      version: 1,
+      videoId: vid,
+      rawFingerprint,
+      zhPairs: savedPairs
+    }));
+  } catch {}
+}
+
+function clearLightweightProgressInSession() {
+  try {
+    if (window.sessionStorage) window.sessionStorage.removeItem(LIGHTWEIGHT_CACHE_KEY);
+  } catch {}
+}
+
+function restoreLightweightProgressFromSession() {
+  try {
+    if (!window.sessionStorage || !rawParsePassed || !parsedRawCues.length || !batchList.length) return 0;
+    const rawJson = window.sessionStorage.getItem(LIGHTWEIGHT_CACHE_KEY);
+    if (!rawJson) return 0;
+    const data = JSON.parse(rawJson);
+    if (!data || typeof data !== "object" || !Array.isArray(data.zhPairs) || !data.zhPairs.length) return 0;
+    const vid = currentVideoId();
+    if (String(data.videoId || "") !== vid) return 0;
+    if (data.rawFingerprint !== computeRawCuesFingerprint(parsedRawCues, vid)) return 0;
+    const zhMap = new Map();
+    for (const pair of data.zhPairs) {
+      if (Array.isArray(pair) && pair.length === 2 && Number.isSafeInteger(pair[0]) && typeof pair[1] === "string" && !/[\r\n]/.test(pair[1])) {
+        zhMap.set(pair[0], pair[1]);
+      }
+    }
+    let restored = 0;
+    for (const b of batchList) {
+      if (b.status === "SAVED" || !b.cues.every(c => zhMap.has(c.index))) continue;
+      const srt = b.cues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${zhMap.get(c.index)}\n${c.ja}`).join("\n\n");
+      const v = parseAndValidateBilingualSrt(srt, b.cues);
+      if (v.errors.length === 0 && v.cues.length === b.cues.length) {
+        b.status = "SAVED";
+        b.failCount = 0;
+        b.lastFailure = "";
+        b.savedSrt = srt;
+        b.savedCues = v.cues;
+        b.draftSrt = srt;
+        restored++;
+      }
+    }
+    return restored;
+  } catch {
+    return 0;
+  }
+}
 
 function canSplit(b) {
   return !!b && b.status !== "SAVED" && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
@@ -2044,6 +2182,29 @@ function parseAndValidateBilingualSrt(text, expectedRawCues) {
   if (!text || text.trim().length === 0) {
     errors.push("【輸入為空】雙語字幕輸入內容為空。");
     return { cues, errors };
+  }
+
+  // 【智慧相容強化】：若使用者於步驟 3 輸入框直接貼入 JSON（{"translations":[...]} 或 {"subtitles":[...]}），
+  // 自動驗證並轉換為標準雙語 SRT 區塊進行嚴格核對！
+  const trimmedInput = text.trim();
+  if (trimmedInput.startsWith("{")) {
+    try {
+      const root = JSON.parse(trimmedInput);
+      const arr = root && typeof root === "object" && !Array.isArray(root)
+        ? (Array.isArray(root.translations) ? root.translations : (Array.isArray(root.subtitles) ? root.subtitles : null))
+        : null;
+      if (arr && arr.length === expectedRawCues.length) {
+        const zhMap = new Map();
+        for (const it of arr) {
+          if (it && typeof it === "object" && Number.isInteger(Number(it.index)) && typeof it.zh_tw === "string" && !/[\r\n]/.test(it.zh_tw)) {
+            zhMap.set(Number(it.index), it.zh_tw);
+          }
+        }
+        if (expectedRawCues.every(c => zhMap.has(c.index))) {
+          text = expectedRawCues.map(c => `${c.rawSeqLine}\n${c.rawTimeLine}\n${zhMap.get(c.index)}\n${c.ja}`).join("\n\n");
+        }
+      }
+    } catch {}
   }
 
   if (text.includes("```")) {
@@ -2316,6 +2477,7 @@ $("btn-save-current-batch").addEventListener("click", () => {
   curBatch.savedSrt = inputSrt;
   curBatch.savedCues = cues;
   curBatch.draftSrt = inputSrt;
+  saveLightweightProgressToSession();
   updateBatchUI();
 
   setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）逐條驗證無誤並已鎖定暫存！`);
@@ -2368,6 +2530,7 @@ $("btn-clear-all-batches").addEventListener("click", () => {
   if (!ok) return;
 
   batchList.forEach(clearBatchData);
+  clearLightweightProgressInSession();
   setTransInputValue("");
   updateBatchUI();
   lockAndClearVerificationState("已清空所有批次暫存，所有批次重設為「待翻譯」。");
@@ -2487,9 +2650,15 @@ function importBilingualJsonText(text) {
   } catch (e) {
     return fail(["JSON 無法解析：" + e.message]);
   }
-  // 相容完整匯出格式 {"subtitles": [...]} 與 AI 純譯文格式 {"translations": [...]}
-  const isSubtitlesArray = root && typeof root === "object" && !Array.isArray(root) && Array.isArray(root.subtitles);
-  const isTranslationsArray = root && typeof root === "object" && !Array.isArray(root) && Array.isArray(root.translations);
+  // 原型污染防護（Prototype Pollution Guard）與雙格式相容（{"subtitles": [...]} 或 {"translations": [...]}）
+  if (!root || typeof root !== "object" || Array.isArray(root)) {
+    return fail(["JSON 根節點必須是物件。"]);
+  }
+  if (Object.prototype.hasOwnProperty.call(root, "__proto__") || Object.prototype.hasOwnProperty.call(root, "prototype")) {
+    return fail(["偵測到不安全的 JSON 屬性名稱，已攔截匯入。"]);
+  }
+  const isSubtitlesArray = Array.isArray(root.subtitles);
+  const isTranslationsArray = Array.isArray(root.translations);
   if (!isSubtitlesArray && !isTranslationsArray) {
     return fail(["JSON 根物件必須含 subtitles 或 translations 陣列。"]);
   }
@@ -2509,7 +2678,7 @@ function importBilingualJsonText(text) {
     if (!it || typeof it !== "object" || Array.isArray(it)) { errs.push(`${lb}不是物件。`); return; }
     let idx = it.index;
     if (typeof idx === "string" && /^[1-9]\d*$/.test(idx)) idx = Number(idx);
-    if (!Number.isInteger(idx) || idx < 1) { errs.push(`${lb} index 不是正整數。`); return; }
+    if (!Number.isSafeInteger(idx) || idx < 1) { errs.push(`${lb} index 不是正整數。`); return; }
     if (zhBySeq.has(idx)) { errs.push(`${lb} 序號 #${idx} 重複。`); return; }
     const raw = rawBySeq.get(idx);
     if (!raw) { errs.push(`${lb} 序號 #${idx} 不存在於原始字幕（未知序號）。`); return; }
@@ -2576,6 +2745,7 @@ function importBilingualJsonText(text) {
   if (plannedCur) {
     setTransInputValue(cur.savedSrt);
   }
+  saveLightweightProgressToSession();
   updateBatchUI();
   $("status-verify").style.display = "none";
 
@@ -2695,7 +2865,10 @@ $("btn-copy-qc-prompt").addEventListener("click", () => {
   copyTextWithFallback($("field-qc-prompt").value, "已複製 QC Prompt！");
 });
 
-// ==================== 整合層：SRT 序列化與播放器預覽 ====================
+// ============================================================================
+// 【模組十一：整合層 —— SRT 序列化與雙語／原文播放器預覽切換】
+// - 未通過步驟 3 全量校驗前僅渲染日文原文；通過全量校驗後立即載入雙語字幕至播放器。
+// ============================================================================
 function serializeCuesToSrt(cues) {
   const blocks = [], notes = [];
   let skipped = 0, blankDropped = 0;
@@ -2743,7 +2916,7 @@ function renderVerifiedPlayer() {
 }
 
 // ============================================================================
-// 【模組十一：向 Cloudflare Worker 請求 YouTube 日文字幕】
+// 【模組十二：向 Cloudflare Worker 請求 YouTube 日文字幕】
 // - 發送前驗證 YouTube 網址與 API 端點協定，並設 30 秒 AbortController 逾時保護。
 // ============================================================================
 $("check").addEventListener("click", async () => {
@@ -2837,7 +3010,7 @@ $("check").addEventListener("click", async () => {
 });
 
 // ============================================================================
-// 【模組十二：本地 SRT / WebVTT 字幕檔解析與標籤清理】
+// 【模組十三：本地 SRT / WebVTT 字幕檔解析與標籤清理】
 // - 安全剝除 WebVTT 格式標籤並還原 HTML 實體，轉換為標準 SRT 送入翻譯流程。
 // ============================================================================
 function parseTimestamp(s) {
