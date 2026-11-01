@@ -2521,6 +2521,2822 @@ function confirmUncertainBatchRetry(targetBatchIdx = currentBatchIdx) {
   const cur = batchList[targetBatchIdx];
   if (!cur.billingUncertain) return false;
 
+  const ok = confirm(<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>【TEST】VT 字幕整合測試頁</title>
+<style>
+/* ============================================================================
+   【全域色彩與基礎變數定義】
+   - 採用深色高對比色票，降低長時間觀看直播字幕與校對的視覺疲勞。
+   - --bottom-gap: 預留 76px 給 iPhone iOS 27.2 Safari 底部懸浮網址列（Liquid Glass）與 Home 橫條。
+   ============================================================================ */
+:root{
+  color-scheme:dark;
+  --bottom-gap:76px;
+  --bg:#000000;
+  --panel:#1c1c1e;
+  --field:#2c2c2e;
+  --fill:#3a3a3c;
+  --line:#38383a;
+  --text:#f5f5f7;
+  --muted:#98989f;
+  --accent:#0a84ff;
+  --ok:#30d158;
+  --bad:#ff453a;
+  --warn:#ffd60a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{
+  background-color:var(--bg);
+  overflow-x:clip;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+  scrollbar-width:thin;
+  scrollbar-color:var(--fill) var(--bg);
+}
+body{
+  min-height:100dvh;
+  margin:0;
+  overflow-x:clip;
+  color:var(--text);
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","Microsoft JhengHei UI",sans-serif;
+  text-rendering:optimizeLegibility;
+}
+/* 手機版安全區域（Safe Area Insets）：完美避開 iPhone 15 Pro 動態島、圓角與底部橫條 */
+main{
+  max-width:760px;
+  margin:auto;
+  padding:
+    max(16px,env(safe-area-inset-top,0px))
+    max(8px,env(safe-area-inset-right,0px))
+    calc(env(safe-area-inset-bottom,0px) + var(--bottom-gap))
+    max(8px,env(safe-area-inset-left,0px));
+}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+h2{font-size:1.08rem;font-weight:600;letter-spacing:-.01em;margin:0 0 10px}
+.intro{color:var(--muted);margin:0 0 20px}
+.panel,.card{
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:18px;
+  padding:16px;
+  margin:14px 0;
+  min-width:0;
+}
+label{display:block;font-weight:650;margin:12px 0 6px}
+input,textarea,button{font:inherit}
+/* iOS 27.2 防自動放大保護：行動端輸入框強制維持 16px，避免 Safari 點擊輸入時自動放大畫面導致橫向偏移 */
+input[type=url],input[type=text],input[type=password],textarea{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid transparent;
+  background:var(--field);
+  color:var(--text);
+  font-size:16px;
+}
+input[type=url]:focus,input[type=text]:focus,input[type=password]:focus,textarea:focus{
+  outline:none;
+  border-color:var(--accent);
+}
+input[type=file]{width:100%;max-width:100%}
+.card textarea{
+  display:block;
+  min-height:140px;
+  resize:vertical;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+/* touch-action: manipulation 消除 iOS 300ms 雙擊縮放判定延遲，讓按鈕點擊零延遲回應 */
+button{
+  display:inline-block;
+  border:0;
+  border-radius:12px;
+  background:var(--accent);
+  color:#fff;
+  font-weight:600;
+  padding:11px 14px;
+  cursor:pointer;
+  margin-top:10px;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+}
+button[hidden]{display:none}
+button:active{opacity:.72}
+button.secondary,button.btn-secondary{background:var(--fill);color:var(--text)}
+button.btn-accent{background:var(--accent);color:#fff}
+button.btn-save{background:var(--ok);color:#000}
+button.btn-danger{background:var(--bad);color:#fff}
+button:disabled{opacity:.5;cursor:not-allowed}
+small,.muted,.hint{color:var(--muted)}
+.hint{font-size:.85rem;margin-top:6px;overflow-wrap:anywhere}
+.status,.status-msg{
+  padding:12px;
+  border-radius:12px;
+  background:var(--field);
+  border:1px solid transparent;
+  margin-top:12px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+.status-msg{max-height:260px;overflow-y:auto}
+.status-msg.err{color:var(--bad)}
+.status-msg.ok{color:var(--ok)}
+.status-msg.warn{color:var(--warn)}
+a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
+.cue{padding:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.cue time{display:block;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.cue time a{text-decoration:none}
+.cue-text{white-space:pre-wrap}
+.cue-zh{color:var(--text);font-size:1.15em;font-weight:600;white-space:pre-wrap}
+.cue.has-zh .cue-text{margin-top:4px;color:var(--muted);font-size:.82em;font-weight:400}
+
+/* ============================================================================
+   【電腦版專屬版面切換器（手機端 < 900px 自動隱藏，維持純淨手機版體驗）】
+   ============================================================================ */
+.desktop-layout-bar{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:var(--field);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:10px 14px;
+  margin:0 0 14px;
+  flex-wrap:wrap;
+}
+.desktop-layout-title{
+  font-size:.9rem;
+  font-weight:650;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.desktop-layout-seg{
+  display:inline-flex;
+  background:var(--bg);
+  padding:4px;
+  border-radius:11px;
+  gap:4px;
+  flex-wrap:wrap;
+}
+.desktop-layout-btn{
+  margin-top:0;
+  padding:7px 14px;
+  font-size:.88rem;
+  font-weight:650;
+  border-radius:8px;
+  background:transparent;
+  color:var(--muted);
+  transition:background-color .18s ease,color .18s ease;
+}
+.desktop-layout-btn:hover{
+  color:var(--text);
+}
+.desktop-layout-btn.active{
+  background:var(--accent);
+  color:#fff;
+}
+
+/* ============================================================================
+   【Apple Music 歌詞式字幕引擎（iPhone 15 Pro 120Hz ＋ Windows 11 Intel GPU 雙平台優化）】
+   1. 僅動畫化 GPU 合成器專屬屬性（transform 與 opacity）：
+      高亮底色獨立於 ::before 偽元素並僅切換 opacity（0 ➔ 1），完全不觸發 background-color
+      或 box-shadow 軟體光柵化重繪（Zero Paint），大幅降低 Intel 整合顯卡與 A17 Pro 頻寬消耗。
+   2. 恆定字體大小與排版隔離（contain: layout style paint）：
+      #autopreview 內所有字幕固定 font-size，僅以 transform: scale(.85) ➔ scale(1.025) 縮放，
+      切換前後 offsetHeight 100% 恆定（0.00px 高度變化、不重新斷行、0 Forced Reflow）。
+   3. 硬體加速合成層穩定化（translateZ(0) + backface-visibility: hidden）：
+      避免 Windows 11 DWM 與 WebKit 在縮放結束瞬間降級圖層造成字體抗鋸齒閃爍。
+   4. 廢除高成本 CSS :has() 選擇器：改由 JS 以 O(1) 標記 .d1/.d2/.d3 距離階層，並僅在動畫靜止期預熱 8 個 .gpu-warm 合成層。
+   ============================================================================ */
+#autopreview{display:flex;flex-direction:column;gap:4px;padding-top:8px}
+#autopreview .cue{
+  position:relative;
+  contain:layout style paint;
+  margin:0 12px 0 6px;
+  padding:13px 16px 16px;
+  border-radius:12px;
+  border-bottom:0;
+  background:transparent;
+  opacity:.3;
+  transform:scale(.85) translateZ(0);
+  transform-origin:20px 50%;
+  backface-visibility:hidden;
+  -webkit-font-smoothing:antialiased;
+  transition:
+    transform .36s cubic-bezier(.22,1,.36,1),
+    opacity .32s cubic-bezier(.22,1,.36,1);
+}
+#autopreview .cue::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:12px;
+  background:rgba(255,255,255,.09);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .32s cubic-bezier(.22,1,.36,1);
+}
+#autopreview .cue.gpu-warm{
+  will-change:transform,opacity;
+}
+#autopreview .cue.gpu-warm::before{
+  will-change:opacity;
+}
+#autopreview .cue.d3{opacity:.38}
+#autopreview .cue.d2{opacity:.5}
+#autopreview .cue.d1{opacity:.7}
+#autopreview .cue.active{
+  z-index:2;
+  opacity:1;
+  transform:scale(1.025) translateZ(0);
+}
+#autopreview .cue.active::before{
+  opacity:1;
+}
+#autopreview .cue .cue-zh{font-size:1.4em;line-height:1.42}
+#autopreview .cue.has-zh .cue-text{font-size:1.05em;line-height:1.42;font-weight:400}
+#autopreview .cue-text{font-weight:600}
+
+/* ============================================================================
+   【iOS 27.2 / iPhone 15 Pro 動態島與頂部安全區置頂播放器遮罩（手機端 < 900px 預設）】
+   - sticky 元素本身保持 background: transparent，透過 ::before 向上延伸覆蓋 env(safe-area-inset-top)，
+     防止捲動字幕從動態島／狀態列後方透出。
+   ============================================================================ */
+#youtube-player-container{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;background:transparent;padding:8px 0;width:100%}
+#youtube-player-container::before{content:"";position:absolute;top:calc(-1 * env(safe-area-inset-top,0px));right:0;bottom:0;left:0;background:var(--bg);z-index:-1;pointer-events:none}
+#youtube-player{position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden;background:#000}
+#youtube-player iframe{position:absolute;top:0;left:0;display:block;width:100% !important;height:100% !important;border:0}
+@media (max-width: 619px){
+  #youtube-player-container{width:100vw;max-width:none;margin-left:calc(50% - 50vw);padding:0}
+}
+.badge-test{background:var(--bad);color:#fff;padding:2px 8px;border-radius:99px;font-size:.78rem;vertical-align:middle;font-weight:700}
+.btn-group{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.btn-group button,.batch-bar button{margin-top:0;max-width:100%}
+.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.three-col>div{min-width:0}
+@media(max-width:520px){.three-col{grid-template-columns:1fr}}
+.batch-bar{display:flex;align-items:center;gap:10px;background:var(--field);padding:12px;border-radius:12px;margin:10px 0;flex-wrap:wrap}
+.batch-info{flex:1 1 100%;font-size:.92rem;font-weight:600;overflow-wrap:anywhere}
+.batch-tag{font-size:.8rem;padding:2px 8px;border-radius:99px;font-weight:700}
+.batch-tag.saved{background:var(--ok);color:#000}.batch-tag.pending{background:var(--warn);color:#000}.batch-tag.translating{background:var(--accent);color:#fff}.batch-tag.failed{background:var(--bad);color:#fff}
+.status-badge{display:inline-block;max-width:100%;padding:4px 12px;border-radius:99px;font-size:.88rem;font-weight:700;overflow-wrap:anywhere}
+.status-badge.ok{background:rgba(48,209,88,.15);color:var(--ok)}
+.status-badge.err{background:rgba(255,69,58,.15);color:var(--bad)}
+#pipeline{font-size:.92rem;margin-top:0}
+.url-bar,.status-grid,.player-lyrics-layout{display:contents}
+
+/* ============================================================================
+   【電腦版雙模式整合配置（>= 900px 顯示切換按鈕，支援一鍵切換 v1 視線平移版 ／ v2 劇院模式版）】
+   ============================================================================ */
+@media (min-width: 900px){
+  .desktop-layout-bar{display:flex}
+  h1{font-size:1.72rem}
+  h2{font-size:1.12rem}
+  .panel,.card{padding:20px 24px;margin:16px 0}
+  input[type=url],input[type=text],input[type=password],textarea{padding:10px 12px;font-size:.95rem}
+  button{padding:9px 16px;font-size:.95rem}
+  .card textarea{min-height:180px}
+  .url-bar{display:flex;gap:10px;align-items:center}
+  .url-bar input{flex:1}
+  .url-bar button{margin-top:0;white-space:nowrap;flex-shrink:0}
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .status-grid .status{margin-top:12px}
+
+  /* --------------------------------------------------------------------------
+     模式一：視線平移優化版（v1_side_by_side，預設模式）
+     - 左欄 62% 巨型播放器垂直置中於視窗正中央（top: 50vh; transform: translateY(-50%)）
+     - 右欄 38% 字幕並排，當前高亮字幕自動捲動對齊視窗垂直正中央（50vh），雙眼水平移動距離最短
+     -------------------------------------------------------------------------- */
+  body[data-desktop-layout="v1_side_by_side"] main,
+  body:not([data-desktop-layout]) main{
+    max-width:1760px;
+    padding:28px 32px 64px;
+  }
+  body[data-desktop-layout="v1_side_by_side"] .player-lyrics-layout.has-player,
+  body:not([data-desktop-layout]) .player-lyrics-layout.has-player{
+    display:grid;
+    grid-template-columns:minmax(560px,1.62fr) minmax(340px,1fr);
+    gap:28px;
+    align-items:start;
+    margin-top:16px;
+  }
+  body[data-desktop-layout="v1_side_by_side"] .player-lyrics-layout.has-player #youtube-player-container,
+  body:not([data-desktop-layout]) .player-lyrics-layout.has-player #youtube-player-container{
+    position:sticky;
+    top:50vh;
+    transform:translateY(-50%);
+    padding:0;
+    z-index:10;
+  }
+  body[data-desktop-layout="v1_side_by_side"] .player-lyrics-layout.has-player #youtube-player-container::before,
+  body:not([data-desktop-layout]) .player-lyrics-layout.has-player #youtube-player-container::before{
+    display:none;
+  }
+  body[data-desktop-layout="v1_side_by_side"] #youtube-player,
+  body:not([data-desktop-layout]) #youtube-player{
+    border-radius:16px;
+    box-shadow:0 16px 40px rgba(0,0,0,.6);
+  }
+  body[data-desktop-layout="v1_side_by_side"] .player-lyrics-layout.has-player #autopreview,
+  body:not([data-desktop-layout]) .player-lyrics-layout.has-player #autopreview{
+    padding-top:0;
+    padding-bottom:38vh;
+  }
+  body[data-desktop-layout="v1_side_by_side"] #autopreview .cue,
+  body:not([data-desktop-layout]) #autopreview .cue{
+    margin:0 4px 0 0;
+    padding:12px 18px 14px;
+    transform-origin:16px 50%;
+  }
+  body[data-desktop-layout="v1_side_by_side"] #autopreview .cue.active,
+  body:not([data-desktop-layout]) #autopreview .cue.active{
+    transform:scale(1.02) translateZ(0);
+  }
+
+  /* --------------------------------------------------------------------------
+     模式二：劇院模式版（v2_theater_top）
+     - 上方 74vh 超大劇院螢幕置頂貼齊視窗最上緣（top: 0; max-height: 74vh）
+     - 下方保留約 26vh 字幕對照區，高亮字幕精準停駐於播放器下緣 8px 處
+     -------------------------------------------------------------------------- */
+  body[data-desktop-layout="v2_theater_top"] main{
+    max-width:1800px;
+    padding:20px 24px 64px;
+  }
+  body[data-desktop-layout="v2_theater_top"] #player-section{
+    padding-top:0;
+  }
+  body[data-desktop-layout="v2_theater_top"] #player-section > h2{
+    padding-top:20px;
+  }
+  body[data-desktop-layout="v2_theater_top"] .player-lyrics-layout.has-player{
+    display:block;
+    margin-top:8px;
+  }
+  body[data-desktop-layout="v2_theater_top"] #youtube-player-container{
+    position:sticky;
+    top:0;
+    z-index:100;
+    background:var(--panel);
+    padding:0;
+    width:100%;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  body[data-desktop-layout="v2_theater_top"] #youtube-player-container::before{
+    top:0;
+    background:var(--panel);
+  }
+  body[data-desktop-layout="v2_theater_top"] #youtube-player{
+    width:100%;
+    max-height:74vh;
+    margin:0 auto;
+    aspect-ratio:16 / 9;
+    border-radius:0 0 14px 14px;
+    background:#000;
+    box-shadow:0 10px 28px rgba(0,0,0,.55);
+  }
+  body[data-desktop-layout="v2_theater_top"] #autopreview{
+    max-width:1280px;
+    margin:0 auto;
+    padding-top:10px;
+    padding-bottom:65vh;
+  }
+  body[data-desktop-layout="v2_theater_top"] #autopreview .cue{
+    margin:0 8px;
+    padding:12px 20px 14px;
+    transform-origin:20px 50%;
+  }
+  body[data-desktop-layout="v2_theater_top"] #autopreview .cue.active{
+    transform:scale(1.02) translateZ(0);
+  }
+}
+
+/* 系統無障礙減弱動態效果支援（iOS 減少動態效果 / Windows 11 關閉動畫效果） */
+@media (prefers-reduced-motion: reduce){
+  #autopreview .cue,#autopreview .cue::before{transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body data-desktop-layout="v1_side_by_side">
+<main>
+  <h1>VT 字幕整合測試頁 <span class="badge-test">TEST ONLY</span></h1>
+  <p class="intro">取得／匯入日文字幕 → 詞庫驗證 → 分批翻譯與暫存 → 全量校驗 → 雙語字幕載入播放器。僅供測試，未連動正式版。</p>
+
+  <section class="panel"><h2>整合流程狀態</h2><div id="pipeline" class="status">…</div></section>
+
+  <section class="panel" id="auth-panel">
+    <h2>0. 測試 Worker 連線與登入驗證（Session Auth）</h2>
+    <p class="hint" id="auth-api-host"></p>
+    <label for="worker-api-url">測試 Worker API 網址（僅限測試環境，嚴禁填寫正式版網址）</label>
+    <input id="worker-api-url" type="url" inputmode="url" value="https://vt-subtitle-api-test.weide1217.workers.dev/" placeholder="https://vt-subtitle-api-test.<subdomain>.workers.dev/">
+    <div id="auth-form">
+      <label for="auth-passphrase">通行碼（Passphrase，僅傳送至 Worker /auth/login 換取 64 字元 Session Token）</label>
+      <input id="auth-passphrase" type="password" autocomplete="current-password" placeholder="請輸入測試 Worker 通行碼">
+      <div class="btn-group">
+        <button id="auth-login" type="button" class="btn-accent">登入</button>
+        <button id="btn-auth-check" type="button" class="btn-secondary">檢查 Session</button>
+      </div>
+    </div>
+    <div class="btn-group">
+      <button id="auth-logout" type="button" class="secondary btn-danger" hidden>登出</button>
+    </div>
+    <div id="auth-status" class="status" aria-live="polite">請先登入。</div>
+  </section>
+
+  <section class="panel" id="player-section">
+    <h2>1. 取得 YouTube 日文字幕</h2>
+    <div id="desktop-layout-switcher" class="desktop-layout-bar" role="region" aria-label="電腦版版面切換">
+      <span class="desktop-layout-title">🖥️ 電腦版觀看模式（手機端自動維持手機版置頂配置）：</span>
+      <div class="desktop-layout-seg">
+        <button id="btn-layout-v1" type="button" class="desktop-layout-btn active" aria-pressed="true">視線平移優化版（左影置中＋右文並排）</button>
+        <button id="btn-layout-v2" type="button" class="desktop-layout-btn" aria-pressed="false">劇院模式版（74vh 置頂巨幕＋下方字幕）</button>
+      </div>
+    </div>
+    <label for="yturl">影片網址</label>
+    <div class="url-bar">
+      <input id="yturl" type="url" inputmode="url"
+        placeholder="https://www.youtube.com/watch?v=..."
+        value="https://www.youtube.com/live/Uy-KPheZe7U?si=7Z1CLq3o3EBK6hJP">
+      <button id="check">取得日文字幕</button>
+    </div>
+    <div class="status-grid">
+      <div id="urlstatus" class="status" aria-live="polite">尚未取得字幕。</div>
+      <div id="player-state" class="status" aria-live="polite">播放器：尚未載入字幕。</div>
+    </div>
+    <div id="player-lyrics-layout" class="player-lyrics-layout">
+      <div id="youtube-player-container" hidden>
+        <div id="youtube-player"></div>
+      </div>
+      <div id="autopreview"></div>
+    </div>
+
+    <p class="muted"><small>本功能透過 Cloudflare Worker 取得字幕。能否取得字幕，取決於影片是否有可用的日文字幕，以及字幕服務的處理結果。</small></p>
+  </section>
+
+  <section class="panel">
+    <h2>2. 匯入字幕檔（備援功能；可送入翻譯流程）</h2>
+    <p class="muted">可匯入 SRT／VTT 字幕檔，或直接貼上字幕內容。</p>
+    <label for="subtitlefile">選擇字幕檔</label>
+    <input id="subtitlefile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
+    <label for="subtitletext">或貼上字幕內容</label>
+    <textarea id="subtitletext" rows="7" placeholder="可貼上 SRT 或 WebVTT 內容"></textarea>
+    <button id="parse">解析字幕</button>
+    <button id="clear" class="secondary">清除</button>
+    <button id="btn-import-to-translation">送入翻譯流程（以解析結果重新編號 1..N）</button>
+    <div id="substatus" class="status" aria-live="polite">尚未載入字幕。</div>
+    <div id="preview"></div>
+  </section>
+
+  <div>
+    <div class="card">
+      <h2>3. 詞庫（翻譯步驟 0）</h2>
+      <label for="glossary-file-input">選取詞庫檔案 hololive_glossary.txt（專案實際檔名；本頁不自動讀取詞庫，必須手動選檔）：</label>
+      <input type="file" id="glossary-file-input" accept=".txt,text/plain">
+      <div><span id="glossary-status-badge" class="status-badge err">● 詞庫未載入：請選擇 hololive_glossary.txt</span></div>
+      <div id="glossary-status-desc" class="hint">未通過結構驗證（≥500 行、27 個必要章節）前，禁止產生翻譯 Prompt、QC Prompt，也禁止全量校驗解鎖。</div>
+    </div>
+
+    <div class="card">
+      <h2>4. 原始日文字幕 SRT（翻譯步驟 1）</h2>
+      <label for="field-raw-ja">貼入原始字幕（解析前防誤觸保護；零長度/重疊時間戳記錄至 warnings 保留）：</label>
+      <div class="btn-group">
+        <button id="btn-parse-raw" class="btn-accent">解析原始字幕</button>
+        <button class="btn-secondary" id="btn-clear-raw">清空原始字幕</button>
+      </div>
+      <textarea id="field-raw-ja" placeholder="請貼入日文原始字幕..."></textarea>
+      <div class="hint">上方「取得日文字幕」或「送入翻譯流程」會自動把字幕序列化為 SRT 填入此處並解析；也可手動貼入標準 SRT。</div>
+      <div id="status-raw" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>5. 翻譯 Prompt 與批次（翻譯步驟 2）</h2>
+      <div class="three-col">
+        <div>
+          <label for="cfg-start-seq">起始序號 (需實際存在)</label>
+          <input type="text" id="cfg-start-seq" inputmode="numeric" pattern="[1-9][0-9]*" value="1" placeholder="例如 1 或 51">
+        </div>
+        <div>
+          <label for="cfg-limit-count">處理段數 (留空代表全部)</label>
+          <input type="text" id="cfg-limit-count" inputmode="numeric" pattern="[1-9][0-9]*" value="" placeholder="留空代表全部">
+        </div>
+        <div>
+          <label for="cfg-batch-size">每批上限 (1~300，建議 100~300)</label>
+          <input type="text" id="cfg-batch-size" inputmode="numeric" pattern="[1-9][0-9]*" value="200" placeholder="1~300，預設 200">
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-apply-batch-config" class="btn-accent">套用設定／建立批次</button>
+      </div>
+
+      <div id="batch-control-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="batch-info-label">批次 1 / 1</span>
+        <span id="batch-status-tag" class="batch-tag pending">待翻譯</span>
+        <button id="btn-prev-batch" class="btn-secondary" disabled>上一批</button>
+        <button id="btn-next-batch" class="btn-secondary" disabled>下一批</button>
+        <button id="btn-start-auto-translate" class="btn-save">開始自動翻譯（全部待處理批次）</button>
+        <button id="btn-translate-current-batch" class="btn-accent">僅自動翻譯此批</button>
+        <button id="btn-confirm-uncertain-retry" class="btn-danger" style="display:none;">人工確認：我已知悉可能重複計費並允許重試此批</button>
+        <button id="btn-stop-auto-translate" class="btn-danger" disabled>停止自動翻譯</button>
+        <button id="btn-gen-batch-prompt" class="btn-secondary">產生此批 Prompt</button>
+      </div>
+
+      <div id="status-auto-translate" class="status-msg" style="display:none;"></div>
+
+      <div class="btn-group">
+        <button id="btn-copy-trans-prompt" disabled>複製 Prompt</button>
+      </div>
+      <textarea id="field-trans-prompt" readonly placeholder="請先完成步驟 0 載入詞庫、步驟 1 解析原始字幕並套用批次設定..."></textarea>
+      <div id="status-prompt-info" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>6. 雙語結果暫存、全量校驗與匯出（翻譯步驟 3）</h2>
+      <label for="field-trans-result">AI 翻譯結果 JSON（自動翻譯通過後會自動填入並暫存；亦可手動貼入 {"translations":[{"index":1,"zh_tw":"..."}]} 驗證暫存）：</label>
+      <div class="btn-group">
+        <button id="btn-save-current-batch" class="btn-save" style="display:none;">暫存當前批次結果</button>
+        <button id="btn-revert-current-batch" class="btn-secondary" style="display:none;">還原至已儲存暫存</button>
+        <button id="btn-clear-current-batch" class="btn-danger" style="display:none;">作廢此批暫存</button>
+        <button id="btn-split-current-batch" class="btn-secondary" style="display:none;">將此批拆成兩批</button>
+        <button id="btn-verify-all" class="btn-accent">合併所有批次並執行全量校驗</button>
+        <button id="btn-export-json" class="btn-secondary" disabled>匯出相容 JSON</button>
+        <button id="btn-import-json" class="btn-secondary">匯入雙語 JSON</button>
+        <input type="file" id="json-import-input" accept=".json,application/json" style="display:none">
+      </div>
+      <div class="btn-group">
+        <button class="btn-secondary" id="btn-clear-trans">清空目前輸入</button>
+        <button class="btn-secondary" id="btn-clear-all-batches">清空所有批次暫存</button>
+      </div>
+      <textarea id="field-trans-result" placeholder='自動翻譯完成後將顯示於此，或手動貼入 OpenAI 產出之純 JSON：{"translations":[{"index":1,"zh_tw":"..."}]}'></textarea>
+      <div id="status-verify" class="status-msg" style="display:none;"></div>
+      <div id="status-import" class="status-msg" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>7. 品質檢查 Prompt（翻譯步驟 4）</h2>
+      <label for="field-qc-prompt">僅在通過步驟 3 全量校驗後解鎖（詞庫紅燈或輸入變更將立即重新鎖定）：</label>
+      <div id="qc-batch-bar" class="batch-bar" style="display:none;">
+        <span class="batch-info" id="qc-batch-label">QC 批次 1 / 1</span>
+        <button id="btn-prev-qc-batch" class="btn-secondary" disabled>QC 上一批</button>
+        <button id="btn-next-qc-batch" class="btn-secondary" disabled>QC 下一批</button>
+        <button id="btn-gen-current-qc" class="btn-accent">產生此批 QC Prompt</button>
+      </div>
+      <div class="btn-group">
+        <button id="btn-copy-qc-prompt" disabled>複製 QC Prompt</button>
+      </div>
+      <textarea id="field-qc-prompt" readonly placeholder="通過全量雙語校驗後，此處將解鎖產生 QC Prompt..."></textarea>
+      <div id="status-qc" class="status-msg" style="display:none;"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const DEFAULT_TEST_API = "https://vt-subtitle-api-test.weide1217.workers.dev/";
+const FORBIDDEN_PROD_HOSTS = new Set(["vt-subtitle-api.weide1217.workers.dev"]);
+const FETCH_TIMEOUT_MS = 30000;
+const TRANSLATE_TIMEOUT_MS = 90000; // 單批 OpenAI 翻譯請求逾時上限 90 秒
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 本地檔案大小上限 20MB
+const EXPECTED_GLOSSARY_SHA256 = "a67e8fdc479d7aa895f3852cf1911d5de0658196cc66db77bed766381ad0ad82";
+const CONTEXT_WINDOW_SIZE = 3; // 前後文參考句數上限（各最多 3 句）
+const AUTH_TOKEN_KEY = "vt-subtitle-session-token";
+const SESSION_TOKEN_KEY = "vt_session_token";
+const LIGHTWEIGHT_CACHE_KEY = "vt_sub_zh_progress_v1"; // sessionStorage 輕量進度鍵名（僅存 index->zh_tw，不存完整字幕於 localStorage）
+
+function getApiBase() {
+  const el = $("worker-api-url");
+  return el && typeof el.value === "string" ? el.value.trim() : "";
+}
+
+function validateTestApiBase(rawBase) {
+  const raw = typeof rawBase === "string" ? rawBase.trim() : getApiBase();
+  if (!raw) {
+    return { ok: false, error: "尚未設定測試 Worker API 網址，已阻止發送請求。" };
+  }
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return { ok: false, error: "測試 Worker API 網址格式不合法，已阻止發送請求。" };
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return { ok: false, error: "測試 Worker API 網址必須為 http 或 https 協定。" };
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (FORBIDDEN_PROD_HOSTS.has(host)) {
+    return {
+      ok: false,
+      error: `【安全攔截】：禁止測試頁連接正式環境 Worker（${host}）！請改用測試專用 Worker 網址（如 vt-subtitle-api-test）。`
+    };
+  }
+  return { ok: true, url: parsed.toString() };
+}
+
+function getFetchImpl() {
+  if (typeof window.VT_TEST_FETCH === "function") return window.VT_TEST_FETCH;
+  if (typeof window.__VT_TEST_FETCH__ === "function") return window.__VT_TEST_FETCH__;
+  return window.fetch.bind(window);
+}
+
+function setStatus(idOrEl, cls, msg) {
+  const el = typeof idOrEl === "string" ? $(idOrEl) : idOrEl;
+  if (!el) return;
+  el.style.display = "block";
+  el.className = "status-msg" + (cls ? " " + cls : "");
+  el.textContent = msg;
+}
+
+// ============================================================================
+// 【模組一：YouTube IFrame 播放器生命週期與時間跳轉管理】
+// - 動態載入官方 https://www.youtube.com/iframe_api（唯一允許之外部腳本）。
+// - 顯隱播放器容器時同步切換父層 #player-lyrics-layout 的 .has-player class，
+//   完全取代高成本的 CSS :has() 選擇器，提升 iOS 27.2 與 Windows 11 排版效能。
+// ============================================================================
+// ============================================================================
+// 【模組一：電腦版雙模式切換器（視線平移優化版 v1 ／ 劇院模式版 v2）與 YouTube IFrame API】
+// - 手機端（視窗寬度 < 900px）：自動鎖定為手機版最新配置（上影黏性置頂＋下文），切換列自動隱藏。
+// - 電腦端（視窗寬度 >= 900px）：可透過切換按鈕即時在「視線平移優化版（左影置中＋右文並排）」與
+//   「劇院模式版（上方 74vh 置頂巨幕＋下方字幕）」之間無縫切換，並自動重算當前高亮字幕捲動位置。
+// ============================================================================
+const DESKTOP_LAYOUT_STORAGE_KEY = "vt_desktop_layout_mode_v1";
+let currentDesktopLayout = "v1_side_by_side"; // 預設為電腦第一版（視線平移優化版）
+
+function applyDesktopLayoutMode(mode, triggerRescroll = true) {
+  const validMode = mode === "v2_theater_top" ? "v2_theater_top" : "v1_side_by_side";
+  currentDesktopLayout = validMode;
+  if (document.body && typeof document.body.setAttribute === "function") {
+    document.body.setAttribute("data-desktop-layout", validMode);
+  }
+  const btnV1 = $("btn-layout-v1");
+  const btnV2 = $("btn-layout-v2");
+  if (btnV1) {
+    const isV1 = validMode === "v1_side_by_side";
+    btnV1.className = "desktop-layout-btn" + (isV1 ? " active" : "");
+    if (typeof btnV1.setAttribute === "function") btnV1.setAttribute("aria-pressed", isV1 ? "true" : "false");
+  }
+  if (btnV2) {
+    const isV2 = validMode === "v2_theater_top";
+    btnV2.className = "desktop-layout-btn" + (isV2 ? " active" : "");
+    if (typeof btnV2.setAttribute === "function") btnV2.setAttribute("aria-pressed", isV2 ? "true" : "false");
+  }
+  try {
+    if (window.sessionStorage) {
+      window.sessionStorage.setItem(DESKTOP_LAYOUT_STORAGE_KEY, validMode);
+    }
+  } catch {}
+  if (triggerRescroll && syncTrack && lastActiveIndex >= 0 && syncTrack.els[lastActiveIndex]) {
+    stopSmoothScroll();
+    scrollCueIntoPlace(syncTrack.els[lastActiveIndex]);
+  }
+}
+
+function initDesktopLayoutSwitcher() {
+  let saved = "v1_side_by_side";
+  try {
+    if (window.sessionStorage) {
+      const s = window.sessionStorage.getItem(DESKTOP_LAYOUT_STORAGE_KEY);
+      if (s === "v1_side_by_side" || s === "v2_theater_top") saved = s;
+    }
+  } catch {}
+  applyDesktopLayoutMode(saved, false);
+
+  const btnV1 = $("btn-layout-v1");
+  const btnV2 = $("btn-layout-v2");
+  if (btnV1) btnV1.addEventListener("click", () => applyDesktopLayoutMode("v1_side_by_side", true));
+  if (btnV2) btnV2.addEventListener("click", () => applyDesktopLayoutMode("v2_theater_top", true));
+}
+
+let youtubePlayer = null;
+let youtubeApiReady = false;
+let youtubePlayerReady = false;
+let loadedVideoId = null;
+let pendingVideoId = null;
+let pendingSeekTime = null;
+
+function setPlayerContainerVisible(visible) {
+  const container = $("youtube-player-container");
+  if (container) container.hidden = !visible;
+  const layout = $("player-lyrics-layout");
+  if (layout && layout.classList) {
+    if (visible) layout.classList.add("has-player");
+    else layout.classList.remove("has-player");
+  }
+}
+
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) {
+    youtubeApiReady = true;
+    return;
+  }
+  if ($("youtube-iframe-api")) return;
+  const script = document.createElement("script");
+  script.id = "youtube-iframe-api";
+  script.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(script);
+}
+
+window.onYouTubeIframeAPIReady = function () {
+  youtubeApiReady = true;
+  if (pendingVideoId) {
+    createYouTubePlayer(pendingVideoId);
+  }
+};
+
+function createYouTubePlayer(videoId) {
+  if (!videoId || !/^[\w-]{11}$/.test(videoId)) return; // 安全驗證：僅允許 11 字元合法 YouTube ID
+  pendingVideoId = videoId;
+  if (!youtubeApiReady) {
+    loadYouTubeAPI();
+    return;
+  }
+
+  setPlayerContainerVisible(true);
+
+  if (youtubePlayer) {
+    if (!youtubePlayerReady) return;
+    if (loadedVideoId !== videoId) {
+      loadedVideoId = videoId;
+      if (pendingSeekTime !== null) {
+        youtubePlayer.loadVideoById(videoId, pendingSeekTime);
+        pendingSeekTime = null;
+      } else {
+        youtubePlayer.cueVideoById(videoId);
+      }
+    } else if (pendingSeekTime !== null) {
+      youtubePlayer.seekTo(pendingSeekTime, true);
+      youtubePlayer.playVideo();
+      pendingSeekTime = null;
+    }
+    return;
+  }
+
+  loadedVideoId = videoId;
+  youtubePlayer = new YT.Player("youtube-player", {
+    width: "100%",
+    height: "100%",
+    videoId: videoId,
+    playerVars: { playsinline: 1, rel: 0 },
+    events: {
+      onReady: function () {
+        youtubePlayerReady = true;
+        if (pendingVideoId && pendingVideoId !== loadedVideoId) {
+          loadedVideoId = pendingVideoId;
+          if (pendingSeekTime !== null) {
+            youtubePlayer.loadVideoById(pendingVideoId, pendingSeekTime);
+          } else {
+            youtubePlayer.cueVideoById(pendingVideoId);
+          }
+        } else if (pendingSeekTime !== null) {
+          youtubePlayer.seekTo(pendingSeekTime, true);
+          youtubePlayer.playVideo();
+        }
+        pendingSeekTime = null;
+      }
+    }
+  });
+}
+
+function seekToTimestamp(videoId, seconds) {
+  if (!videoId || !/^[\w-]{11}$/.test(videoId)) return;
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  pendingVideoId = videoId;
+  pendingSeekTime = safeSeconds;
+
+  if (!youtubeApiReady) {
+    loadYouTubeAPI();
+    return;
+  }
+  if (!youtubePlayer || !youtubePlayerReady) {
+    createYouTubePlayer(videoId);
+    return;
+  }
+
+  setPlayerContainerVisible(true);
+  if (loadedVideoId !== videoId) {
+    loadedVideoId = videoId;
+    youtubePlayer.loadVideoById(videoId, safeSeconds);
+  } else {
+    youtubePlayer.seekTo(safeSeconds, true);
+    youtubePlayer.playVideo();
+  }
+  pendingSeekTime = null;
+}
+
+// ============================================================================
+// 【模組二：字幕跟隨播放進度與單一 VSync 迴圈平滑捲動引擎】
+// - 專為 iPhone 15 Pro (iOS 27.2 ProMotion 120Hz, 3x Retina DPR) 與
+//   Windows 11 (Intel CPU / Iris Xe / UHD 整合顯卡 60Hz~144Hz) 設計。
+// - 嚴格遵循 W3C / WebKit / Chromium 渲染管線「先讀取幾何座標（Read Phase）➔
+//   再修改 DOM 樣式並推進捲動（Write Phase）」，達成 0 次強制同步重排（Zero Layout Thrashing）。
+// ============================================================================
+const ACTIVE_GRACE = 2;          // 字幕結束後，仍維持高亮顯示的寬限秒數（2 秒）
+const FOLLOW_PAUSE_MS = 4000;    // 使用者手動觸控滑動或滾輪捲動後，暫停自動跟隨的毫秒數（4 秒）
+const SYNC_INTERVAL_MS = 50;     // 播放時間輪詢間隔（50ms = 20Hz，整合於 VSync 主迴圈內）
+const ACTIVE_SCALE = 1.025;      // 手機版高亮字幕放大倍率（對應 CSS #autopreview .cue.active）
+const ACTIVE_TOP_GAP = 8;        // 高亮字幕上緣與置頂播放器下緣的間距（8px）
+const MIN_SCROLL_STEP_PX = 1.25; // 基準最小捲動步進（防止阻尼尾段過慢停滯）
+
+let syncTrack = null;
+let lastActiveIndex = -1;
+let isTouching = false;          // 手指或滑鼠是否正在按住拖曳（接觸期間 100% 鎖定自動捲動）
+let followPausedUntil = 0;       // 手動捲動後暫停自動跟隨的截止時間戳
+let autoScrollUntil = 0;         // 程式自身執行 window.scrollTo 的保護時間窗，避免誤判為使用者手動捲動
+let resumeFollowTimer = null;    // 手放開 4 秒後自動平滑歸位至當前高亮字幕的計時器
+let warmIdleTimer = null;        // 僅在捲動與縮放動畫結束後的靜止期才切換 GPU 預熱合成層
+
+// 單一 VSync 迴圈捲動狀態變數（動畫進行期間不在每幀讀取 DOM offsetTop/getBoundingClientRect）
+let scrollActive = false;
+let scrollTargetY = 0;
+let scrollPosY = 0;
+let scrollMaxY = 0;
+let scrollLastTs = 0;
+let lastSyncCheckTs = 0;
+
+function stopSmoothScroll() {
+  scrollActive = false;
+  scrollLastTs = 0;
+}
+
+// 【Windows 11 Intel GPU ＆ iPhone 15 Pro 記憶體保護：動態視窗 GPU 合成層預熱】
+// 限制同時帶有 will-change 的字幕節點最多僅 8 個（當前句前 2 句 ～ 後 5 句），
+// 且在動畫靜止期（390ms 後）才切換，確保捲動期間 0 紋理配置與 0 紋理釋放卡頓。
+function scheduleGpuWarmWindow(track, anchor, immediate = false) {
+  if (!track || anchor < 0) return;
+  if (warmIdleTimer) {
+    clearTimeout(warmIdleTimer);
+    warmIdleTimer = null;
+  }
+  const applyWarm = () => {
+    warmIdleTimer = null;
+    if (!syncTrack || syncTrack !== track) return;
+    const els = track.els;
+    const n = els.length;
+    const keepSet = new Set();
+    const lo = Math.max(0, anchor - 2);
+    const hi = Math.min(n - 1, anchor + 5);
+    for (let i = lo; i <= hi; i++) {
+      keepSet.add(i);
+      if (!track.warmed.has(i) && els[i]) {
+        els[i].classList.add("gpu-warm");
+        track.warmed.add(i);
+      }
+    }
+    track.warmed.forEach(i => {
+      if (!keepSet.has(i) && els[i]) {
+        els[i].classList.remove("gpu-warm");
+        track.warmed.delete(i);
+      }
+    });
+  };
+  if (immediate) {
+    applyWarm();
+  } else {
+    warmIdleTimer = setTimeout(applyWarm, 390);
+  }
+}
+
+function animateScrollToY(targetY, currentScrollY, maxScrollY) {
+  scrollMaxY = maxScrollY;
+  const clamped = Math.max(0, Math.min(scrollMaxY, targetY));
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    autoScrollUntil = Date.now() + 140;
+    scrollPosY = clamped;
+    window.scrollTo(0, Math.round(clamped));
+    stopSmoothScroll();
+    return;
+  }
+  if (!scrollActive) {
+    scrollPosY = currentScrollY;
+    scrollLastTs = 0;
+  }
+  if (Math.abs(clamped - scrollPosY) < 0.8) return;
+  scrollTargetY = clamped;
+  scrollActive = true;
+}
+
+// 【iPhone 15 Pro 120Hz ProMotion 次像素精度 ＆ Windows 11 幀率無關指數阻尼捲動步進】
+function stepSmoothScrollFrame(now) {
+  if (!scrollActive) return;
+  if (isTouching || Date.now() < followPausedUntil) {
+    stopSmoothScroll();
+    return;
+  }
+  const dt = scrollLastTs ? Math.min(0.033, Math.max(0.004, (now - scrollLastTs) / 1000)) : (1 / 60);
+  scrollLastTs = now;
+
+  // 依據螢幕實體像素密度（iPhone 15 Pro DPR=3 為 0.333px；一般電腦 DPR=1 為 1px）對齊物理像素網格，
+  // 徹底消除 Math.round() 在 120Hz 下把尾段微幅移動捨去為 0 所造成的 1% Low 階梯跳格感！
+  const dpr = Math.min(4, Math.max(1, Number(window.devicePixelRatio) || 1));
+  const snapUnit = 1 / dpr;
+
+  const diff = scrollTargetY - scrollPosY;
+  const absDiff = Math.abs(diff);
+  if (absDiff <= snapUnit) {
+    autoScrollUntil = Date.now() + 140;
+    scrollPosY = scrollTargetY;
+    window.scrollTo(0, Math.round(scrollTargetY * dpr) / dpr);
+    stopSmoothScroll();
+    return;
+  }
+
+  const alpha = 1 - Math.exp(-10.8 * dt);
+  const minStep = Math.max(snapUnit, MIN_SCROLL_STEP_PX * (dt * 60) / dpr);
+  const stepMag = Math.min(absDiff, Math.max(absDiff * alpha, minStep));
+  scrollPosY += (diff > 0 ? stepMag : -stepMag);
+  autoScrollUntil = Date.now() + 160;
+  window.scrollTo(0, Math.round(scrollPosY * dpr) / dpr);
+}
+
+// 建立字幕時間軸二分搜尋與前綴最大結束時間索引（O(log N) 極速定位）
+function buildTrackIndex(track) {
+  const cues = track.cues;
+  track.estar = cues.map(c => Math.max(c.start, c.end));
+  track.ord = cues.map((_, i) => i).sort((a, b) => cues[a].start - cues[b].start || a - b);
+  track.pm = [];
+  track.ord.forEach((i, k) => {
+    track.pm[k] = Math.max(k ? track.pm[k - 1] : -Infinity, track.estar[i]);
+  });
+  track.active = [];
+  track.styled = [];
+  track.warmed = new Set();
+}
+
+function findActiveIndices(track, t) {
+  const cues = track.cues, ord = track.ord, pm = track.pm, est = track.estar, n = cues.length;
+  let lo = 0, hi = n - 1, h = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[ord[mid]].start <= t) { h = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  if (h < 0) return [];
+  const L = cues[ord[h]].start;
+  const fut = h < n - 1;
+  const anyIn = pm[h] >= t; // pm[h] 為 0..h 的最大結束時間，O(1) 判斷是否有重疊長句仍在播放中
+  const out = [];
+  for (let k = h; k >= 0; k--) {
+    const i = ord[k];
+    if (t <= est[i]) out.push(i);
+    else if (cues[i].start === L && (fut || (!anyIn && t <= est[i] + ACTIVE_GRACE))) out.push(i);
+    if (cues[i].start < L && pm[k] < t) break;
+  }
+  return out.sort((a, b) => a - b);
+}
+
+// 唯讀計算目標捲動座標（同時支援手機版、電腦視線平移版 v1 與電腦劇院置頂版 v2）
+function computeDesiredScrollPlan(el) {
+  if (!el || isTouching || Date.now() < followPausedUntil) return null;
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  if (activeTag === "TEXTAREA" || activeTag === "INPUT") return null;
+  const preview = $("autopreview");
+  if (!preview) return null;
+  const previewRect = preview.getBoundingClientRect();
+  const winH = window.innerHeight;
+  if (previewRect.bottom < 0 || previewRect.top > winH * 1.8) return null;
+
+  const player = $("youtube-player-container");
+  const playerRect = player && !player.hidden ? player.getBoundingClientRect() : null;
+  const isStackedAbove = Boolean(
+    playerRect &&
+    playerRect.right > previewRect.left + 20 &&
+    playerRect.left < previewRect.right - 20
+  );
+  const isDesktop = (Number(window.innerWidth) || 0) >= 900;
+
+  const currentScrollY = window.scrollY;
+  const maxScrollY = Math.max(0, document.documentElement.scrollHeight - winH);
+  const r = el.getBoundingClientRect();
+  const cueDocCenterY = currentScrollY + r.top + r.height / 2;
+  let desiredScrollY;
+
+  if (!isStackedAbove) {
+    // 【電腦第一版（v1 視線平移優化版：左 62% 影片垂直置中＋右 38% 字幕並排）】：
+    // 將高亮字幕中心點對齊視窗垂直正中央（50vh），與左側垂直置中的影片平視對齊！
+    desiredScrollY = cueDocCenterY - (winH * 0.5);
+  } else if (isDesktop && currentDesktopLayout === "v2_theater_top") {
+    // 【電腦第二版（v2 劇院模式版：上方 74vh 置頂巨幕＋下方 26vh 字幕區）】：
+    // 將高亮字幕上緣對齊置頂劇院播放器下緣 + ACTIVE_TOP_GAP (8px)，並確保播放器貼齊視窗最上緣（top: 0）。
+    const stuckPlayerBottom = playerRect ? playerRect.height : 20;
+    const targetViewportTop = stuckPlayerBottom + ACTIVE_TOP_GAP;
+    const cueActiveVisualDocTop = cueDocCenterY - (el.offsetHeight * 1.02) / 2;
+    desiredScrollY = cueActiveVisualDocTop - targetViewportTop;
+    if (playerRect && playerRect.top > 0) {
+      const playerDocTop = currentScrollY + playerRect.top;
+      desiredScrollY = Math.max(playerDocTop, desiredScrollY);
+    }
+  } else {
+    // 【手機版（iPhone 15 Pro / iOS 27.2 上影黏性置頂＋下文）】：
+    // 將高亮字幕上緣對齊黏性播放器下緣 + ACTIVE_TOP_GAP (8px)。
+    let targetViewportTop = 20;
+    if (playerRect) {
+      const stickyTop = playerRect.top > 0 && playerRect.top < 64 ? playerRect.top : 0;
+      const stuckPlayerBottom = stickyTop + playerRect.height;
+      targetViewportTop = stuckPlayerBottom + ACTIVE_TOP_GAP;
+    }
+    const cueActiveVisualDocTop = cueDocCenterY - (el.offsetHeight * ACTIVE_SCALE) / 2;
+    desiredScrollY = cueActiveVisualDocTop - targetViewportTop;
+  }
+
+  return {
+    desiredScrollY,
+    currentScrollY,
+    maxScrollY
+  };
+}
+
+function scrollCueIntoPlace(el) {
+  const plan = computeDesiredScrollPlan(el);
+  if (plan) {
+    animateScrollToY(plan.desiredScrollY, plan.currentScrollY, plan.maxScrollY);
+  }
+}
+
+function scheduleResumeFollow(ms = FOLLOW_PAUSE_MS) {
+  followPausedUntil = Date.now() + ms;
+  if (resumeFollowTimer) clearTimeout(resumeFollowTimer);
+  resumeFollowTimer = setTimeout(() => {
+    resumeFollowTimer = null;
+    if (isTouching || Date.now() < followPausedUntil) return;
+    if (!syncTrack || lastActiveIndex < 0) return;
+    if (youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getPlayerState === "function" && youtubePlayer.getPlayerState() !== 1) return;
+    const el = syncTrack.els[lastActiveIndex];
+    if (el) scrollCueIntoPlace(el);
+  }, ms + 20);
+}
+
+// 嚴格遵循 Read-Then-Write（先讀取幾何座標、後寫入 DOM class）與 O(1) 距離標記
+function setActiveCues(next) {
+  if (!syncTrack) return;
+  const prev = syncTrack.active;
+  if (prev.length === next.length && prev.every((v, k) => v === next[k])) return;
+
+  let anchor = -1;
+  next.forEach(i => { if (anchor < 0 || syncTrack.cues[i].start < syncTrack.cues[anchor].start) anchor = i; });
+  const anchorChanged = anchor !== lastActiveIndex;
+  lastActiveIndex = anchor;
+
+  const els = syncTrack.els;
+  const n = els.length;
+
+  // 1. READ PHASE：在修改任何 class 之前（DOM 處於 Clean 狀態）先讀取目標句座標
+  const scrollPlan = (anchorChanged && anchor >= 0 && els[anchor])
+    ? computeDesiredScrollPlan(els[anchor])
+    : null;
+
+  // 2. WRITE PHASE：以 O(1) 清除上一次的距離樣式，並標記新的 .active 與 .d1 / .d2 / .d3
+  const prevStyled = syncTrack.styled || [];
+  for (let k = 0; k < prevStyled.length; k++) {
+    const idx = prevStyled[k];
+    if (els[idx]) els[idx].classList.remove("active", "d1", "d2", "d3");
+  }
+
+  const nextSet = new Set(next);
+  const newStyledSet = new Set();
+  next.forEach(i => {
+    if (els[i]) {
+      els[i].classList.add("active");
+      newStyledSet.add(i);
+    }
+  });
+
+  if (next.length > 0) {
+    const distMap = new Map();
+    next.forEach(a => {
+      for (let d = 1; d <= 3; d++) {
+        const i1 = a - d, i2 = a + d;
+        if (i1 >= 0 && !nextSet.has(i1)) {
+          const cur = distMap.get(i1);
+          if (!cur || d < cur) distMap.set(i1, d);
+        }
+        if (i2 < n && !nextSet.has(i2)) {
+          const cur = distMap.get(i2);
+          if (!cur || d < cur) distMap.set(i2, d);
+        }
+      }
+    });
+    distMap.forEach((d, idx) => {
+      els[idx].classList.add("d" + d);
+      newStyledSet.add(idx);
+    });
+  }
+
+  syncTrack.active = next;
+  syncTrack.styled = Array.from(newStyledSet);
+
+  if (anchorChanged && anchor >= 0) {
+    const isAlreadyWarm = syncTrack.warmed.has(anchor);
+    scheduleGpuWarmWindow(syncTrack, anchor, !isAlreadyWarm);
+  }
+
+  if (scrollPlan) {
+    animateScrollToY(scrollPlan.desiredScrollY, scrollPlan.currentScrollY, scrollPlan.maxScrollY);
+  }
+}
+
+// 手指觸控期間（iPhone iOS 27.2）：完全鎖定自動捲動，並立即停止進行中的平滑捲動
+["touchstart", "touchmove"].forEach(name => {
+  window.addEventListener(name, () => {
+    isTouching = true;
+    stopSmoothScroll();
+    autoScrollUntil = 0;
+    followPausedUntil = Infinity;
+    if (resumeFollowTimer) {
+      clearTimeout(resumeFollowTimer);
+      resumeFollowTimer = null;
+    }
+  }, { passive: true });
+});
+
+// 手指完全放開後：才開始起算 4 秒倒數（若 iOS 慣性滑動仍在繼續，scroll 事件會持續順延倒數）
+["touchend", "touchcancel"].forEach(name => {
+  window.addEventListener(name, (e) => {
+    if (e.touches && e.touches.length > 0) return;
+    isTouching = false;
+    scheduleResumeFollow(FOLLOW_PAUSE_MS);
+  }, { passive: true });
+});
+
+// 電腦版滑鼠滾輪（Windows 11 滾輪／精確式觸控板）：立即停止自動捲動並重置 4 秒倒數
+window.addEventListener("wheel", () => {
+  stopSmoothScroll();
+  autoScrollUntil = 0;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
+window.addEventListener("keydown", (e) => {
+  const tag = document.activeElement ? document.activeElement.tagName : "";
+  if (tag === "TEXTAREA" || tag === "INPUT") return;
+  if (!SCROLL_KEYS.has(e.key)) return;
+  stopSmoothScroll();
+  autoScrollUntil = 0;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+// 視窗捲動監聽：程式自身觸發的 rAF 捲動期間直接跳過，僅在手動暫停期間順延 4 秒倒數
+window.addEventListener("scroll", () => {
+  if (scrollActive) return;
+  if (isTouching) {
+    followPausedUntil = Infinity;
+    return;
+  }
+  if (Date.now() < autoScrollUntil || Date.now() >= followPausedUntil) return;
+  scheduleResumeFollow(FOLLOW_PAUSE_MS);
+}, { passive: true });
+
+// 背景分頁返回前景時（iOS 切換 App 或 Windows 切換分頁）：重置幀時間差，防止跳幀
+if (typeof document !== "undefined" && document && typeof document.addEventListener === "function") {
+  document.addEventListener("visibilitychange", () => {
+    scrollLastTs = 0;
+    lastSyncCheckTs = 0;
+  });
+}
+
+// 單一整合式 VSync 主迴圈：先讀取播放時間與排版（Read Phase），再更新樣式並於同一幀立即推進捲動（Write Phase）
+function masterFrameLoop(now) {
+  if (syncTrack && youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getCurrentTime === "function") {
+    if (now - lastSyncCheckTs >= SYNC_INTERVAL_MS) {
+      lastSyncCheckTs = now;
+      const t = youtubePlayer.getCurrentTime();
+      if (typeof t === "number" && Number.isFinite(t)) {
+        setActiveCues(findActiveIndices(syncTrack, t));
+      }
+    }
+  }
+  if (scrollActive) {
+    stepSmoothScrollFrame(now);
+  }
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(masterFrameLoop);
+}
+if (typeof requestAnimationFrame === "function") requestAnimationFrame(masterFrameLoop);
+initDesktopLayoutSwitcher();
+
+// ============================================================================
+// 【模組三：時間戳轉換、YouTube 網址嚴格驗證與字幕 DOM 安全建構】
+// - parseYouTubeUrl：僅接受合法 YouTube 主機名稱與 11 字元影片 ID（/^[\w-]{11}$/）。
+// - renderCues：全程使用 document.createElement 與 textContent 建構字幕卡片，
+//   100% 免疫跨站腳本攻擊（DOM XSS），並於首幀預熱前幾句的 GPU 合成層。
+// ============================================================================
+function parseYouTubeUrl(raw) {
+  let u;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return { ok: false, error: "網址格式不正確，請重新確認。" };
+  }
+
+  const host = u.hostname.toLowerCase().replace(/^www\./, "").replace(/^m\./, "");
+  let id = "";
+
+  if (host === "youtu.be") {
+    id = u.pathname.split("/").filter(Boolean)[0] || "";
+  } else if (["youtube.com", "music.youtube.com"].includes(host)) {
+    if (u.pathname === "/watch") {
+      id = u.searchParams.get("v") || "";
+    } else {
+      const m = u.pathname.match(/^\/(?:live|shorts|embed|v)\/([^/?]+)/);
+      if (m) id = m[1];
+    }
+  }
+
+  if (!id || !/^[\w-]{11}$/.test(id)) {
+    return { ok: false, error: "無法辨識影片 ID，請貼上有效的 YouTube 影片或直播存檔網址。" };
+  }
+  return { ok: true, id };
+}
+
+// 先四捨五入至 0.1 秒再進位計算時分秒，避免 59.96 秒變成 00:60.0
+function fmt(t) {
+  const tenths = Math.round(Math.max(0, t) * 10);
+  const h = Math.floor(tenths / 36000);
+  const m = Math.floor((tenths % 36000) / 600);
+  const s = ((tenths % 600) / 10).toFixed(1).padStart(4, "0");
+  return (h ? String(h).padStart(2, "0") + ":" : "") + String(m).padStart(2, "0") + ":" + s;
+}
+
+function toSrtTime(sec) {
+  const total = Math.round(Math.max(0, sec) * 1000);
+  const p = (n, w) => String(n).padStart(w, "0");
+  return p(Math.floor(total / 3600000), 2) + ":" + p(Math.floor(total / 60000) % 60, 2) + ":" +
+    p(Math.floor(total / 1000) % 60, 2) + "," + p(total % 1000, 3);
+}
+
+function parseStrictTimestampValues(tsStr) {
+  const m = tsStr.match(/^(\d{2}):(\d{2}):(\d{2})[,\.](\d{3})$/);
+  if (!m) return null;
+  const hh = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  const ss = parseInt(m[3], 10);
+  const ms = parseInt(m[4], 10);
+  if (mm >= 60 || ss >= 60) return null;
+  const totalMs = hh * 3600000 + mm * 60000 + ss * 1000 + ms;
+  return { raw: tsStr, totalMs };
+}
+
+function renderCues(container, cues, limit = Infinity, videoId = "") {
+  container.replaceChildren();
+  const sliced = cues.slice(0, limit);
+  const fragment = document.createDocumentFragment();
+  const track = videoId ? { cues: sliced, els: [] } : null;
+  if (track) {
+    buildTrackIndex(track);
+    syncTrack = track;
+    lastActiveIndex = -1;
+  } else if (container.id === "autopreview") {
+    syncTrack = null;
+    lastActiveIndex = -1;
+  }
+
+  sliced.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "cue";
+    if (track) track.els.push(d);
+
+    const time = document.createElement("time");
+    if (videoId) {
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = fmt(c.start) + " → " + fmt(c.end);
+      link.addEventListener("click", event => {
+        event.preventDefault();
+        isTouching = false;
+        followPausedUntil = 0;
+        stopSmoothScroll();
+        if (resumeFollowTimer) {
+          clearTimeout(resumeFollowTimer);
+          resumeFollowTimer = null;
+        }
+        seekToTimestamp(videoId, c.start);
+      });
+      time.append(link);
+    } else {
+      time.textContent = fmt(c.start) + " → " + fmt(c.end);
+    }
+
+    const txt = document.createElement("div");
+    txt.className = "cue-text";
+    txt.textContent = c.text;
+
+    const body = document.createElement("div");
+    body.className = "cue-body";
+
+    if (c.zh) {
+      const zh = document.createElement("div");
+      zh.className = "cue-zh";
+      zh.textContent = c.zh;
+      d.classList.add("has-zh");
+      body.append(zh, txt);
+    } else {
+      body.append(txt);
+    }
+
+    d.append(time, body);
+    fragment.append(d);
+  });
+
+  container.append(fragment);
+  if (track && track.els.length) scheduleGpuWarmWindow(track, 0, true);
+
+  if (cues.length > limit) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = `目前顯示前 ${limit} 句，共 ${cues.length} 句字幕。`;
+    container.append(note);
+  }
+}
+
+// ============================================================================
+// 【模組四：全域狀態管理與嚴格驗證鎖定機制（Fail-Closed）】
+// - 只要詞庫失效、原始字幕修改、或批次譯文變更，立即透過 lockAndClearVerificationState()
+//   撤銷全量校驗通過狀態、鎖定 JSON 匯出與 QC Prompt，確保不會匯出未驗證資料。
+// ============================================================================
+let verifiedPlayerCues = null;
+let playerShowsTranslation = false;
+let currentQcBatchIdx = 0;
+let sourceLabel = "";
+
+let loadedGlossaryRawContent = "";
+let loadedGlossarySha256 = "";
+let isGlossaryVerified = false;
+let glossaryLoadToken = 0;
+let currentSessionToken = "";
+let isAutoTranslating = false;
+let autoTranslateAbortController = null;
+let currentTranslationJobId = "";
+let cumulativeTokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+
+let parsedRawCues = [];
+let rawParsePassed = false;
+let batchList = [];
+let currentBatchIdx = 0;
+const MAX_BATCH_SIZE = 300;
+const MAX_SPLIT_DEPTH = 2;
+const MIN_SPLIT_CUES = 2;
+
+let fullyVerifiedCues = [];
+let globalRawWarnings = [];
+let isProgrammaticInputUpdate = false;
+let lastParsedRawJa = "";
+
+function setPlayerState(msg) {
+  const el = $("player-state");
+  if (el) el.textContent = msg;
+}
+
+function hasTranslationWork() {
+  return batchList.some(b => b.status === "SAVED") ||
+    $("field-trans-result").value.trim().length > 0 ||
+    fullyVerifiedCues.length > 0;
+}
+
+function currentVideoId() {
+  const p = parseYouTubeUrl($("yturl").value.trim());
+  return p.ok ? p.id : "";
+}
+
+function setTransInputValue(val) {
+  isProgrammaticInputUpdate = true;
+  $("field-trans-result").value = val;
+  isProgrammaticInputUpdate = false;
+}
+
+function makeBatch(batchNum, cues, splitDepth = 0) {
+  return {
+    batchNum,
+    startSeq: cues[0].index,
+    endSeq: cues[cues.length - 1].index,
+    cues,
+    status: "PENDING",
+    savedSrt: "",
+    savedCues: [],
+    draftSrt: "",
+    splitDepth,
+    failCount: 0,
+    lastFailure: "",
+    billingUncertain: false,
+    userConfirmedUncertainRetry: false,
+    uncertainReason: ""
+  };
+}
+
+function clearBatchData(b) {
+  b.status = "PENDING";
+  b.savedSrt = "";
+  b.savedCues = [];
+  b.draftSrt = "";
+  b.failCount = 0;
+  b.lastFailure = "";
+  b.billingUncertain = false;
+  b.userConfirmedUncertainRetry = false;
+  b.uncertainReason = "";
+}
+
+function updatePipeline() {
+  const saved = batchList.filter(b => b.status === "SAVED").length;
+  const exportOn = !$("btn-export-json").disabled;
+  $("pipeline").textContent =
+    `來源：${sourceLabel || "尚未載入"}\n` +
+    `原始字幕：${rawParsePassed ? `已解析 ${parsedRawCues.length} 句（時間戳警告 ${globalRawWarnings.length} 項）` : "未解析"}\n` +
+    `詞庫：${isGlossaryVerified ? "已通過結構驗證" : "未通過／未載入"}\n` +
+    `批次：${batchList.length ? `已暫存 ${saved} / ${batchList.length}` : "尚未建立"}\n` +
+    `全量校驗：${fullyVerifiedCues.length ? `通過（${fullyVerifiedCues.length} 句）` : "未通過／未執行"}\n` +
+    `播放器：${playerShowsTranslation ? "雙語（已校驗）" : (rawParsePassed ? "僅日文" : "無資料")}　匯出：${exportOn ? "可用" : "鎖定"}`;
+}
+
+function lockAndClearVerificationState(reasonMsg) {
+  fullyVerifiedCues = [];
+  verifiedPlayerCues = null;
+  $("qc-batch-bar").style.display = "none";
+  $("btn-copy-qc-prompt").disabled = true;
+  $("field-qc-prompt").value = "";
+  $("status-qc").style.display = "none";
+  $("btn-export-json").disabled = true;
+  if (playerShowsTranslation) {
+    playerShowsTranslation = false;
+    if (rawParsePassed && parsedRawCues.length) {
+      renderSourcePreview();
+    } else {
+      $("autopreview").replaceChildren();
+      syncTrack = null;
+      lastActiveIndex = -1;
+    }
+  }
+  setPlayerState("播放器：僅顯示日文原文。" + (reasonMsg ? "\n" + reasonMsg : ""));
+  updatePipeline();
+}
+
+function resetBatchState() {
+  batchList = [];
+  currentBatchIdx = 0;
+  $("batch-control-bar").style.display = "none";
+  $("btn-save-current-batch").style.display = "none";
+  $("btn-revert-current-batch").style.display = "none";
+  $("btn-clear-current-batch").style.display = "none";
+  $("btn-split-current-batch").style.display = "none";
+  $("field-trans-prompt").value = "";
+  $("btn-copy-trans-prompt").disabled = true;
+  $("status-prompt-info").style.display = "none";
+  updatePipeline();
+}
+
+function clearAllRawAndBatchState(reasonMsg) {
+  rawParsePassed = false;
+  parsedRawCues = [];
+  globalRawWarnings = [];
+  lastParsedRawJa = "";
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState(reasonMsg);
+}
+
+function getScopedWarnings() {
+  const targetedSeqSet = new Set(fullyVerifiedCues.map(c => c.index));
+  return globalRawWarnings
+    .filter(w => targetedSeqSet.has(w.index))
+    .map(w => ({
+      index: w.index,
+      type: w.type,
+      message: w.message
+    }));
+}
+
+async function copyTextWithFallback(text, successMsg) {
+  if (!text) {
+    alert("Prompt 內容為空！");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    alert(successMsg);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      alert(successMsg);
+    } catch {
+      alert("複製失敗，請手動全選複製。");
+    } finally {
+      document.body.removeChild(ta);
+    }
+  }
+}
+
+// ============================================================================
+// 【模組五（步驟 0）：詞庫讀取、LF 正規化 SHA-256 雜湊驗證與 27 章節結構檢查】
+// - 強制驗證檔案大小（<=20MB）、行數（>=500 行）、27 個必備章節標記，
+//   並以 Web Crypto API 計算 LF 正規化後的 SHA-256，確保與 Worker 內建版本 100% 一致。
+// ============================================================================
+function normalizeGlossaryText(text) {
+  return String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+}
+
+function invalidateGlossaryState(reason, token) {
+  if (token !== undefined && token !== glossaryLoadToken) return;
+
+  isGlossaryVerified = false;
+  loadedGlossaryRawContent = "";
+  loadedGlossarySha256 = "";
+  const badge = $("glossary-status-badge");
+  badge.className = "status-badge err";
+  badge.textContent = "● 詞庫未載入或驗證失敗";
+  $("glossary-status-desc").textContent = reason || "選取檔案中，已撤銷舊詞庫與相關 Prompt。";
+  $("field-trans-prompt").value = "";
+  $("field-qc-prompt").value = "";
+  $("btn-copy-trans-prompt").disabled = true;
+  $("btn-copy-qc-prompt").disabled = true;
+  $("status-prompt-info").style.display = "none";
+  $("status-qc").style.display = "none";
+
+  lockAndClearVerificationState("詞庫已失效，全量校驗、預覽與 JSON 匯出已全面鎖定。");
+}
+
+// 【FIPS 180-4 標準 SHA-256 純 JS 備援實作】
+// 當使用者直接以 file:// 協定雙擊開啟 HTML 時，瀏覽器因非 HTTPS 安全上下文（Non-Secure Context）
+// 會隱藏 crypto.subtle；此標準實作確保在 file:// 下仍能 100% 精準計算詞庫 SHA-256 雜湊！
+function sha256PureJsBytes(bytes) {
+  const K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ]);
+  let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+  let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+  const bitLen = bytes.length * 8;
+  const padLen = ((bytes.length + 9 + 63) & ~63);
+  const buf = new Uint8Array(padLen);
+  buf.set(bytes);
+  buf[bytes.length] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(padLen - 8, Math.floor(bitLen / 0x100000000), false);
+  dv.setUint32(padLen - 4, bitLen >>> 0, false);
+  const W = new Uint32Array(64);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < padLen; off += 64) {
+    for (let i = 0; i < 16; i++) W[i] = dv.getUint32(off + i * 4, false);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(W[i - 15], 7) ^ rotr(W[i - 15], 18) ^ (W[i - 15] >>> 3);
+      const s1 = rotr(W[i - 2], 17) ^ rotr(W[i - 2], 19) ^ (W[i - 2] >>> 10);
+      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) >>> 0;
+    }
+    let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[i] + W[i]) >>> 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const t2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0;
+      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+  }
+  return [h0, h1, h2, h3, h4, h5, h6, h7].map(v => v.toString(16).padStart(8, "0")).join("");
+}
+
+async function computeSHA256(text) {
+  const normalized = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const bytes = new TextEncoder().encode(normalized);
+  if (typeof crypto !== "undefined" && crypto && crypto.subtle && typeof crypto.subtle.digest === "function") {
+    try {
+      const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    } catch {}
+  }
+  return sha256PureJsBytes(bytes);
+}
+
+async function validateGlossaryFileContent(content, token) {
+  if (token !== glossaryLoadToken) return false;
+
+  if (!content || content.trim().length === 0) {
+    invalidateGlossaryState("選取之檔案內容為空，請選取正確的詞庫檔案。", token);
+    return false;
+  }
+
+  const normalizedContent = normalizeGlossaryText(content);
+  const lines = normalizedContent.split("\n");
+  if (lines.length < 500) {
+    invalidateGlossaryState(`檔案僅 ${lines.length} 行，原始詞庫應約 931 行。行數不足，判定結構不完整。`, token);
+    return false;
+  }
+
+  const requiredSections = [
+    "1. hololive JP", "1.1 0期生", "1.2 1期生", "1.3 2期生",
+    "1.4 GAMERS", "1.5 3期生", "1.6 4期生", "1.7 5期生", "1.8 holoX",
+    "2. hololive Indonesia", "2.1 AREA 15", "2.2 holoro", "2.3 holoh3ro",
+    "3. hololive English", "3.1 Myth", "3.2 Project: HOPE", "3.3 Council", "3.4 Promise", "3.5 Advent", "3.6 Justice",
+    "4. hololive DEV_IS", "4.1 ReGLOSS", "4.2 FLOW GLOW", "4.3 アソビ★まわり隊！",
+    "5. 跨團體共通規則與字幕翻譯詞彙", "5.3 常見詞的上下文翻譯",
+    "6. 未確認／需人工複核清單"
+  ];
+
+  const missing = requiredSections.filter(sec => !normalizedContent.includes(sec));
+  if (missing.length > 0) {
+    invalidateGlossaryState(`缺少關鍵章節標記：${missing.slice(0, 3).join(", ")}${missing.length > 3 ? " 等" : ""}。`, token);
+    return false;
+  }
+
+  let sha256 = "";
+  try {
+    sha256 = await computeSHA256(normalizedContent);
+  } catch {
+    invalidateGlossaryState("此瀏覽器環境無法計算 SHA-256（需於 HTTPS 或 localhost 安全環境執行），無法驗證詞庫版本一致性。", token);
+    return false;
+  }
+  if (token !== glossaryLoadToken) return false;
+
+  if (sha256 !== EXPECTED_GLOSSARY_SHA256) {
+    invalidateGlossaryState(
+      `詞庫版本 SHA-256 與 Worker 內建標準版本不一致！\n預期雜湊：${EXPECTED_GLOSSARY_SHA256}\n實際雜湊：${sha256}\n請選取正確版本的 hololive_glossary.txt。`,
+      token
+    );
+    return false;
+  }
+
+  loadedGlossaryRawContent = normalizedContent;
+  loadedGlossarySha256 = sha256;
+  isGlossaryVerified = true;
+  const badge = $("glossary-status-badge");
+  badge.className = "status-badge ok";
+  badge.textContent = "● 詞庫結構與 SHA-256 版本驗證通過（27 個必要章節）";
+  $("glossary-status-desc").textContent = `行數：${lines.length} 行 | SHA-256（LF 正規化）：${sha256}（與 Worker 測試環境內建版本一致）`;
+  updateBatchUI();
+  updatePipeline();
+  return true;
+}
+
+$("glossary-file-input").addEventListener("change", async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  if (file.size > MAX_FILE_BYTES) {
+    alert("選取的詞庫檔案過大（超過 20MB），請確認是否選到正確的 .txt 檔案。");
+    e.target.value = "";
+    return;
+  }
+
+  if (batchList.some(b => b.status === "SAVED") || fullyVerifiedCues.length > 0) {
+    const ok = confirm("選取新詞庫將使現有的全量校驗結果與 QC Prompt 失效。\n所有批次必須依新詞庫重新進行校驗與 QC。\n確定要更換詞庫嗎？");
+    if (!ok) {
+      e.target.value = "";
+      return;
+    }
+  }
+
+  const currentToken = ++glossaryLoadToken;
+  invalidateGlossaryState("正在讀取新選取的詞庫檔案...", currentToken);
+
+  try {
+    const text = await file.text();
+    const okv = await validateGlossaryFileContent(text, currentToken);
+    if (okv && currentToken === glossaryLoadToken) {
+      const d = $("glossary-status-desc");
+      d.textContent = `檔名：${file.name} | ` + d.textContent +
+        (/^hololive_glossary\.txt$/i.test(file.name) ? "" : "\n注意：檔名不是 hololive_glossary.txt，請確認選到正確檔案。");
+    }
+  } catch {
+    invalidateGlossaryState("詞庫檔案讀取發生錯誤。", currentToken);
+  }
+});
+
+// ============================================================================
+// 【模組六（步驟 1）：原始日文字幕嚴格 SRT 解析與非破壞性異常警告記錄】
+// - 嚴格驗證序號與時間戳格式，對零長度、反轉、重疊時間戳僅記錄於 warnings 而不竄改原始值。
+// ============================================================================
+function parseRawSubtitlesStrict(text) {
+  const errors = [];
+  const warnings = [];
+  const cues = [];
+
+  if (!text || text.trim().length === 0) {
+    errors.push("輸入內容為空。");
+    return { cues: [], errors, warnings: [] };
+  }
+
+  // 移除開頭 UTF-8 BOM、統一換行符號，並僅剝除整份文字首尾的純空白分隔行（保留日文行內空白）
+  const normalizedText = text
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "");
+
+  if (!normalizedText.includes("-->")) {
+    errors.push("輸入內容不包含標準 SRT 時間軸（-->）。時間戳行模式無法確定最後一段結束時間，請改用標準 SRT 格式。");
+    return { cues: [], errors, warnings: [] };
+  }
+
+  const blocks = normalizedText.split(/\n[ \t]*\n+/).filter(b => b.length > 0);
+  blocks.forEach((block, bIdx) => {
+    const rawLines = block.split("\n");
+    if (rawLines.length < 3) {
+      errors.push(`區塊 #${bIdx + 1} 行數不足（至少需有序號、時間戳與日文原文）。`);
+      return;
+    }
+
+    const rawSeqLine = rawLines[0];
+    if (!/^[1-9]\d*$/.test(rawSeqLine)) {
+      errors.push(`區塊 #${bIdx + 1} 序號行格式不符規範（必須為無前後空白之純數字整數，實際為: "${rawSeqLine}"）`);
+      return;
+    }
+    const seq = parseInt(rawSeqLine, 10);
+
+    const rawTimeLine = rawLines[1];
+    const tm = rawTimeLine.match(/^(\d{2}:\d{2}:\d{2}[,\.]\d{3}) --> (\d{2}:\d{2}:\d{2}[,\.]\d{3})$/);
+    if (!tm) {
+      errors.push(`區塊 #${bIdx + 1} 時間戳行格式不符規範（必須為標準 "HH:MM:SS,mmm --> HH:MM:SS,mmm"，且箭頭前後為單空格無多餘空白，實際為: "${rawTimeLine}"）`);
+      return;
+    }
+    const startObj = parseStrictTimestampValues(tm[1]);
+    const endObj = parseStrictTimestampValues(tm[2]);
+    if (!startObj || !endObj) {
+      errors.push(`區塊 #${bIdx + 1} 時間戳數值非合法格式: "${rawTimeLine}"`);
+      return;
+    }
+
+    if (startObj.totalMs === endObj.totalMs) {
+      warnings.push({ index: seq, type: "zero_duration", message: `字幕 #${seq} 時間戳為零長度 (${startObj.raw} --> ${endObj.raw})，保留原始值。` });
+    } else if (startObj.totalMs > endObj.totalMs) {
+      warnings.push({ index: seq, type: "reversed_time", message: `字幕 #${seq} 時間戳開始時間晚於結束時間 (${startObj.raw} --> ${endObj.raw})，依規格保留原始值並提出警告。` });
+    }
+
+    const jaLines = rawLines.slice(2);
+    const jaText = jaLines.join("\n");
+
+    cues.push({
+      index: seq,
+      rawSeqLine,
+      rawTimeLine,
+      rawStart: startObj.raw,
+      rawEnd: endObj.raw,
+      startMs: startObj.totalMs,
+      endMs: endObj.totalMs,
+      jaLines,
+      ja: jaText
+    });
+  });
+
+  if (errors.length === 0) {
+    const seqSet = new Set();
+    for (let i = 0; i < cues.length; i++) {
+      const c = cues[i];
+      if (seqSet.has(c.index)) {
+        errors.push(`發現重複序號: #${c.index}`);
+      }
+      seqSet.add(c.index);
+
+      if (i > 0) {
+        const prev = cues[i - 1];
+        if (c.startMs < prev.startMs) {
+          warnings.push({ index: c.index, type: "backward_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 早於前一條開始時間 (${prev.rawStart})，保留原始值。` });
+        } else if (c.startMs < prev.endMs) {
+          warnings.push({ index: c.index, type: "overlap_time", message: `字幕 #${c.index} 開始時間 (${c.rawStart}) 與前一條結束時間重疊，保留原始值。` });
+        }
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { cues: [], errors, warnings: [] };
+  }
+  return { cues, errors, warnings };
+}
+
+// 共用的原始字幕解析與套用流程：僅在解析成功後才清空既有批次、同步更新 textarea 與狀態
+function applyRawSubtitles(text, newSourceLabel, extraNotes = []) {
+  const { cues, errors, warnings } = parseRawSubtitlesStrict(text);
+  if (errors.length > 0) {
+    setStatus("status-raw", "err", `【原始字幕解析 FAIL】：發現 ${errors.length} 項嚴重錯誤，保留現有解析資料與批次：\n` + errors.slice(0, 10).join("\n"));
+    return false;
+  }
+
+  sourceLabel = newSourceLabel;
+  lastParsedRawJa = text;
+  if ($("field-raw-ja").value !== text) {
+    $("field-raw-ja").value = text;
+  }
+  rawParsePassed = true;
+  parsedRawCues = cues;
+  globalRawWarnings = warnings.slice();
+
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState("原始字幕已重新解析，請重新完成翻譯與全量校驗。");
+  $("status-verify").style.display = "none";
+
+  setStatus("status-raw", "ok",
+    `【原始字幕解析 PASS】：共 ${cues.length} 條合法字幕。` +
+    (warnings.length > 0 ? `\n【時間戳警告（${warnings.length} 項，已保存）】：\n` + warnings.slice(0, 6).map(w => w.message).join("\n") + (warnings.length > 6 ? `\n...其餘 ${warnings.length - 6} 項警告已完整記錄` : "") : "") +
+    (extraNotes.length > 0 ? "\n" + extraNotes.join("\n") : "") +
+    `\n\n提示：請在步驟 2 設定起始序號、處理段數後，點擊「套用設定／建立批次」開始分批作業。`);
+  renderSourcePreview();
+  updatePipeline();
+  return true;
+}
+
+$("field-raw-ja").addEventListener("input", () => {
+  const currentVal = $("field-raw-ja").value;
+  if (currentVal === lastParsedRawJa) return;
+
+  if (rawParsePassed && hasTranslationWork()) {
+    const ok = confirm("目前已有批次暫存或翻譯輸入！修改原始字幕將會使現有暫存與校驗失效。\n確定要修改原始字幕並放棄現有資料嗎？\n點擊「取消」將還原原始字幕內容並保留所有批次與翻譯。");
+    if (!ok) {
+      $("field-raw-ja").value = lastParsedRawJa;
+      return;
+    }
+  }
+
+  sourceLabel = "手動貼上 SRT";
+  clearAllRawAndBatchState("原始字幕已修改，舊驗證與翻譯內容已清空。請重新解析原始字幕。");
+  $("status-raw").style.display = "none";
+  $("status-verify").style.display = "none";
+});
+
+$("btn-parse-raw").addEventListener("click", () => {
+  if (hasTranslationWork()) {
+    const ok = confirm("目前已有暫存之翻譯資料或輸入框中有翻譯內容！\n重新解析原始字幕將會清空現有的所有批次暫存與翻譯輸入。\n確定要重新解析原始字幕嗎？");
+    if (!ok) return;
+  }
+  applyRawSubtitles($("field-raw-ja").value, sourceLabel || "手動貼上 SRT");
+});
+
+$("btn-clear-raw").addEventListener("click", () => {
+  if (hasTranslationWork()) {
+    const ok = confirm("確定要清空原始字幕嗎？這將會一併清空現有的批次暫存與翻譯輸入！");
+    if (!ok) return;
+  }
+  $("field-raw-ja").value = "";
+  $("status-raw").style.display = "none";
+  sourceLabel = "";
+  clearAllRawAndBatchState("已清空原始字幕。");
+});
+
+// ============================================================================
+// 【模組七（步驟 2）：分批設定、前後文視窗擷取與 sessionStorage 輕量進度快取】
+// - 支援自訂起始序號、處理段數與每批上限（1~300 句），並附帶前後各最多 3 句語境參考。
+// - 僅於 sessionStorage 保存輕量級 [index, zh_tw] 配對與原始字幕指紋，頁面重整後可安全恢復。
+// ============================================================================
+$("btn-apply-batch-config").addEventListener("click", () => {
+  if (!rawParsePassed || parsedRawCues.length === 0) {
+    setStatus("status-prompt-info", "err", "【操作順序錯誤】：請先完成步驟 1 原始字幕解析，方可套用批次設定！");
+    return;
+  }
+
+  const rawStartSeqStr = $("cfg-start-seq").value.trim();
+  if (!/^[1-9]\d*$/.test(rawStartSeqStr)) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：起始序號必須是正整數（輸入為 "${rawStartSeqStr}"）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+  const cfgStartSeq = parseInt(rawStartSeqStr, 10);
+  const startIdx = parsedRawCues.findIndex(c => c.index === cfgStartSeq);
+  if (startIdx === -1) {
+    const availableSample = parsedRawCues.slice(0, 5).map(c => "#" + c.index).join(", ");
+    setStatus("status-prompt-info", "err", `【設定錯誤】：找不到指定的起始序號 #${cfgStartSeq}！請輸入實際存在的字幕序號（現有可用序號範例：${availableSample}${parsedRawCues.length > 5 ? " ... 共 " + parsedRawCues.length + " 個序號" : ""}）。已停止，絕不自動退回第一條。`);
+    return;
+  }
+
+  const rawLimitStr = $("cfg-limit-count").value.trim();
+  const availableRemaining = parsedRawCues.length - startIdx;
+  let cfgLimit = availableRemaining;
+  let isTruncatedNotice = "";
+
+  if (rawLimitStr !== "") {
+    if (!/^[1-9]\d*$/.test(rawLimitStr)) {
+      setStatus("status-prompt-info", "err", `【設定錯誤】：處理段數必須是正整數（輸入為 "${rawLimitStr}"，只有留空才代表處理全部）。已停止，保留現有設定、批次與輸入。`);
+      return;
+    }
+    const parsedLimit = parseInt(rawLimitStr, 10);
+    if (parsedLimit > availableRemaining) {
+      cfgLimit = availableRemaining;
+      isTruncatedNotice = ` (注意：輸入的處理段數 ${parsedLimit} 大於剩餘字幕數 ${availableRemaining}，已自動調整為實際處理 ${availableRemaining} 段)`;
+    } else {
+      cfgLimit = parsedLimit;
+    }
+  }
+
+  const rawBatchSizeStr = $("cfg-batch-size").value.trim();
+  if (!/^[1-9]\d*$/.test(rawBatchSizeStr)) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須是 1 到 ${MAX_BATCH_SIZE} 之間的正整數（輸入為 "${rawBatchSizeStr}"）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+  const cfgBatchSize = parseInt(rawBatchSizeStr, 10);
+  if (cfgBatchSize > MAX_BATCH_SIZE) {
+    setStatus("status-prompt-info", "err", `【設定錯誤】：每批上限必須在 1 到 ${MAX_BATCH_SIZE} 之間（輸入為 ${cfgBatchSize}）。已停止，保留現有設定、批次與輸入。`);
+    return;
+  }
+
+  if (hasTranslationWork()) {
+    const ok = confirm("目前已有暫存之翻譯或未暫存的輸入內容，重新建立批次將清空現有暫存與輸入！\n確定要放棄並套用新批次設定嗎？");
+    if (!ok) return;
+  }
+
+  setTransInputValue("");
+  resetBatchState();
+  lockAndClearVerificationState("已重新建立批次，請完成翻譯與全量校驗。");
+
+  const targetedCues = parsedRawCues.slice(startIdx, startIdx + cfgLimit);
+  const total = targetedCues.length;
+  const totalBatches = Math.ceil(total / cfgBatchSize);
+
+  for (let b = 0; b < totalBatches; b++) {
+    const bStart = b * cfgBatchSize;
+    const bEnd = Math.min(bStart + cfgBatchSize, total);
+    batchList.push(makeBatch(b + 1, targetedCues.slice(bStart, bEnd), 0));
+  }
+
+  currentBatchIdx = 0;
+  $("batch-control-bar").style.display = "flex";
+  $("btn-save-current-batch").style.display = "inline-block";
+  $("btn-revert-current-batch").style.display = "none";
+  $("btn-clear-current-batch").style.display = "inline-block";
+  $("btn-split-current-batch").style.display = "inline-block";
+
+  const restoreRes = restoreLightweightProgressFromSession();
+  if (batchList[0] && batchList[0].status === "SAVED") {
+    setTransInputValue(batchList[0].savedSrt);
+  }
+  updateBatchUI();
+
+  if (!isGlossaryVerified) {
+    setStatus("status-prompt-info", "err", "【安全阻擋】：詞庫未載入或驗證失敗（紅燈），禁止產生翻譯與 QC Prompt！請先於步驟 0 載入正確詞庫檔案。" +
+      (restoreRes.restoredCount > 0 ? `\n（已從 sessionStorage 恢復 ${restoreRes.restoredCount} 批已完成譯文）` : ""));
+    $("field-trans-prompt").value = "";
+    $("btn-copy-trans-prompt").disabled = true;
+    return;
+  }
+
+  generatePromptForBatch(batchList[0]);
+  if (isTruncatedNotice) {
+    $("status-prompt-info").textContent += isTruncatedNotice;
+  }
+  if (restoreRes.restoredCount > 0) {
+    $("status-prompt-info").textContent += `\n【已自動恢復進度】：已從 sessionStorage 驗證並恢復 ${restoreRes.restoredCount} / ${batchList.length} 批已完成譯文。`;
+  }
+});
+
+function canSplit(b) {
+  return !!b && b.status !== "SAVED" && b.splitDepth < MAX_SPLIT_DEPTH && b.cues.length >= MIN_SPLIT_CUES;
+}
+
+function getBatchContextWindow(batchObj) {
+  if (!parsedRawCues.length || !batchObj || !batchObj.cues.length) {
+    return { contextBefore: [], contextAfter: [] };
+  }
+  const firstSeq = batchObj.cues[0].index;
+  const lastSeq = batchObj.cues[batchObj.cues.length - 1].index;
+  const firstPos = parsedRawCues.findIndex(c => c.index === firstSeq);
+  const lastPos = parsedRawCues.findIndex(c => c.index === lastSeq);
+  const contextBefore = firstPos > 0
+    ? parsedRawCues.slice(Math.max(0, firstPos - CONTEXT_WINDOW_SIZE), firstPos).map(c => ({ index: c.index, ja: c.ja }))
+    : [];
+  const contextAfter = (lastPos >= 0 && lastPos + 1 < parsedRawCues.length)
+    ? parsedRawCues.slice(lastPos + 1, lastPos + 1 + CONTEXT_WINDOW_SIZE).map(c => ({ index: c.index, ja: c.ja }))
+    : [];
+  return { contextBefore, contextAfter };
+}
+
+function computeRawCuesFingerprint(cues, videoId) {
+  let h1 = 0x811c9dc5 >>> 0;
+  let h2 = 0x01000193 >>> 0;
+  const str = String(videoId || "") + "#" + cues.length + "#" +
+    cues.map(c => `${c.index}|${c.rawStart}|${c.rawEnd}|${c.ja}`).join("\n");
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ (ch + (i & 0xff)), 0x85ebca6b) >>> 0;
+  }
+  return `${cues.length}:${h1.toString(16).padStart(8, "0")}${h2.toString(16).padStart(8, "0")}`;
+}
+
+function saveLightweightProgressToSession() {
+  try {
+    if (!window.sessionStorage || !rawParsePassed || !batchList.length) return;
+    const vid = currentVideoId();
+    const rawFingerprint = computeRawCuesFingerprint(parsedRawCues, vid);
+    const savedPairs = [];
+    batchList.forEach(b => {
+      if (b.status === "SAVED" && Array.isArray(b.savedCues)) {
+        b.savedCues.forEach(c => savedPairs.push([c.index, c.zh_tw]));
+      }
+    });
+    const payload = {
+      version: 1,
+      videoId: vid,
+      rawFingerprint,
+      sourceLabel,
+      startSeq: $("cfg-start-seq").value.trim(),
+      limitCount: $("cfg-limit-count").value.trim(),
+      batchSize: $("cfg-batch-size").value.trim(),
+      updatedAt: Date.now(),
+      zhPairs: savedPairs
+    };
+    window.sessionStorage.setItem(LIGHTWEIGHT_CACHE_KEY, JSON.stringify(payload));
+  } catch {}
+}
+
+function clearLightweightProgressInSession() {
+  try {
+    if (window.sessionStorage) window.sessionStorage.removeItem(LIGHTWEIGHT_CACHE_KEY);
+  } catch {}
+}
+
+// 頁面重整或重建批次後，安全檢查 videoId 與原始字幕指紋，僅在 100% 吻合時恢復已完成批次（Fix #5）
+function restoreLightweightProgressFromSession() {
+  try {
+    if (!window.sessionStorage || !rawParsePassed || !parsedRawCues.length || !batchList.length) {
+      return { restoredCount: 0, reason: "NOT_READY" };
+    }
+    const rawJson = window.sessionStorage.getItem(LIGHTWEIGHT_CACHE_KEY);
+    if (!rawJson) return { restoredCount: 0, reason: "EMPTY" };
+    const data = JSON.parse(rawJson);
+    if (!data || typeof data !== "object" || !Array.isArray(data.zhPairs) || data.zhPairs.length === 0) {
+      return { restoredCount: 0, reason: "INVALID_PAYLOAD" };
+    }
+
+    const vid = currentVideoId();
+    if (String(data.videoId || "") !== vid) {
+      return { restoredCount: 0, reason: "VIDEO_ID_MISMATCH" };
+    }
+    const expectedFp = computeRawCuesFingerprint(parsedRawCues, vid);
+    if (data.rawFingerprint !== expectedFp) {
+      return { restoredCount: 0, reason: "RAW_SUBTITLES_MISMATCH" };
+    }
+
+    const zhMap = new Map();
+    for (const pair of data.zhPairs) {
+      if (Array.isArray(pair) && pair.length === 2 && Number.isInteger(pair[0]) && typeof pair[1] === "string") {
+        zhMap.set(pair[0], pair[1]);
+      }
+    }
+    if (zhMap.size === 0) return { restoredCount: 0, reason: "NO_VALID_PAIRS" };
+
+    let restoredCount = 0;
+    for (const b of batchList) {
+      if (b.status === "SAVED") continue;
+      if (!b.cues.every(c => zhMap.has(c.index))) continue;
+      const candidateObj = {
+        translations: b.cues.map(c => ({ index: c.index, zh_tw: zhMap.get(c.index) }))
+      };
+      const v = parseAndValidateTranslationsJson(candidateObj, b.cues);
+      if (v.errors.length === 0 && v.cues.length === b.cues.length) {
+        b.status = "SAVED";
+        b.failCount = 0;
+        b.lastFailure = "";
+        b.billingUncertain = false;
+        b.userConfirmedUncertainRetry = false;
+        b.uncertainReason = "";
+        b.savedSrt = v.normalizedJson;
+        b.savedCues = v.cues;
+        b.draftSrt = v.normalizedJson;
+        restoredCount++;
+      }
+    }
+    return { restoredCount, reason: restoredCount > 0 ? "OK" : "NO_MATCHING_BATCH" };
+  } catch {
+    return { restoredCount: 0, reason: "EXCEPTION" };
+  }
+}
+
+function updateBatchUI() {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  $("batch-info-label").textContent =
+    `目前批次：第 ${cur.batchNum} / ${batchList.length} 批 (編號 #${cur.startSeq} ~ #${cur.endSeq}，共 ${cur.cues.length} 條)` +
+    (cur.splitDepth > 0 ? `｜已拆分 ${cur.splitDepth} 層` : "");
+
+  $("btn-split-current-batch").disabled = isAutoTranslating || !canSplit(cur);
+
+  const tag = $("batch-status-tag");
+  const currentInput = $("field-trans-result").value;
+  const hasDraftDiff = cur.status === "SAVED" && cur.savedSrt !== currentInput;
+  const confirmBtn = $("btn-confirm-uncertain-retry");
+
+  if (cur.status === "TRANSLATING") {
+    tag.className = "batch-tag translating";
+    tag.textContent = "自動翻譯中…";
+    $("btn-save-current-batch").disabled = true;
+    $("btn-clear-current-batch").disabled = true;
+    $("btn-revert-current-batch").style.display = "none";
+    if (confirmBtn) confirmBtn.style.display = "none";
+  } else if (cur.status === "SAVED") {
+    if (confirmBtn) confirmBtn.style.display = "none";
+    if (hasDraftDiff) {
+      tag.className = "batch-tag pending";
+      tag.textContent = "已暫存 (有未儲存修改)";
+      $("btn-save-current-batch").disabled = isAutoTranslating;
+      $("btn-clear-current-batch").disabled = isAutoTranslating;
+      $("btn-revert-current-batch").style.display = "inline-block";
+    } else {
+      tag.className = "batch-tag saved";
+      tag.textContent = "已暫存 (鎖定)";
+      $("btn-save-current-batch").disabled = true;
+      $("btn-clear-current-batch").disabled = isAutoTranslating;
+      $("btn-revert-current-batch").style.display = "none";
+    }
+  } else {
+    tag.className = (cur.failCount > 0 || cur.billingUncertain) ? "batch-tag failed" : "batch-tag pending";
+    if (cur.billingUncertain && !cur.userConfirmedUncertainRetry) {
+      tag.textContent = `不確定計費鎖定（需人工確認：${cur.uncertainReason || cur.lastFailure || "前次可能已計費"}）`;
+      if (confirmBtn) {
+        confirmBtn.style.display = "inline-block";
+        confirmBtn.disabled = isAutoTranslating;
+      }
+    } else if (cur.billingUncertain && cur.userConfirmedUncertainRetry) {
+      tag.className = "batch-tag pending";
+      tag.textContent = "已人工確認可重試（待執行）";
+      if (confirmBtn) confirmBtn.style.display = "none";
+    } else {
+      tag.textContent = cur.failCount > 0 ? `待翻譯（失敗 ${cur.failCount} 次：${cur.lastFailure}）` : "待翻譯";
+      if (confirmBtn) confirmBtn.style.display = "none";
+    }
+    $("btn-save-current-batch").disabled = isAutoTranslating;
+    $("btn-clear-current-batch").disabled = true;
+    $("btn-revert-current-batch").style.display = "none";
+  }
+
+  $("btn-prev-batch").disabled = isAutoTranslating || (currentBatchIdx === 0);
+  $("btn-next-batch").disabled = isAutoTranslating || (currentBatchIdx === batchList.length - 1);
+  if ($("btn-start-auto-translate")) {
+    const allSaved = batchList.length > 0 && batchList.every(b => b.status === "SAVED");
+    const blockedByUncertain = cur.billingUncertain && !cur.userConfirmedUncertainRetry;
+    $("btn-start-auto-translate").disabled = isAutoTranslating || !isGlossaryVerified || allSaved;
+    $("btn-translate-current-batch").disabled = isAutoTranslating || !isGlossaryVerified || cur.status === "SAVED" || blockedByUncertain;
+    $("btn-stop-auto-translate").disabled = !isAutoTranslating;
+  }
+  updatePipeline();
+}
+
+function handleBatchSwitch(newIdx) {
+  if (isAutoTranslating || currentBatchIdx === newIdx) return;
+  const cur = batchList[currentBatchIdx];
+  const inputVal = $("field-trans-result").value;
+
+  const hasUnsavedDraft = (cur.status === "PENDING" && inputVal.trim().length > 0) ||
+                          (cur.status === "SAVED" && inputVal !== cur.savedSrt);
+
+  if (hasUnsavedDraft) {
+    const ok = confirm(`目前第 ${cur.batchNum} 批有尚未暫存的修改內容！\n點擊「確定」將放棄未儲存修改並切換批次。\n點擊「取消」將留在原批次並保留目前輸入與暫存。`);
+    if (!ok) return;
+    cur.draftSrt = cur.status === "SAVED" ? cur.savedSrt : "";
+  }
+
+  currentBatchIdx = newIdx;
+  const targetBatch = batchList[currentBatchIdx];
+  const textToLoad = targetBatch.status === "SAVED" ? targetBatch.savedSrt : (targetBatch.draftSrt || "");
+  setTransInputValue(textToLoad);
+  updateBatchUI();
+  generatePromptForBatch(targetBatch);
+}
+
+$("btn-prev-batch").addEventListener("click", () => {
+  if (currentBatchIdx > 0) handleBatchSwitch(currentBatchIdx - 1);
+});
+
+$("btn-next-batch").addEventListener("click", () => {
+  if (currentBatchIdx < batchList.length - 1) handleBatchSwitch(currentBatchIdx + 1);
+});
+
+$("btn-gen-batch-prompt").addEventListener("click", () => {
+  if (batchList.length > 0) generatePromptForBatch(batchList[currentBatchIdx]);
+});
+
+function generatePromptForBatch(batchObj) {
+  if (!isGlossaryVerified) {
+    setStatus("status-prompt-info", "err", "【安全阻擋】：詞庫檢查未通過（紅燈），禁止產生翻譯 Prompt！");
+    $("field-trans-prompt").value = "";
+    $("btn-copy-trans-prompt").disabled = true;
+    return;
+  }
+
+  const totalBatches = batchList.length;
+  const { contextBefore, contextAfter } = getBatchContextWindow(batchObj);
+  const inputPayload = {
+    contextBefore,
+    cues: batchObj.cues.map(c => ({ index: c.index, ja: c.ja })),
+    contextAfter
+  };
+
+  const prompt = `你現在是專業的 Hololive 日文轉台灣繁體中文雙語字幕翻譯專家。請將以下直播日文字幕翻譯成自然、準確的台灣繁體中文。
+
+【重要分批指示】
+本任務共 ${totalBatches} 批，此為【第 ${batchObj.batchNum} 批】，待翻譯字幕序號範圍為 #${batchObj.startSeq} 至 #${batchObj.endSeq}（共 ${batchObj.cues.length} 條）。
+contextBefore 與 contextAfter 僅供理解前後語境，嚴禁輸出至 translations 中。
+
+【參考詞庫與規範（hololive_glossary.txt）】
+${loadedGlossaryRawContent}
+
+【嚴格輸出格式與翻譯規則】
+1. 只輸出合法的純 JSON 物件，嚴禁包含 Markdown 程式碼框（\`\`\`）或任何解釋文字。
+2. 輸出 JSON 格式固定為：
+{
+  "translations": [
+    { "index": ${batchObj.startSeq}, "zh_tw": "繁體中文譯文" }
+  ]
+}
+3. 嚴禁輸出 start、end、ja、warnings、subtitles 或任何額外欄位。
+4. 必須針對 cues 中的每一筆 index 輸出唯一對應的單行繁體中文譯文（zh_tw 不可為空字串，不可含換行符號），不得漏翻、重複、合併、拆分或改變順序。
+5. [笑い]、[叫び声] 請翻譯為「[笑聲]」、「[尖叫聲]」；不確定的內容請標註「（待確認）」，不得自行猜測編造。
+
+【待翻譯資料 JSON】：
+${JSON.stringify(inputPayload, null, 2)}`;
+
+  $("field-trans-prompt").value = prompt;
+  $("btn-copy-trans-prompt").disabled = false;
+  setStatus("status-prompt-info", "ok", `已產生【第 ${batchObj.batchNum} / ${totalBatches} 批】OpenAI JSON 翻譯 Prompt（#${batchObj.startSeq} ~ #${batchObj.endSeq}，共 ${batchObj.cues.length} 條）。`);
+}
+
+$("btn-copy-trans-prompt").addEventListener("click", () => {
+  copyTextWithFallback($("field-trans-prompt").value, "已複製翻譯 Prompt！");
+});
+
+// ============================================================================
+// 【模組八（步驟 3）：OpenAI 翻譯 JSON 第二重嚴格驗證與防竄改組裝】
+// - 嚴格拒絕多餘欄位、重複/遺漏/未知序號、順序錯亂、空白或含換行之譯文。
+// - 組裝雙語結果時，index / start / end / ja 100% 取自前端原始解析資料，絕不信任 AI 回傳值。
+// ============================================================================
+$("field-trans-result").addEventListener("input", () => {
+  if (isProgrammaticInputUpdate) return;
+  if (batchList.length > 0 && batchList[currentBatchIdx]) {
+    batchList[currentBatchIdx].draftSrt = $("field-trans-result").value;
+    updateBatchUI();
+  }
+  lockAndClearVerificationState("翻譯輸入框有未儲存的修改，請點擊「暫存當前批次結果」更新暫存，或點擊「還原」撤銷修改。");
+  $("status-verify").style.display = "none";
+});
+
+function parseAndValidateTranslationsJson(inputTextOrObj, expectedRawCues) {
+  const errors = [];
+  const cues = [];
+  let errorCode = null;
+  const setCode = code => { if (!errorCode) errorCode = code; };
+
+  let root = null;
+  if (typeof inputTextOrObj === "string") {
+    const trimmed = inputTextOrObj.trim();
+    if (!trimmed) {
+      errors.push("【輸入為空】翻譯結果內容為空。");
+      return { cues, errors, errorCode: "EMPTY", normalizedJson: "" };
+    }
+    if (trimmed.includes("```")) {
+      errors.push("【格式錯誤】偵測到 Markdown 程式碼框符號 (```)，只允許純 JSON！");
+      setCode("FORMAT_ERROR");
+    }
+    try {
+      root = JSON.parse(trimmed);
+    } catch (e) {
+      errors.push(`【JSON 解析失敗】無法解析為合法 JSON：${e.message}`);
+      return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
+    }
+  } else if (inputTextOrObj && typeof inputTextOrObj === "object") {
+    root = inputTextOrObj;
+  } else {
+    errors.push("【輸入為空】未提供有效的翻譯資料。");
+    return { cues, errors, errorCode: "EMPTY", normalizedJson: "" };
+  }
+
+  if (!root || typeof root !== "object" || Array.isArray(root)) {
+    errors.push("【格式錯誤】JSON 根節點必須是物件。");
+    return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
+  }
+
+  const rootKeys = Object.keys(root);
+  const forbiddenRootKeys = rootKeys.filter(k => !["translations", "ok", "jobId", "batchIndex", "model", "usage", "cached"].includes(k));
+  if (forbiddenRootKeys.length > 0) {
+    errors.push(`【格式錯誤】JSON 根物件包含不允許的多餘欄位：${forbiddenRootKeys.join(", ")}`);
+    setCode("FORMAT_ERROR");
+  }
+
+  if (!Array.isArray(root.translations)) {
+    errors.push("【格式錯誤】JSON 根物件必須包含 translations 陣列。");
+    return { cues, errors, errorCode: "FORMAT_ERROR", normalizedJson: "" };
+  }
+
+  const arr = root.translations;
+  const expectedMap = new Map();
+  expectedRawCues.forEach((c, idx) => expectedMap.set(c.index, { rawCue: c, pos: idx }));
+
+  const seenIndices = new Set();
+  const validByIndex = new Map();
+  let lastPos = -1;
+
+  for (let i = 0; i < arr.length; i++) {
+    const item = arr[i];
+    const label = `第 ${i + 1} 筆`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      errors.push(`【格式錯誤】translations ${label} 不是有效物件。`);
+      setCode("FORMAT_ERROR");
+      continue;
+    }
+
+    const itemKeys = Object.keys(item);
+    const extraItemKeys = itemKeys.filter(k => k !== "index" && k !== "zh_tw");
+    if (extraItemKeys.length > 0) {
+      errors.push(`【格式錯誤】translations ${label} 包含禁止由 AI 輸出的欄位（${extraItemKeys.join(", ")}），AI 不得提供或覆寫時間戳與日文原文！`);
+      setCode("FORMAT_ERROR");
+    }
+
+    const idx = item.index;
+    if (typeof idx !== "number" || !Number.isInteger(idx) || idx < 1) {
+      errors.push(`【序號錯誤】translations ${label} 的 index (${JSON.stringify(idx)}) 必須為正整數。`);
+      setCode("FORMAT_ERROR");
+      continue;
+    }
+
+    if (seenIndices.has(idx)) {
+      errors.push(`【重複序號】發現重複的 index: #${idx}。`);
+      setCode("DUPLICATE_INDEX");
+      continue;
+    }
+    seenIndices.add(idx);
+
+    const expEntry = expectedMap.get(idx);
+    if (!expEntry) {
+      errors.push(`【未知／多餘序號】AI 回傳了不屬於本批範圍的未知 index: #${idx}（嚴禁輸出前後文或範圍外序號）。`);
+      setCode("UNKNOWN_INDEX");
+      continue;
+    }
+
+    if (expEntry.pos < lastPos) {
+      errors.push(`【順序錯亂】序號 #${idx} 的排列順序與原始字幕順序不一致。`);
+      setCode("ORDER_MISMATCH");
+    }
+    lastPos = Math.max(lastPos, expEntry.pos);
+
+    const zh = item.zh_tw;
+    if (typeof zh !== "string" || zh.trim().length === 0) {
+      errors.push(`【譯文無效】字幕 #${idx} 的 zh_tw 必須為非空白字串！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
+    }
+    if (/[\r\n]/.test(zh)) {
+      errors.push(`【非單行譯文】字幕 #${idx} 的 zh_tw 包含換行符號，譯文必須為單行！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
+    }
+    if (zh.includes("```")) {
+      errors.push(`【譯文無效】字幕 #${idx} 的 zh_tw 包含 Markdown 程式碼框符號 (\`\`\`)！`);
+      setCode("INVALID_TRANSLATION");
+      continue;
+    }
+
+    validByIndex.set(idx, zh);
+  }
+
+  const missingIndices = [];
+  for (const exp of expectedRawCues) {
+    if (!seenIndices.has(exp.index)) {
+      missingIndices.push(exp.index);
+    }
+  }
+  if (missingIndices.length > 0) {
+    errors.push(`【遺漏字幕】AI 回傳缺少 ${missingIndices.length} 筆應有字幕序號：${missingIndices.slice(0, 10).map(n => "#" + n).join(", ")}${missingIndices.length > 10 ? " 等" : ""}。`);
+    setCode("MISSING_INDEX");
+  }
+
+  if (arr.length !== expectedRawCues.length && !errorCode) {
+    errors.push(`【總段數不符】預期應有 ${expectedRawCues.length} 筆，實際回傳 ${arr.length} 筆。`);
+    setCode(arr.length < expectedRawCues.length ? "MISSING_INDEX" : "UNKNOWN_INDEX");
+  }
+
+  if (errors.length > 0) {
+    return { cues: [], errors, errorCode: errorCode || "FORMAT_ERROR", normalizedJson: "" };
+  }
+
+  // 安全組裝：index、start、end、ja 100% 取自前端原始 expectedRawCues，絕不信任 AI 回傳內容
+  for (const exp of expectedRawCues) {
+    cues.push({
+      index: exp.index,
+      start: exp.rawStart,
+      end: exp.rawEnd,
+      ja: exp.ja,
+      zh_tw: validByIndex.get(exp.index)
+    });
+  }
+
+  const normalizedJson = JSON.stringify({
+    translations: cues.map(c => ({ index: c.index, zh_tw: c.zh_tw }))
+  }, null, 2);
+
+  return { cues, errors: [], errorCode: null, normalizedJson };
+}
+
+// 相容性別名（指向同一 JSON 雙重驗證函式）
+var parseAndValidateBilingualSrt = parseAndValidateTranslationsJson;
+
+function classifyBatchFailure(text, expectedCues, errors, explicitErrorCode) {
+  const t = String(text || "");
+  const code = explicitErrorCode || "";
+
+  if (code === "EMPTY" || t.trim().length === 0) {
+    return {
+      type: "EMPTY",
+      label: "輸入為空",
+      advice: () => "輸入內容為空。請執行自動翻譯或貼入 OpenAI 回傳的 translations JSON 後再暫存。"
+    };
+  }
+  if (code === "AUTH_ERROR") {
+    return {
+      type: "AUTH_ERROR",
+      label: "未登入或 Session 過期",
+      advice: () => "登入驗證未通過或 Session 已過期（401），已立即停止翻譯佇列。請於上方步驟 0 重新登入後再繼續，已暫存批次均已保留。"
+    };
+  }
+  if (code === "GLOSSARY_MISMATCH") {
+    return {
+      type: "GLOSSARY_MISMATCH",
+      label: "詞庫 SHA-256 不一致",
+      advice: () => "前端詞庫與 Worker 測試環境內建詞庫 SHA-256 不一致，已停止佇列。請重新載入正確版本的 hololive_glossary.txt。"
+    };
+  }
+  if (code === "UNCERTAIN_PRIOR_BILLING") {
+    return {
+      type: "UNCERTAIN_PRIOR_BILLING",
+      label: "不確定前次計費狀態（需人工確認）",
+      advice: () => "前次請求已送往 OpenAI 或於回應期間中斷，可能已產生 API 費用！系統已鎖定此批次且禁止自動重送。請先點擊「人工確認：我已知悉可能重複計費並允許重試此批」確認後，才可重試。"
+    };
+  }
+  if (code === "QUOTA_EXCEEDED" || (/RESOURCE_EXHAUSTED|insufficient_quota|quota|超過.{0,6}(配額|額度|上限)|已達.{0,6}(配額|額度|上限)/i.test(t) && !t.trim().startsWith("{"))) {
+    return {
+      type: "QUOTA_EXCEEDED",
+      label: "OpenAI 額度不足",
+      advice: () => "OpenAI API 額度不足（QUOTA_EXCEEDED），系統已立即停止佇列且禁止自動重試，請檢查 OpenAI 帳戶額度。已暫存批次不受影響。"
+    };
+  }
+  if (code === "RATE_LIMITED" || (/\b429\b|rate.?limit|too many requests|稍後再試/i.test(t) && !t.trim().startsWith("{"))) {
+    return {
+      type: "RATE_LIMITED",
+      label: "速率限制／併發衝突",
+      advice: () => "請求達到速率限制或同一批次正在處理中（RATE_LIMITED / 409）。已暫停佇列，請稍候片刻再單獨重試此批。"
+    };
+  }
+  if (code === "TIMEOUT") {
+    return {
+      type: "TIMEOUT",
+      label: "OpenAI 回應逾時（可能已計費）",
+      advice: (b) => (canSplit(b)
+        ? "等待 OpenAI 回應逾時（TIMEOUT）。由於請求已送出，前次可能已產生費用；若要直接重試此批，必須先點擊「人工確認」按鈕，或按「將此批拆成兩批」縮小單批句數。"
+        : "等待 OpenAI 回應逾時（TIMEOUT）。由於前次請求可能已計費，必須先點擊「人工確認」按鈕後才可重試此批。")
+    };
+  }
+  if (code === "NETWORK_ERROR" || code === "SERVER_ERROR") {
+    return {
+      type: code,
+      label: code === "NETWORK_ERROR" ? "網路連線錯誤（可能已計費）" : "Worker／上游伺服器錯誤（可能已計費）",
+      advice: () => "發生網路或伺服器中斷，已暫停佇列。由於無法排除前次請求已於 OpenAI 端產生費用，重試前必須先點擊「人工確認」按鈕。"
+    };
+  }
+
+  const trimmed = t.trim();
+  if (code === "TRUNCATED" || (trimmed.startsWith("{") && !trimmed.endsWith("}") && /"translations"\s*:\s*\[/.test(trimmed))) {
+    return {
+      type: "TRUNCATED",
+      label: "輸出截斷 (TRUNCATED，已消耗 Token)",
+      advice: (b) => canSplit(b)
+        ? "AI 回應因長度上限在中途截斷（OpenAI 已消耗 Token 計費）。建議點擊「將此批拆成兩批」改以較小批次翻譯；若要原批重試，必須先點擊「人工確認」按鈕。"
+        : "AI 回應在中途截斷（已消耗 Token 計費）。若要重試此批，必須先點擊「人工確認」按鈕。"
+    };
+  }
+
+  const labelMap = {
+    MISSING_INDEX: "驗證失敗：遺漏序號 (MISSING_INDEX)",
+    DUPLICATE_INDEX: "驗證失敗：重複序號 (DUPLICATE_INDEX)",
+    UNKNOWN_INDEX: "驗證失敗：多餘／未知序號 (UNKNOWN_INDEX)",
+    ORDER_MISMATCH: "驗證失敗：順序錯亂 (ORDER_MISMATCH)",
+    INVALID_TRANSLATION: "驗證失敗：譯文無效或非單行 (INVALID_TRANSLATION)",
+    FORMAT_ERROR: "驗證失敗：JSON 格式或欄位錯誤 (FORMAT_ERROR)"
+  };
+  return {
+    type: code || "VALIDATION",
+    label: labelMap[code] || "驗證失敗",
+    advice: (b) => "請檢查上方錯誤明細。只有同時通過 Worker 與前端雙重驗證的批次才會儲存；若前次已呼叫 OpenAI 推論，重試前需先完成人工確認。" +
+      (b && b.failCount >= 3 ? "\n同一批已連續失敗 3 次以上，建議點擊「將此批拆成兩批」縮小範圍後再試。" : "")
+  };
+}
+
+function renumberBatches() {
+  batchList.forEach((b, i) => { b.batchNum = i + 1; });
+}
+
+function splitBatchAt(idx) {
+  const cur = batchList[idx];
+  if (!canSplit(cur)) return false;
+  const mid = Math.ceil(cur.cues.length / 2);
+  const depth = cur.splitDepth + 1;
+  batchList.splice(idx, 1, makeBatch(0, cur.cues.slice(0, mid), depth), makeBatch(0, cur.cues.slice(mid), depth));
+  renumberBatches();
+  currentBatchIdx = idx;
+  return true;
+}
+
+$("btn-split-current-batch").addEventListener("click", () => {
+  if (batchList.length === 0) return;
+  const cur = batchList[currentBatchIdx];
+  if (!canSplit(cur)) {
+    setStatus("status-verify", "err", cur.status === "SAVED"
+      ? "【拆批拒絕】：此批已驗證並暫存，不可拆分或重跑。若確需重做，請先「作廢此批暫存」。"
+      : `【拆批拒絕】：此批已達最大拆分深度（${MAX_SPLIT_DEPTH} 層）或段數過少（${cur.cues.length} 條）。請人工重試此批。`);
+    return;
+  }
+  const hasInput = $("field-trans-result").value.trim().length > 0;
+  const ok = confirm(`將第 ${cur.batchNum} 批（#${cur.startSeq} ~ #${cur.endSeq}，${cur.cues.length} 條）拆成兩批重新翻譯？` +
+    (hasInput ? "\n目前輸入框中的未暫存內容將被清空。" : "") + "\n其他已暫存批次不受影響。");
+  if (!ok) return;
+  const from = `#${cur.startSeq} ~ #${cur.endSeq}`;
+  splitBatchAt(currentBatchIdx);
+  setTransInputValue("");
+  lockAndClearVerificationState("批次已拆分，請完成所有批次並重新執行全量校驗。");
+  updateBatchUI();
+  if (isGlossaryVerified) generatePromptForBatch(batchList[currentBatchIdx]);
+  setStatus("status-verify", "warn", `已將 ${from} 拆成兩批：第 ${batchList[currentBatchIdx].batchNum} 批（#${batchList[currentBatchIdx].startSeq} ~ #${batchList[currentBatchIdx].endSeq}）與第 ${batchList[currentBatchIdx + 1].batchNum} 批（#${batchList[currentBatchIdx + 1].startSeq} ~ #${batchList[currentBatchIdx + 1].endSeq}）。共 ${batchList.length} 批。`);
+});
+
+$("btn-save-current-batch").addEventListener("click", () => {
+  if (isAutoTranslating) return;
+  lockAndClearVerificationState("批次暫存異動中，請完成所有批次並重新執行全量校驗。");
+
+  if (!rawParsePassed || batchList.length === 0) {
+    setStatus("status-verify", "err", "【暫存 FAIL】：請先完成步驟 1 原始字幕解析與套用批次設定！");
+    return;
+  }
+
+  const curBatch = batchList[currentBatchIdx];
+  const inputText = $("field-trans-result").value;
+  const { cues, errors, errorCode, normalizedJson } = parseAndValidateTranslationsJson(inputText, curBatch.cues);
+
+  if (errors.length > 0) {
+    const failure = classifyBatchFailure(inputText, curBatch.cues, errors, errorCode);
+    curBatch.failCount += 1;
+    curBatch.lastFailure = failure.label;
+    updateBatchUI();
+    setStatus("status-verify", "err", `【第 ${curBatch.batchNum} 批暫存 FAIL】：發現 ${errors.length} 項錯誤：\n` + errors.slice(0, 10).join("\n") +
+      `\n\n【失敗類型】${failure.label}（本批累計失敗 ${curBatch.failCount} 次）\n${failure.advice(curBatch)}`);
+    return;
+  }
+
+  curBatch.status = "SAVED";
+  curBatch.failCount = 0;
+  curBatch.lastFailure = "";
+  curBatch.billingUncertain = false;
+  curBatch.userConfirmedUncertainRetry = false;
+  curBatch.uncertainReason = "";
+  curBatch.savedSrt = normalizedJson;
+  curBatch.savedCues = cues;
+  curBatch.draftSrt = normalizedJson;
+  setTransInputValue(normalizedJson);
+  saveLightweightProgressToSession();
+  updateBatchUI();
+
+  setStatus("status-verify", "ok", `【第 ${curBatch.batchNum} 批暫存 PASS】：編號 #${curBatch.startSeq} ~ #${curBatch.endSeq}（共 ${cues.length} 條）已以原始時間戳與日文安全組裝並鎖定暫存！`);
+});
+
+// ============================================================================
+// 【模組九（步驟 0 登入驗證）：Session Token 管理與正式環境攔截（Stage 7B rev5）】
+// - Token 僅存於 sessionStorage，絕不存取 localStorage；遇到 401 時僅清除 Token，完整保留字幕與翻譯進度。
+// - 嚴格攔截正式版 Worker 網址（FORBIDDEN_PROD_HOSTS），並即時顯示通行碼傳送目標主機。
+// ============================================================================
+function authToken() {
+  if (currentSessionToken && /^[a-f0-9]{64}$/.test(currentSessionToken)) {
+    return currentSessionToken;
+  }
+  if (typeof window.VT_AUTH_TOKEN === "string" && /^[a-f0-9]{64}$/.test(window.VT_AUTH_TOKEN.trim())) {
+    return window.VT_AUTH_TOKEN.trim();
+  }
+  try {
+    if (window.sessionStorage) {
+      const v1 = window.sessionStorage.getItem(AUTH_TOKEN_KEY);
+      if (v1 && /^[a-f0-9]{64}$/.test(v1.trim())) {
+        currentSessionToken = v1.trim();
+        return currentSessionToken;
+      }
+      const v2 = window.sessionStorage.getItem(SESSION_TOKEN_KEY);
+      if (v2 && /^[a-f0-9]{64}$/.test(v2.trim())) {
+        currentSessionToken = v2.trim();
+        return currentSessionToken;
+      }
+    }
+  } catch {}
+  return "";
+}
+
+// 儲存或清除 Session Token（統一由單一函式處理，消除重複實作）
+function setAuthToken(t) {
+  const clean = t ? String(t).trim() : "";
+  try {
+    if (!window.sessionStorage) return false;
+    if (clean) {
+      window.sessionStorage.setItem(AUTH_TOKEN_KEY, clean);
+      window.sessionStorage.setItem(SESSION_TOKEN_KEY, clean);
+      currentSessionToken = clean;
+    } else {
+      window.sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      currentSessionToken = "";
+    }
+    return true;
+  } catch {
+    currentSessionToken = "";
+    return false;
+  }
+}
+
+function clearAuthToken() {
+  setAuthToken("");
+}
+
+// 相容性別名（供自動化測試腳本呼叫，指向同一核心實作，無重複邏輯）
+var getExistingAuthToken = authToken;
+var setSessionToken = setAuthToken;
+
+function renderAuthState(authed, message) {
+  const msg = message || (authed ? "已登入。" : "請先登入。");
+  if ($("auth-form")) $("auth-form").hidden = Boolean(authed);
+  if ($("auth-logout")) $("auth-logout").hidden = !authed;
+  if ($("auth-status")) $("auth-status").textContent = msg;
+  if ($("status-auth")) $("status-auth").textContent = msg;
+}
+
+function handleSessionExpired() {
+  clearAuthToken(); // 只清 Token；不呼叫任何會清除字幕、批次或譯文的函式
+  renderAuthState(false, "登入已失效或尚未登入，請重新登入。目前的字幕、批次與譯文都已保留。");
+}
+
+// 顯示通行碼將送往哪個主機（只顯示主機名稱；用 textContent）
+function renderApiHost(rawUrl) {
+  const target = typeof rawUrl === "string" ? rawUrl.trim() : (getApiBase() || DEFAULT_TEST_API);
+  let host = "";
+  try {
+    const parsed = new URL(target);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      host = parsed.host;
+    }
+  } catch {}
+  if ($("auth-api-host")) {
+    $("auth-api-host").textContent = host ? "通行碼將送往：" + host : "警告：API 網址無效，請勿輸入通行碼。";
+  }
+}
+
+if ($("worker-api-url")) {
+  $("worker-api-url").addEventListener("input", () => renderApiHost());
+}
+
+async function authRequest(path, { method = "GET", body, token = authToken() } = {}) {
+  const apiCheck = validateTestApiBase();
+  if (!apiCheck.ok) {
+    const err = new Error(apiCheck.error);
+    err.status = 0;
+    err.isConfigError = true;
+    throw err;
+  }
+  const headers = {};
+  if (token) headers.Authorization = "Bearer " + token;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const fetchFn = getFetchImpl();
+  const endpoint = new URL(path.replace(/^\/+/, ""), apiCheck.url).toString();
+  const res = await fetchFn(endpoint, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (!res.ok) {
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.retryAfter = Number(res.headers && typeof res.headers.get === "function" ? res.headers.get("Retry-After") : 0) || Number(data.retryAfterSeconds) || 0;
+    throw err;
+  }
+  return data;
+}
+
+async function handleAuthLoginClick() {
+  const apiCheck = validateTestApiBase();
+  if (!apiCheck.ok) {
+    renderAuthState(false, apiCheck.error);
+    return;
+  }
+  const passEl = $("auth-passphrase");
+  const passphrase = passEl ? passEl.value : "";
+  if (!passphrase) {
+    renderAuthState(false, "請輸入通行碼後再點擊登入。");
+    return;
+  }
+  if ($("auth-login")) $("auth-login").disabled = true;
+  if ($("btn-auth-login")) $("btn-auth-login").disabled = true;
+  try {
+    let data;
+    try {
+      data = await authRequest("/auth/login", { method: "POST", body: { passphrase } });
+    } catch (e) {
+      renderAuthState(
+        false,
+        e.status === 429 ? `失敗次數過多，請約 ${e.retryAfter || "幾"} 秒後再試。` :
+        e.status === 401 ? "通行碼不正確。" :
+        e.status ? (e.message || "登入失敗。") : "無法連線到登入服務。"
+      );
+      return;
+    }
+    if (!data || typeof data.token !== "string" || !data.token) {
+      renderAuthState(false, "登入服務回應異常（沒有收到登入憑證）。");
+      return;
+    }
+    if (!setAuthToken(data.token)) {
+      let note = "";
+      try {
+        await authRequest("/auth/logout", { method: "POST", body: {}, token: data.token });
+      } catch (e) {
+        if (e.status !== 401) note = "\n另外，撤銷伺服器端 Session 的請求失敗；該 Session 會在到期後自動失效。";
+      }
+      renderAuthState(false, "登入服務已接受通行碼，但瀏覽器無法儲存登入資訊（可能禁用 sessionStorage），因此無法登入。" + note);
+      return;
+    }
+    if (passEl) passEl.value = "";
+    renderAuthState(true, "登入成功。");
+  } finally {
+    if ($("auth-login")) $("auth-login").disabled = false;
+    if ($("btn-auth-login")) $("btn-auth-login").disabled = false;
+  }
+}
+
+if ($("auth-login")) $("auth-login").addEventListener("click", handleAuthLoginClick);
+if ($("btn-auth-login")) $("btn-auth-login").addEventListener("click", handleAuthLoginClick);
+
+$("btn-auth-check").addEventListener("click", async () => {
+  const apiCheck = validateTestApiBase();
+  if (!apiCheck.ok) {
+    renderAuthState(false, apiCheck.error);
+    return;
+  }
+  const token = authToken();
+  if (!token) {
+    renderAuthState(false, "請先登入。");
+    return;
+  }
+  try {
+    await authRequest("/auth/session");
+    renderAuthState(true, "登入有效。");
+  } catch (e) {
+    if (e.status === 401) handleSessionExpired();
+    else renderAuthState(true, "暫時無法確認登入狀態（網路或服務問題），已保留本機登入資訊。");
+  }
+});
+
+async function handleAuthLogoutClick() {
+  const apiCheck = validateTestApiBase();
+  const token = authToken();
+  let serverRevoked = true;
+  if (token && apiCheck.ok) {
+    try {
+      await authRequest("/auth/logout", { method: "POST", body: {}, token });
+    } catch (e) {
+      if (e.status !== 401) serverRevoked = false;
+    }
+  }
+  clearAuthToken();
+  renderAuthState(false, serverRevoked ? "已登出。" : "已清除本機登入；但伺服器端撤銷請求失敗，該 Session 會在到期後自動失效。");
+}
+
+if ($("auth-logout")) $("auth-logout").addEventListener("click", handleAuthLogoutClick);
+if ($("btn-auth-logout")) $("btn-auth-logout").addEventListener("click", handleAuthLogoutClick);
+
+async function checkSessionOnLoad() {
+  if (!authToken()) {
+    renderAuthState(false, "請先登入。");
+    return;
+  }
+  try {
+    await authRequest("/auth/session");
+    renderAuthState(true, "登入有效。");
+  } catch (e) {
+    if (e.status === 401) handleSessionExpired();
+    else renderAuthState(true, "暫時無法確認登入狀態（網路或服務問題），已保留本機登入資訊。");
+  }
+}
+
+// ==================== 不確定計費狀態人工確認（Fix #3：禁止自動設為 true，必須由使用者明確操作確認） ====================
+function confirmUncertainBatchRetry(targetBatchIdx = currentBatchIdx) {
+  if (isAutoTranslating || !batchList.length || !batchList[targetBatchIdx]) return false;
+  const cur = batchList[targetBatchIdx];
+  if (!cur.billingUncertain) return false;
+
   const ok = confirm(
     `【不確定計費風險人工確認（第 ${cur.batchNum} 批）】\n` +
     `前次翻譯請求（原因：${cur.uncertainReason || cur.lastFailure || "中斷或未通過驗證"}）已送達 OpenAI 或於回應期間中斷，可能已經產生 API 費用！\n` +
