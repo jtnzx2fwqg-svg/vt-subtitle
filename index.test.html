@@ -206,9 +206,8 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
   border-bottom:0;
   background:transparent;
   opacity:.3;
-  transform:scale(.85) translateZ(0);
+  transform:scale(.85);
   transform-origin:20px 50%;
-  backface-visibility:hidden;
   -webkit-font-smoothing:antialiased;
   transition:
     transform .36s cubic-bezier(.22,1,.36,1),
@@ -236,7 +235,7 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
 #autopreview .cue.active{
   z-index:2;
   opacity:1;
-  transform:scale(1.025) translateZ(0);
+  transform:scale(1.025);
 }
 #autopreview .cue.active::before{
   opacity:1;
@@ -250,7 +249,7 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
    - sticky 元素本身保持 background: transparent，透過 ::before 向上延伸覆蓋 env(safe-area-inset-top)，
      防止捲動字幕從動態島／狀態列後方透出。
    ============================================================================ */
-#youtube-player-container{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;background:transparent;padding:8px 0;width:100%}
+#youtube-player-container{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;background:transparent;padding:8px 0;width:100%;contain:layout style;touch-action:manipulation}
 #youtube-player-container::before{content:"";position:absolute;top:calc(-1 * env(safe-area-inset-top,0px));right:0;bottom:0;left:0;background:var(--bg);z-index:-1;pointer-events:none}
 #youtube-player{position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden;background:#000}
 #youtube-player iframe{position:absolute;top:0;left:0;display:block;width:100% !important;height:100% !important;border:0}
@@ -335,7 +334,7 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
   }
   body[data-desktop-layout="v1_side_by_side"] #autopreview .cue.active,
   body:not([data-desktop-layout]) #autopreview .cue.active{
-    transform:scale(1.02) translateZ(0);
+    transform:scale(1.02);
   }
 
   /* 模式二：劇院模式版（v2_theater_top）
@@ -388,7 +387,7 @@ a{color:var(--accent);overflow-wrap:anywhere;touch-action:manipulation}
     transform-origin:20px 50%;
   }
   body[data-desktop-layout="v2_theater_top"] #autopreview .cue.active{
-    transform:scale(1.02) translateZ(0);
+    transform:scale(1.02);
   }
 }
 /* 系統無障礙減弱動態效果支援（iOS 減少動態效果 / Windows 11 關閉動畫效果） */
@@ -793,6 +792,25 @@ function createYouTubePlayer(videoId) {
           youtubePlayer.playVideo();
         }
         pendingSeekTime = null;
+        syncPlaybackPowerState();
+      },
+      onStateChange: function (ev) {
+        // 【iPhone 15 Pro 降溫與嵌入器零卡頓關鍵】：
+        // 1. 僅在 YT.PlayerState.PLAYING (1) 時啟動低功耗同步計時器。
+        // 2. 當使用者點擊嵌入器暫停 (2)、拖曳時間軸緩衝 (3) 或結束 (0) 時，立即停止捲動與計時器並釋放 GPU 預熱層！
+        if (ev && ev.data === 1) {
+          isVideoPlaying = true;
+          startSyncTimer();
+        } else {
+          isVideoPlaying = false;
+          stopSyncTimer();
+          stopSmoothScroll();
+          if (ev && ev.data === 3) {
+            // 使用者正在拖曳 YouTube 嵌入器進度條（BUFFERING）：給予 600ms 防搶奪保護窗
+            followPausedUntil = Math.max(followPausedUntil, Date.now() + 600);
+          }
+          releaseGpuWarmLayersOnPause();
+        }
       }
     }
   });
@@ -833,7 +851,7 @@ function seekToTimestamp(videoId, seconds) {
 // ============================================================================
 const ACTIVE_GRACE = 2;          // 字幕結束後，仍維持高亮顯示的寬限秒數（2 秒）
 const FOLLOW_PAUSE_MS = 4000;    // 使用者手動觸控滑動或滾輪捲動後，暫停自動跟隨的毫秒數（4 秒）
-const SYNC_INTERVAL_MS = 50;     // 播放時間輪詢間隔（50ms = 20Hz，整合於 VSync 主迴圈內）
+const SYNC_INTERVAL_MS = 120;    // 低功耗播放時間取樣間隔（120ms = 8.3Hz，僅在影片播放中執行，大幅降低跨 iframe 通訊與發熱）
 const ACTIVE_SCALE = 1.025;      // 手機版高亮字幕放大倍率（對應 CSS #autopreview .cue.active）
 const ACTIVE_TOP_GAP = 8;        // 高亮字幕上緣與置頂播放器下緣的間距（8px）
 const MIN_SCROLL_STEP_PX = 1.25; // 基準最小捲動步進（防止阻尼尾段過慢停滯）
@@ -841,33 +859,46 @@ const MIN_SCROLL_STEP_PX = 1.25; // 基準最小捲動步進（防止阻尼尾�
 let syncTrack = null;
 let lastActiveIndex = -1;
 let isTouching = false;          // 手指或滑鼠是否正在按住拖曳（接觸期間 100% 鎖定自動捲動）
-let followPausedUntil = 0;       // 手動捲動後暫停自動跟隨的截止時間戳
+let followPausedUntil = 0;       // 手動捲動或點擊嵌入器後暫停自動跟隨的截止時間戳
 let autoScrollUntil = 0;         // 程式自身執行 window.scrollTo 的保護時間窗，避免誤判為使用者手動捲動
 let resumeFollowTimer = null;    // 手放開 4 秒後自動平滑歸位至當前高亮字幕的計時器
 let warmIdleTimer = null;        // 僅在捲動與縮放動畫結束後的靜止期才切換 GPU 預熱合成層
+let pauseCoolTimer = null;       // 影片暫停後釋放 GPU 預熱圖層的冷卻計時器
 let resizeDebounceTimer = null;  // 視窗縮放或旋轉後的防抖重對齊計時器
 
-// 單一 VSync 迴圈捲動狀態變數（動畫進行期間不在每幀讀取 DOM offsetTop/getBoundingClientRect）
+// 【按需啟動（On-Demand）VSync 捲動狀態】：
+// 僅在 scrollActive === true 的 ~250ms 換句捲動期間請求 requestAnimationFrame，
+// 捲動到位後立即停止 rAF（scrollRafId = 0），讓 iPhone 15 Pro ProMotion 在靜止與閱讀期間降至 10Hz 極低功耗，機身保持冰涼！
 let scrollActive = false;
+let scrollRafId = 0;
 let scrollTargetY = 0;
 let scrollPosY = 0;
 let scrollMaxY = 0;
 let scrollLastTs = 0;
 let lastSyncCheckTs = 0;
+let syncTimerId = null;
+let isVideoPlaying = false;
 
 function stopSmoothScroll() {
   scrollActive = false;
   scrollLastTs = 0;
+  if (scrollRafId && typeof cancelAnimationFrame === "function") {
+    cancelAnimationFrame(scrollRafId);
+    scrollRafId = 0;
+  }
 }
 
-// 【Windows 11 Intel GPU ＆ iPhone 15 Pro 記憶體保護：動態視窗 GPU 合成層預熱】
-// 限制同時帶有 will-change 的字幕節點最多僅 8 個（當前句前 2 句 ～ 後 5 句），
-// 且在動畫靜止期（390ms 後）才切換，確保捲動期間 0 紋理配置與 0 紋理釋放卡頓。
+// 【極致降溫：5 節點精簡 GPU 預熱視窗 ＋ 暫停時自動釋放】
+// 僅對當前句前 1 句至後 3 句（最多 5 個節點）掛載 will-change，並在影片暫停時完全釋放至 0 個！
 function scheduleGpuWarmWindow(track, anchor, immediate = false) {
   if (!track || anchor < 0) return;
   if (warmIdleTimer) {
     clearTimeout(warmIdleTimer);
     warmIdleTimer = null;
+  }
+  if (pauseCoolTimer) {
+    clearTimeout(pauseCoolTimer);
+    pauseCoolTimer = null;
   }
   const applyWarm = () => {
     warmIdleTimer = null;
@@ -875,8 +906,8 @@ function scheduleGpuWarmWindow(track, anchor, immediate = false) {
     const els = track.els;
     const n = els.length;
     const keepSet = new Set();
-    const lo = Math.max(0, anchor - 2);
-    const hi = Math.min(n - 1, anchor + 5);
+    const lo = Math.max(0, anchor - 1);
+    const hi = Math.min(n - 1, anchor + 3);
     for (let i = lo; i <= hi; i++) {
       keepSet.add(i);
       if (!track.warmed.has(i) && els[i]) {
@@ -898,6 +929,35 @@ function scheduleGpuWarmWindow(track, anchor, immediate = false) {
   }
 }
 
+function releaseGpuWarmLayersOnPause() {
+  if (pauseCoolTimer) clearTimeout(pauseCoolTimer);
+  pauseCoolTimer = setTimeout(() => {
+    pauseCoolTimer = null;
+    if (isVideoPlaying || !syncTrack) return;
+    const els = syncTrack.els;
+    syncTrack.warmed.forEach(i => {
+      if (els[i]) els[i].classList.remove("gpu-warm");
+    });
+    syncTrack.warmed.clear();
+  }, 1200);
+}
+
+function ensureScrollRaf() {
+  if (!scrollActive || scrollRafId) return;
+  if (typeof requestAnimationFrame === "function") {
+    scrollRafId = requestAnimationFrame(onDemandScrollLoop);
+  }
+}
+
+function onDemandScrollLoop(now) {
+  scrollRafId = 0;
+  if (!scrollActive) return;
+  stepSmoothScrollFrame(now);
+  if (scrollActive && typeof requestAnimationFrame === "function") {
+    scrollRafId = requestAnimationFrame(onDemandScrollLoop);
+  }
+}
+
 function animateScrollToY(targetY, currentScrollY, maxScrollY) {
   scrollMaxY = maxScrollY;
   const clamped = Math.max(0, Math.min(scrollMaxY, targetY));
@@ -915,6 +975,7 @@ function animateScrollToY(targetY, currentScrollY, maxScrollY) {
   if (Math.abs(clamped - scrollPosY) < 0.8) return;
   scrollTargetY = clamped;
   scrollActive = true;
+  ensureScrollRaf();
 }
 
 // 【iPhone 15 Pro 120Hz ProMotion 次像素精度 ＆ Windows 11 幀率無關指數阻尼捲動步進】
@@ -1199,35 +1260,101 @@ window.addEventListener("resize", () => {
   }, 120);
 }, { passive: true });
 
-// 背景分頁返回前景時（iOS 切換 App 或 Windows 切換分頁）：重置幀時間差，防止跳幀
+// 【嵌入器點擊零卡頓保護】：
+// 當使用者在 iPhone 15 Pro 點擊 YouTube 嵌入器（播放／暫停／進度條／音量／全螢幕）時，
+// 觸控發生在跨網域 iframe 內部，不會觸發外部 window 的 touchstart，但會觸發容器 pointerdown 或 window blur（焦點進入 iframe）。
+// 此時立即停止外部頁面的平滑捲動並鎖定 800ms，確保 iOS WebKit 不會因外部 scrollTo() 與嵌入器手勢衝突而卡頓！
+(function setupIframeInteractionGuard() {
+  const playerContainer = $("youtube-player-container");
+  if (playerContainer && typeof playerContainer.addEventListener === "function") {
+    ["touchstart", "pointerdown", "mousedown"].forEach(evName => {
+      playerContainer.addEventListener(evName, () => {
+        stopSmoothScroll();
+        followPausedUntil = Math.max(followPausedUntil, Date.now() + 1200);
+      }, { passive: true });
+    });
+  }
+  window.addEventListener("blur", () => {
+    const active = document.activeElement;
+    if (active && active.tagName === "IFRAME") {
+      stopSmoothScroll();
+      followPausedUntil = Math.max(followPausedUntil, Date.now() + 800);
+    }
+  }, { passive: true });
+})();
+
+// 低功耗播放時間檢查（僅在影片實際播放且頁面位於前景時，每 120ms 執行一次）
+function pollPlaybackTimeOnce() {
+  if (typeof document !== "undefined" && document.hidden) return;
+  if (!syncTrack || !youtubePlayer || !youtubePlayerReady || typeof youtubePlayer.getCurrentTime !== "function") return;
+  if (typeof youtubePlayer.getPlayerState === "function") {
+    const st = youtubePlayer.getPlayerState();
+    if (st !== 1) {
+      isVideoPlaying = false;
+      stopSyncTimer();
+      return;
+    }
+  }
+  const t = youtubePlayer.getCurrentTime();
+  if (typeof t === "number" && Number.isFinite(t)) {
+    if (Math.abs(t - syncTrack.lastTime) >= 0.02) {
+      syncTrack.lastTime = t;
+      setActiveCues(findActiveIndices(syncTrack, t));
+    }
+  }
+}
+
+function startSyncTimer() {
+  if (syncTimerId !== null) return;
+  pollPlaybackTimeOnce();
+  syncTimerId = setInterval(pollPlaybackTimeOnce, SYNC_INTERVAL_MS);
+}
+
+function stopSyncTimer() {
+  if (syncTimerId !== null) {
+    clearInterval(syncTimerId);
+    syncTimerId = null;
+  }
+}
+
+function syncPlaybackPowerState() {
+  if (!youtubePlayer || !youtubePlayerReady) {
+    stopSyncTimer();
+    return;
+  }
+  if (typeof youtubePlayer.getPlayerState === "function") {
+    const st = youtubePlayer.getPlayerState();
+    if (st === 1) {
+      isVideoPlaying = true;
+      startSyncTimer();
+    } else {
+      isVideoPlaying = false;
+      stopSyncTimer();
+    }
+  }
+}
+
+// 背景分頁返回前景時（iOS 切換 App 或 Windows 切換分頁）：背景時完全停止計時器與捲動，返回前景時重置時間差
 if (typeof document !== "undefined" && document && typeof document.addEventListener === "function") {
   document.addEventListener("visibilitychange", () => {
     scrollLastTs = 0;
     lastSyncCheckTs = 0;
+    if (document.hidden) {
+      stopSmoothScroll();
+      stopSyncTimer();
+    } else if (isVideoPlaying) {
+      startSyncTimer();
+    }
   });
 }
 
-// 單一整合式 VSync 主迴圈：先讀取播放時間與排版（Read Phase），再更新樣式並於同一幀立即推進捲動（Write Phase）
-// 效能保護：當影片暫停且時間未變動（|t - track.lastTime| < 0.015s）時跳過二分搜尋與陣列配置，達成 0 閒置 CPU 消耗。
+// 保留 masterFrameLoop 相容介面供自動化測試呼叫（平時不常駐執行，0 閒置功耗）
 function masterFrameLoop(now) {
-  if (syncTrack && youtubePlayer && youtubePlayerReady && typeof youtubePlayer.getCurrentTime === "function") {
-    if (now - lastSyncCheckTs >= SYNC_INTERVAL_MS) {
-      lastSyncCheckTs = now;
-      const t = youtubePlayer.getCurrentTime();
-      if (typeof t === "number" && Number.isFinite(t)) {
-        if (Math.abs(t - syncTrack.lastTime) >= 0.015) {
-          syncTrack.lastTime = t;
-          setActiveCues(findActiveIndices(syncTrack, t));
-        }
-      }
-    }
-  }
+  pollPlaybackTimeOnce();
   if (scrollActive) {
     stepSmoothScrollFrame(now);
   }
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(masterFrameLoop);
 }
-if (typeof requestAnimationFrame === "function") requestAnimationFrame(masterFrameLoop);
 initDesktopLayoutSwitcher();
 
 // ============================================================================
@@ -1383,7 +1510,7 @@ function renderCues(container, cues, limit = Infinity, videoId = "") {
   });
 
   container.append(fragment);
-  if (track && track.els.length) scheduleGpuWarmWindow(track, 0, true);
+  if (track && track.els.length) { scheduleGpuWarmWindow(track, 0, true); syncPlaybackPowerState(); }
 
   if (cues.length > limit) {
     const note = document.createElement("p");
